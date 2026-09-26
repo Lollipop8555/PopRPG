@@ -6,29 +6,38 @@
 
 ## 两条铁律
 
-1. **DESIGN 已确认决策不要擅自改**：要改先和用户确认（决策全在 §8 / `design/07-decisions.md`）。
-2. **任何交互必须能在 §5.4「操作模式标准表」找到出处**（`design/04-editor.md`）；找不到先改 §5.4 再加代码。
+1. **DESIGN 已确认决策不要擅自改**：要改先和用户确认（决策全在 [`design/07-decisions.md`](design/07-decisions.md)）。
+2. **任何交互必须能在 [`design/04-editor.md`](design/04-editor.md) §5.4「操作模式标准表」找到出处**，找不到先改 §5.4 再加代码。
+
+## ⚠️ 全局基调：视觉风格（手绘 / 涂鸦）贯穿所有 UI
+
+**视觉风格不是收尾才考虑的事，是全局基调。** 任何界面（构建页、游玩页、属性面板、按钮、网格、地图组件、弹层）都必须从一开始就遵循「纸张 + 手绘 + 涂鸦」观感。AI 开工任何 UI 任务前，**必须先读 [`design/00b-style.md`](design/00b-style.md)**，并贯穿实现始终；不要等 Phase C 才补。
+
+## 🛠 AI 实现守则（开工前必读）
+
+任何**实现**任务开工前，额外先读 [`design/00c-guidelines.md`](design/00c-guidelines.md)：必读顺序、禁止事项（不许堆大文件 / 不许跳过操作模式 / 不许擅自改决策 / 不许引后端或额外绘图库）、代码组织约定、验收原子化、视觉贯穿。这是防止做出"一坨"的直接约束。
 
 ## 模块映射（文件 → 覆盖原章节）
 
 | 文件 | 覆盖原章节 | 主题 |
 |------|-----------|------|
-| [design/00-overview.md](design/00-overview.md) | §1–§2 | 产品定位 / 技术栈 |
+| [design/00-overview.md](design/00-overview.md) | §1–§2 | 产品定位 / 技术栈 / 三条立场 |
+| [design/00b-style.md](design/00b-style.md) | §10（前置） | **视觉风格（纸张+手绘+涂鸦）全局基调** |
+| [design/00c-guidelines.md](design/00c-guidelines.md) | 新增 | **AI 实现守则（必读顺序/禁止事项/代码组织）** |
 | [design/01-pmod.md](design/01-pmod.md) | §3 | `.pmod` 文件格式（含完整示例） |
-| [design/02-data-model.md](design/02-data-model.md) | §4.0–§4.7 | 七大类组件（怪物/职业/道具/建筑/道路/地图/项目）+ 组件库总纲 |
-| [design/03-engine.md](design/03-engine.md) | §4.8 | 规则引擎：前置配置 + 硬规则 + 各场景算法（移动/战斗/状态/奖励池/怪物池/事件/商店/存档结算） |
-| [design/04-editor.md](design/04-editor.md) | §5 | 编辑器设计（构建态）：布局 / 图层 / 组件库 / 操作模式 / 画布 / 属性编辑 / 校验 / 清单 |
-| [design/05-mvp.md](design/05-mvp.md) | §6 | MVP 范围：预设最小清单 + 数值标定 + 验收标准 |
-| [design/06-future.md](design/06-future.md) | §7 | 后续阶段：游玩态 / 骰子系统 / 存档分享 / 明确不做 / 技能扩展方向 |
-| [design/07-decisions.md](design/07-decisions.md) | §8 | 已确认决策记录（约 30 条铁律） |
-| [design/08-deploy.md](design/08-deploy.md) | §9–§10 | 部署（GitHub Pages）/ 视觉风格（纸张 + 手绘） |
+| [design/02-data-model.md](design/02-data-model.md) | §4.0–§4.7 | 七大类组件 + 项目 + 组件库总纲 |
+| [design/03-engine.md](design/03-engine.md) | §4.8 | 规则引擎 |
+| [design/04-editor.md](design/04-editor.md) | §5 | 编辑器设计（构建态） |
+| [design/05-mvp.md](design/05-mvp.md) | §6 | MVP 范围：预设 + 验收 |
+| [design/06-future.md](design/06-future.md) | §7 | 后续阶段：游玩/骰子/存档/明确不做 |
+| [design/07-decisions.md](design/07-decisions.md) | §8 | 已确认决策记录 |
+| [design/08-deploy.md](design/08-deploy.md) | §9 | 部署（GitHub Pages） |
 
-> `design/03-engine.md` 体量最大（§4.8 全章），做引擎/规则结算时只读它即可；其余模块均 < 30KB。
-
-## 章节 → 模块 快速映射（供交叉引用解析）
+## 章节 → 模块 快速映射
 
 ```
 §1,§2   → 00-overview
+§10     → 00b-style（全局基调，前置）
 §3      → 01-pmod
 §4.0–4.7→ 02-data-model
 §4.8    → 03-engine
@@ -36,7 +45,8 @@
 §6      → 05-mvp
 §7      → 06-future
 §8      → 07-decisions
-§9,§10  → 08-deploy
+§9      → 08-deploy
+（实现守则 → 00c-guidelines，无原 § 编号，新增）
 ```
 
 ## 最新核对决策（2026-09-26 末轮，12 条修正/补充）
@@ -62,4 +72,8 @@
 
 ## 进度同步
 
-**2026-09-26 · 设计文档模块化**：原 `DESIGN.md`（约 2450 行）按顶层章节切片到 `docs/design/` 下 9 个模块文件；根 `DESIGN.md` 改为本索引（含模块映射 + 章节→模块映射 + 12 条最新决策 + 约束）。交叉引用保留原 § 编号，由本索引解析到具体模块。
+**2026-09-26 · 文档防烂加固**
+- 视觉风格从末尾 §10 **前置**为 `design/00b-style.md`（全局基调，开工 UI 前必读）。
+- 新增 `design/00c-guidelines.md`（AI 实现守则）：必读顺序 / 禁止事项（不许堆大文件、不许跳过操作模式、不许擅自改决策、不许引后端或额外绘图库）/ 代码组织约定（store 分层、引擎UI分离、组件拆分粒度、每里程碑 build 通过）/ 验收原子化 / 视觉贯穿。
+- 根索引两条铁律 + 全局基调块 + 实现守则块已接入；模块映射表与章节映射同步更新。
+- 背景：一次按文档的实现产出混乱代码（已删除），复盘认定文档缺失"实现守则/代码组织红线"是主要可改进点，故补此模块从源头约束。
