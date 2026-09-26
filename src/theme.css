@@ -369,3 +369,271 @@ select {
   color: #fff;
   border-color: var(--accent-2);
 }
+
+/* 通用文字 */
+.muted {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+.warn {
+  color: var(--accent);
+  font-size: 12px;
+}
+
+/* 徽标 */
+.badge {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 18px;
+  margin-left: 4px;
+  border: 1.5px solid var(--line);
+}
+.badge.preset {
+  background: var(--accent-2);
+  color: #fff;
+  border-color: var(--accent-2);
+}
+.badge.user {
+  background: var(--paper-2);
+}
+.badge.on {
+  background: var(--accent-2);
+  color: #fff;
+  border-color: var(--accent-2);
+}
+.badge.off {
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+.badge.soft {
+  background: rgba(47, 111, 94, 0.12);
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
+/* 套件条目内的名称与操作 */
+.kit-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kit-actions {
+  display: none;
+  gap: 3px;
+}
+.kit-item:hover .kit-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+.hp-btn.mini {
+  padding: 1px 6px;
+  font-size: 11px;
+  border-radius: 7px 5px 8px 4px / 5px 8px 4px 7px;
+}
+.hp-btn.danger {
+  border-color: var(--accent);
+}
+.search {
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  background: #fffdf6;
+  padding: 4px 6px;
+}
+
+/* 画布模式条 */
+.mode-bar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  background: rgba(255, 252, 244, 0.85);
+  padding: 5px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  z-index: 5;
+  max-width: 70%;
+}
+.mode-btn {
+  border: 1.5px solid var(--ink);
+  border-radius: 8px 6px 9px 5px / 6px 9px 5px 8px;
+  background: var(--paper-2);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  position: relative;
+}
+.mode-btn kbd {
+  margin-left: 4px;
+  font-size: 9px;
+  opacity: 0.6;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.mode-btn.on {
+  background: var(--accent);
+  color: #fff3e6;
+  border-color: var(--accent);
+}
+.mark-toggle {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.mark-toggle button {
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  border-radius: 6px;
+  padding: 2px 7px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.mark-toggle button.on {
+  background: var(--accent-2);
+  color: #fff;
+  border-color: var(--accent-2);
+}
+
+/* 池 / 标签编辑器 */
+.pool-list {
+  max-height: 150px;
+  overflow: auto;
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  padding: 4px;
+}
+.pool-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.pool-row:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+.pool-row.on {
+  background: rgba(47, 111, 94, 0.15);
+}
+.effect-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+  border: 1.5px dashed var(--line);
+  border-radius: 6px;
+  padding: 4px;
+  margin-bottom: 4px;
+}
+.outcome-mini {
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  padding: 5px;
+  margin-top: 4px;
+}
+.event-out {
+  border-top: 1px dashed var(--line);
+  padding-top: 4px;
+  margin-top: 4px;
+}
+
+/* 清单面板 */
+.checklist-panel {
+  position: absolute;
+  right: 8px;
+  top: 52px;
+  width: 360px;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 8px 10px;
+  background: var(--paper);
+  z-index: 20;
+}
+.checklist-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px dashed var(--line);
+  margin-bottom: 6px;
+}
+.checklist-row {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px dotted var(--line);
+  font-size: 13px;
+}
+.checklist-row.error {
+  color: var(--accent);
+}
+.checklist-row.warn {
+  color: #9a6b1f;
+}
+.ck-code {
+  font-weight: 700;
+  min-width: 28px;
+}
+.checklist-ok {
+  color: var(--accent-2);
+  font-weight: 700;
+  padding: 6px 0;
+}
+.checklist-note {
+  margin-top: 6px;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+/* 标签反查弹窗 */
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(58, 47, 37, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal {
+  background: var(--paper);
+  padding: 14px 16px;
+}
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px dashed var(--line);
+  margin-bottom: 8px;
+}
+.tag-backref {
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin: 6px 0;
+}
+.tag-backref-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tag-backref-uses,
+.tag-backref-owners {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  align-items: center;
+}
+.tag-backref-uses .badge a {
+  cursor: pointer;
+  text-decoration: underline;
+}
+.tag-backref-owners.warn {
+  color: var(--accent);
+}

@@ -1,94 +1,107 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
-  Project,
-  Entity,
+  AnyComponent,
+  EntityKind,
   GameMap,
+  Library,
   MapNode,
-  Item,
-  Building,
-  Monster,
-  ClassDef,
-  Road,
+  Project,
+  Rules,
 } from './types';
-import { createDefaultProject } from './presets';
-import { genId } from './utils';
+import {
+  createDefaultLibrary,
+  createDefaultProject,
+  resetToPreset,
+} from './presets';
+import { genIdFor, deepClone } from './utils';
 
-export type Tool = 'select' | 'start' | 'end' | 'erase' | 'line';
+export type Tool = 'select' | 'place' | 'line' | 'box' | 'erase' | 'mark';
 
 interface UIState {
-  selectedEntityId: string | null;
+  selectedEntityId: string | null; // 放置模式选中的组件（来自库）
   selectedMapId: string;
   selectedNode: string | null; // "x,y"
   tool: Tool;
-  rightTab: 'template' | 'instance'; // 右侧面板：模板(定义) / 实例(画布上的节点)
+  markTarget: 'start' | 'end'; // 标记模式放起点还是终点
+  rightTab: 'template' | 'instance' | 'rules'; // 右侧面板：模板(定义) / 实例(画布上的节点) / 规则
+}
+
+interface HistorySnap {
+  library: Library;
+  project: Project;
 }
 
 export interface StoreState {
+  library: Library;
   project: Project;
   ui: UIState;
-  past: Project[]; // 撤销历史
-  future: Project[]; // 重做历史
+  past: HistorySnap[];
+  future: HistorySnap[];
 
+  ensureLibrary: () => void;
+  // 库操作（预设+自建同权）
+  addComponent: (kind: EntityKind) => string; // 返回新 id
+  updateComponent: (id: string, patch: Partial<AnyComponent>) => void;
+  removeComponent: (id: string) => void;
+  duplicateComponent: (id: string) => string | null;
+  resetComponent: (id: string) => void; // 仅预设：恢复默认
+  toggleEnabled: (id: string) => void;
+  usageCount: (id: string) => number; // 铺设 + 被引用计数
+
+  // 项目级
   setProjectName: (n: string) => void;
   setBackground: (t: string) => void;
+  setRules: (patch: Partial<Rules>) => void;
 
-  selectEntity: (id: string | null) => void; // 选中左侧套件条目（用于放置/编辑）
+  // UI
+  selectEntity: (id: string | null) => void;
   setTool: (t: Tool) => void;
+  setMarkTarget: (t: 'start' | 'end') => void;
   selectNode: (key: string | null) => void;
-  deselectAll: () => void; // 取消所有选中（Esc）
-  setRightTab: (t: 'template' | 'instance') => void;
+  deselectAll: () => void;
+  setRightTab: (t: 'template' | 'instance' | 'rules') => void;
 
+  // 地图 / 节点
   selectMap: (id: string) => void;
   addMap: () => void;
   removeMap: (id: string) => void;
   renameMap: (id: string, name: string) => void;
-
-  setStart: (x: number, y: number) => void;
-  setEnd: (x: number, y: number) => void;
   placeNode: (x: number, y: number) => void;
   eraseNode: (x: number, y: number) => void;
+  eraseNodes: (cells: [number, number][]) => void; // 框选批量删除（一步撤销）
   updateNode: (x: number, y: number, patch: Partial<MapNode>) => void;
-  moveNode: (from: [number, number], to: [number, number]) => [number, number]; // 返回实际落点（被挡则返回原位）
-  drawRoad: (cells: [number, number][]) => void; // 一次性铺一条路（铺路模式：点起点→点终点，整体算一步）
-  duplicateNode: (x: number, y: number) => void; // 复制节点到旁边空位
+  moveNode: (from: [number, number], to: [number, number]) => [number, number];
+  drawRoad: (cells: [number, number][]) => void;
+  duplicateNode: (x: number, y: number) => void;
 
-  addEntity: (e: Entity) => void;
-  updateEntity: (id: string, patch: any) => void;
-  removeEntity: (id: string) => void;
-  duplicateEntity: (id: string) => void; // 复制组件模板
-
+  // 导入 / 历史
   loadProject: (p: Project) => void;
+  loadLibrary: (lib: Library) => void;
   undo: () => void;
   redo: () => void;
 }
 
 const HISTORY_LIMIT = 100;
-function withHistory(s: StoreState, project: Project) {
+function withHistory(s: StoreState, library: Library, project: Project) {
   return {
-    past: [...s.past, s.project].slice(-HISTORY_LIMIT),
-    future: [] as Project[],
+    past: [...s.past, { library: s.library, project: s.project }].slice(-HISTORY_LIMIT),
+    future: [] as HistorySnap[],
+    library,
     project,
   };
 }
 
-// 当前活动地图：selectedMapId 失效（如刷新后为空）时回退到第一张
 function resolveMapId(s: StoreState): string {
   if (s.project.maps.some((m) => m.id === s.ui.selectedMapId)) return s.ui.selectedMapId;
   return s.project.maps[0]?.id ?? '';
 }
 
-export function findEntity(p: Project, id: string): Entity | undefined {
-  return (
-    p.monsters.find((e) => e.id === id) ||
-    p.items.find((e) => e.id === id) ||
-    p.buildings.find((e) => e.id === id) ||
-    p.roads.find((e) => e.id === id) ||
-    p.classes.find((e) => e.id === id)
-  );
+export function findComponent(lib: Library, id: string): AnyComponent | undefined {
+  return lib[id];
 }
 
-// 节点占用范围（建筑可占多格，w/h 默认 1）
+// 节点占用范围（建筑可占多格）
 function nodeRect(n: MapNode) {
   const w = n.w ?? 1;
   const h = n.h ?? 1;
@@ -104,41 +117,62 @@ function rectsOverlap(a: MapNode, b: MapNode): boolean {
   return A.x0 <= B.x1 && A.x1 >= B.x0 && A.y0 <= B.y1 && A.y1 >= B.y0;
 }
 
-function replaceEntity(p: Project, id: string, patch: any): Project {
-  const merge = <T extends Entity>(arr: T[], kind: Entity['kind']): T[] =>
-    arr.map((e) => (e.id === id ? ({ ...e, ...patch, kind } as T) : e));
-  return {
-    ...p,
-    monsters: merge<Monster>(p.monsters, 'monster'),
-    items: merge<Item>(p.items, 'item'),
-    buildings: merge<Building>(p.buildings, 'building'),
-    roads: merge<Road>(p.roads, 'road'),
-    classes: merge<ClassDef>(p.classes, 'class'),
-  };
+// 统计某组件被"铺设 + 被引用"的次数（删除确认用）
+function countUsage(lib: Library, project: Project, id: string): number {
+  let n = 0;
+  // 1) 地图节点引用（road/building 的 ref）
+  for (const m of project.maps) {
+    for (const node of m.nodes) {
+      if ((node.type === 'road' || node.type === 'building') && node.ref === id) n += 1;
+    }
+  }
+  // 2) 组件间引用
+  for (const c of Object.values(lib)) {
+    if (c.id === id) continue;
+    if (c.kind === 'monster') {
+      if (c.attack_weights && id in c.attack_weights) n += 1;
+      if (c.reward_pool && poolRefsId(c.reward_pool, id)) n += 1;
+    } else if (c.kind === 'building') {
+      if (c.reward_pool && poolRefsId(c.reward_pool, id)) n += 1;
+      if (c.monster_pool && poolRefsId(c.monster_pool, id)) n += 1;
+      if (c.stock && poolRefsId(c.stock, id)) n += 1;
+      if (c.mimic) {
+        if (c.mimic.monster === id) n += 1;
+        if (c.mimic.reward_pool && poolRefsId(c.mimic.reward_pool, id)) n += 1;
+      }
+      if (c.event) {
+        const o = [c.event.on_success, c.event.on_fail];
+        for (const out of o) {
+          if (out.grant && out.grant.some((g) => grantId(g) === id)) n += 1;
+        }
+      }
+    } else if (c.kind === 'item') {
+      if (c.effects?.some((e) => (e.op === 'learn_skill' || e.op === 'forget_skill') && e.skill === id)) n += 1;
+    } else if (c.kind === 'class') {
+      if (c.starting_items?.includes(id)) n += 1;
+    }
+  }
+  // 3) 规则 class_pool
+  if (project.rules.class_pool.includes(id)) n += 1;
+  return n;
 }
-
-function removeEntityFrom(p: Project, id: string): Project {
-  const np: Project = {
-    ...p,
-    monsters: p.monsters.filter((e) => e.id !== id),
-    items: p.items.filter((e) => e.id !== id),
-    buildings: p.buildings.filter((e) => e.id !== id),
-    roads: p.roads.filter((e) => e.id !== id),
-    classes: p.classes.filter((e) => e.id !== id),
-  };
-  // 清理引用了已删除建筑的地图节点
-  np.maps = np.maps.map((m) => ({
-    ...m,
-    nodes: m.nodes.filter((n) => !(n.type === 'building' && n.ref === id)),
-  }));
-  return np;
+function poolRefsId(
+  pool: { source: 'ids' | 'filter'; ids?: (string | { id: string; weight: number })[] },
+  id: string
+): boolean {
+  return !!pool.ids?.some((e) => (typeof e === 'string' ? e === id : e.id === id));
+}
+function grantId(g: string | { id: string; count?: number }): string {
+  return typeof g === 'string' ? g : g.id;
 }
 
 const DEFAULT_PROJECT = createDefaultProject();
+const DEFAULT_LIBRARY = createDefaultLibrary();
 
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
+      library: DEFAULT_LIBRARY,
       project: DEFAULT_PROJECT,
       past: [],
       future: [],
@@ -147,30 +181,95 @@ export const useStore = create<StoreState>()(
         selectedMapId: DEFAULT_PROJECT.maps[0]?.id ?? '',
         selectedNode: null,
         tool: 'select',
+        markTarget: 'start',
         rightTab: 'template',
       },
 
-      setProjectName: (n) =>
-        set((s) => ({ project: { ...s.project, name: n } })),
+      ensureLibrary: () =>
+        set((s) => {
+          const ids = Object.keys(s.library);
+          if (ids.length > 0) return s;
+          return { library: createDefaultLibrary() };
+        }),
 
-      setBackground: (t) =>
-        set((s) => ({ project: { ...s.project, background: t } })),
+      addComponent: (kind) => {
+        const id = genIdFor(kind);
+        const base: AnyComponent = makeBlank(kind, id);
+        set((s) => withHistory(s, { ...s.library, [id]: base }, s.project));
+        return id;
+      },
 
-      selectEntity: (id) =>
-        set((s) => ({ ui: { ...s.ui, selectedEntityId: id } })),
+      updateComponent: (id, patch) =>
+        set((s) => {
+          const cur = s.library[id];
+          if (!cur) return s;
+          const next = { ...cur, ...patch, id, kind: cur.kind } as AnyComponent;
+          return withHistory(s, { ...s.library, [id]: next }, s.project);
+        }),
 
+      removeComponent: (id) =>
+        set((s) => {
+          const lib = { ...s.library };
+          delete lib[id];
+          // 同步：项目启用集合移除；地图节点引用该组件的去除
+          const enabledIds = s.project.enabledIds.filter((e) => e !== id);
+          const maps = s.project.maps.map((m) => ({
+            ...m,
+            nodes: m.nodes.filter(
+              (n) => !((n.type === 'road' || n.type === 'building') && n.ref === id)
+            ),
+          }));
+          const project = { ...s.project, enabledIds, maps };
+          return {
+            ...withHistory(s, lib, project),
+            ui: {
+              ...s.ui,
+              selectedEntityId: s.ui.selectedEntityId === id ? null : s.ui.selectedEntityId,
+            },
+          };
+        }),
+
+      duplicateComponent: (id) => {
+        const src = get().library[id];
+        if (!src) return null;
+        const copy = deepClone(src);
+        const newId = genIdFor(src.kind);
+        copy.id = newId;
+        copy.name = `${src.name} 副本`;
+        set((s) => withHistory(s, { ...s.library, [newId]: copy }, s.project));
+        return newId;
+      },
+
+      resetComponent: (id) => {
+        const def = resetToPreset(id);
+        if (!def) return;
+        set((s) => withHistory(s, { ...s.library, [id]: def }, s.project));
+      },
+
+      toggleEnabled: (id) =>
+        set((s) => {
+          const has = s.project.enabledIds.includes(id);
+          const enabledIds = has
+            ? s.project.enabledIds.filter((e) => e !== id)
+            : [...s.project.enabledIds, id];
+          return withHistory(s, s.library, { ...s.project, enabledIds });
+        }),
+
+      usageCount: (id) => countUsage(get().library, get().project, id),
+
+      setProjectName: (n) => set((s) => ({ project: { ...s.project, name: n } })),
+      setBackground: (t) => set((s) => ({ project: { ...s.project, background: t } })),
+      setRules: (patch) =>
+        set((s) => withHistory(s, s.library, { ...s.project, rules: { ...s.project.rules, ...patch } })),
+
+      selectEntity: (id) => set((s) => ({ ui: { ...s.ui, selectedEntityId: id } })),
       setTool: (t) => set((s) => ({ ui: { ...s.ui, tool: t } })),
-
+      setMarkTarget: (t) => set((s) => ({ ui: { ...s.ui, markTarget: t } })),
       selectNode: (key) => set((s) => ({ ui: { ...s.ui, selectedNode: key } })),
 
       deselectAll: () =>
         set((s) => ({
-          ui: {
-            ...s.ui,
-            selectedEntityId: null,
-            selectedNode: null,
-            tool: 'select', // 退出擦除/标记等所有放置模式
-          },
+          ui: { ...s.ui, selectedEntityId: null, selectedNode: null, tool: 'select' },
         })),
 
       setRightTab: (t) => set((s) => ({ ui: { ...s.ui, rightTab: t } })),
@@ -181,12 +280,12 @@ export const useStore = create<StoreState>()(
       addMap: () =>
         set((s) => {
           const m: GameMap = {
-            id: genId('map'),
+            id: genIdFor('road').replace('r_', 'map_'),
             name: `地图 ${s.project.maps.length + 1}`,
             nodes: [],
           };
           return {
-            ...withHistory(s, { ...s.project, maps: [...s.project.maps, m] }),
+            ...withHistory(s, s.library, { ...s.project, maps: [...s.project.maps, m] }),
             ui: { ...s.ui, selectedMapId: m.id, selectedNode: null },
           };
         }),
@@ -195,49 +294,24 @@ export const useStore = create<StoreState>()(
         set((s) => {
           if (s.project.maps.length <= 1) return s;
           const maps = s.project.maps.filter((m) => m.id !== id);
-          const selectedMapId =
-            s.ui.selectedMapId === id ? maps[0].id : s.ui.selectedMapId;
+          const selectedMapId = s.ui.selectedMapId === id ? maps[0].id : s.ui.selectedMapId;
           return {
-            ...withHistory(s, { ...s.project, maps }),
+            ...withHistory(s, s.library, { ...s.project, maps }),
             ui: { ...s.ui, selectedMapId, selectedNode: null },
           };
         }),
 
       renameMap: (id, name) =>
         set((s) =>
-          withHistory(s, {
-            ...s.project,
-            maps: s.project.maps.map((m) => (m.id === id ? { ...m, name } : m)),
-          })
+          withHistory(
+            s,
+            s.library,
+            {
+              ...s.project,
+              maps: s.project.maps.map((m) => (m.id === id ? { ...m, name } : m)),
+            }
+          )
         ),
-
-      setStart: (x, y) =>
-        set((s) => {
-          const maps = s.project.maps.map((m) => {
-            if (m.id !== resolveMapId(s)) return m;
-            const nodes = m.nodes.filter((n) => n.type !== 'start');
-            return {
-              ...m,
-              start: [x, y] as [number, number],
-              nodes: [...nodes, { x, y, type: 'start' } as MapNode],
-            };
-          });
-          return withHistory(s, { ...s.project, maps });
-        }),
-
-      setEnd: (x, y) =>
-        set((s) => {
-          const maps = s.project.maps.map((m) => {
-            if (m.id !== resolveMapId(s)) return m;
-            const nodes = m.nodes.filter((n) => n.type !== 'end');
-            return {
-              ...m,
-              end: [x, y] as [number, number],
-              nodes: [...nodes, { x, y, type: 'end' } as MapNode],
-            };
-          });
-          return withHistory(s, { ...s.project, maps });
-        }),
 
       placeNode: (x, y) =>
         set((s) => {
@@ -245,46 +319,38 @@ export const useStore = create<StoreState>()(
           const mid = resolveMapId(s);
           const maps = project.maps.map((m) => {
             if (m.id !== mid) return m;
-            if (ui.tool === 'start') {
-              const nodes = m.nodes.filter((n) => n.type !== 'start');
-              return {
-                ...m,
-                start: [x, y] as [number, number],
-                nodes: [...nodes, { x, y, type: 'start' } as MapNode],
-              };
+            if (ui.tool === 'mark') {
+              const type = ui.markTarget;
+              const nodes = m.nodes.filter((n) => n.type !== type);
+              const node: MapNode = { x, y, type } as MapNode;
+              const patch: Partial<GameMap> = { nodes: [...nodes, node] };
+              if (type === 'start') patch.start = [x, y];
+              if (type === 'end') patch.end = [x, y];
+              return { ...m, ...patch };
             }
-            if (ui.tool === 'end') {
-              const nodes = m.nodes.filter((n) => n.type !== 'end');
-              return {
-                ...m,
-                end: [x, y] as [number, number],
-                nodes: [...nodes, { x, y, type: 'end' } as MapNode],
-              };
-            }
+            if (ui.tool !== 'place') return m;
             const sel = ui.selectedEntityId;
             if (!sel) return m;
-            const ent = findEntity(project, sel);
+            const ent = s.library[sel];
             if (!ent) return m;
             let node: MapNode | null = null;
-            if (ent.kind === 'road') node = { x, y, type: 'road' };
+            if (ent.kind === 'road') node = { x, y, type: 'road', ref: ent.id };
             else if (ent.kind === 'building')
               node = { x, y, type: 'building', ref: ent.id };
             if (!node) return m;
-            // 移除与新建节点（含多格建筑）重叠的旧节点
             const nodes = m.nodes.filter((n) => !rectsOverlap(n, node!));
             return { ...m, nodes: [...nodes, node] };
           });
-          return withHistory(s, { ...s.project, maps });
+          return withHistory(s, s.library, { ...s.project, maps });
         }),
 
       eraseNode: (x, y) =>
         set((s) => {
           const mid = resolveMapId(s);
           const target = s.project.maps.find((m) => m.id === mid);
-          if (!target || !target.nodes.some((n) => covers(n, x, y))) return s; // 空格无节点 → 不动
+          if (!target || !target.nodes.some((n) => covers(n, x, y))) return s;
           const maps = s.project.maps.map((m) => {
             if (m.id !== mid) return m;
-            // 清掉该格覆盖到的所有节点（含历史遗留的重叠节点，一次点干净）
             const removed = new Set(m.nodes.filter((n) => covers(n, x, y)));
             if (!removed.size) return m;
             const nodes = m.nodes.filter((n) => !removed.has(n));
@@ -294,23 +360,49 @@ export const useStore = create<StoreState>()(
             if (end && !nodes.some((n) => n.type === 'end')) end = undefined;
             return { ...m, nodes, start, end };
           });
-          return withHistory(s, { ...s.project, maps });
+          return withHistory(s, s.library, { ...s.project, maps });
+        }),
+
+      eraseNodes: (cells) =>
+        set((s) => {
+          const mid = resolveMapId(s);
+          const set = new Set(cells.map(([x, y]) => `${x},${y}`));
+          const maps = s.project.maps.map((m) => {
+            if (m.id !== mid) return m;
+            const removed = m.nodes.filter((n) => {
+              // 覆盖该节点占地任一格即删除
+              for (let dx = 0; dx < (n.w ?? 1); dx++)
+                for (let dy = 0; dy < (n.h ?? 1); dy++)
+                  if (set.has(`${n.x + dx},${n.y + dy}`)) return true;
+              return false;
+            });
+            if (!removed.length) return m;
+            const kept = m.nodes.filter((n) => !removed.includes(n));
+            let start = m.start;
+            let end = m.end;
+            if (start && !kept.some((n) => n.type === 'start')) start = undefined;
+            if (end && !kept.some((n) => n.type === 'end')) end = undefined;
+            return { ...m, nodes: kept, start, end };
+          });
+          return withHistory(s, s.library, { ...s.project, maps });
         }),
 
       updateNode: (x, y, patch) =>
         set((s) =>
-          withHistory(s, {
-            ...s.project,
-            maps: s.project.maps.map((m) => {
-              if (m.id !== resolveMapId(s)) return m;
-              return {
-                ...m,
-                nodes: m.nodes.map((n) =>
-                  n.x === x && n.y === y ? { ...n, ...patch } : n
-                ),
-              };
-            }),
-          })
+          withHistory(
+            s,
+            s.library,
+            {
+              ...s.project,
+              maps: s.project.maps.map((m) => {
+                if (m.id !== resolveMapId(s)) return m;
+                return {
+                  ...m,
+                  nodes: m.nodes.map((n) => (n.x === x && n.y === y ? { ...n, ...patch } : n)),
+                };
+              }),
+            }
+          )
         ),
 
       moveNode: (from, to) => {
@@ -323,47 +415,36 @@ export const useStore = create<StoreState>()(
         if (!node) return from;
         const w = node.w ?? 1;
         const h = node.h ?? 1;
-        // 目标若与其它节点重叠（且非自身）→ 不移动，保持"一格一节点"，避免叠成深色/相互覆盖
         const blocked = m.nodes.some((n) => {
           if (n === node) return false;
           const nx1 = n.x + (n.w ?? 1) - 1;
           const ny1 = n.y + (n.h ?? 1) - 1;
-          return (
-            to[0] <= nx1 &&
-            to[0] + w - 1 >= n.x &&
-            to[1] <= ny1 &&
-            to[1] + h - 1 >= n.y
-          );
+          return to[0] <= nx1 && to[0] + w - 1 >= n.x && to[1] <= ny1 && to[1] + h - 1 >= n.y;
         });
         if (blocked) return from;
-        const nodes = m.nodes.map((n) =>
-          n === node ? { ...n, x: to[0], y: to[1] } : n
-        );
+        const nodes = m.nodes.map((n) => (n === node ? { ...n, x: to[0], y: to[1] } : n));
         const patch: Partial<GameMap> = { nodes };
         if (m.start && m.start[0] === from[0] && m.start[1] === from[1])
-          patch.start = [to[0], to[1]] as [number, number];
-        if (m.end && m.end[0] === from[0] && m.end[1] === from[1])
-          patch.end = [to[0], to[1]] as [number, number];
-        const maps = s.project.maps.map((mm) =>
-          mm.id === mid ? { ...mm, ...patch } : mm
-        );
-        set(withHistory(s, { ...s.project, maps }));
+          patch.start = [to[0], to[1]];
+        if (m.end && m.end[0] === from[0] && m.end[1] === from[1]) patch.end = [to[0], to[1]];
+        const maps = s.project.maps.map((mm) => (mm.id === mid ? { ...mm, ...patch } : mm));
+        set(withHistory(s, s.library, { ...s.project, maps }));
         return to;
       },
 
       drawRoad: (cells) =>
         set((s) => {
+          const sel = s.ui.selectedEntityId;
+          const roadRef = sel && s.library[sel]?.kind === 'road' ? sel : undefined;
           const maps = s.project.maps.map((m) => {
             if (m.id !== resolveMapId(s)) return m;
             const want = new Set(cells.map(([cx, cy]) => `${cx},${cy}`));
-            // 清掉这些格子上原有的道路（避免重叠冗余），再补上新道路
             const kept = m.nodes.filter(
               (n) => !(n.type === 'road' && want.has(`${n.x},${n.y}`))
             );
             const existing = new Set(
               kept.filter((n) => n.type === 'road').map((n) => `${n.x},${n.y}`)
             );
-            // 已存在道路或已被建筑/标记占用的格子，跳过（不覆盖、不删除它们）
             const blockers = kept.filter((n) => n.type !== 'road');
             const added: MapNode[] = cells
               .filter(
@@ -371,10 +452,13 @@ export const useStore = create<StoreState>()(
                   !existing.has(`${cx},${cy}`) &&
                   !blockers.some((n) => covers(n, cx, cy))
               )
-              .map(([cx, cy]) => ({ x: cx, y: cy, type: 'road' } as MapNode));
+              .map(
+                ([cx, cy]) =>
+                  ({ x: cx, y: cy, type: 'road', ref: roadRef } as MapNode)
+              );
             return { ...m, nodes: [...kept, ...added] };
           });
-          return withHistory(s, { ...s.project, maps });
+          return withHistory(s, s.library, { ...s.project, maps });
         }),
 
       duplicateNode: (x, y) =>
@@ -383,7 +467,7 @@ export const useStore = create<StoreState>()(
           const m = s.project.maps.find((mm) => mm.id === mid);
           if (!m) return s;
           const node = m.nodes.find((n) => n.x === x && n.y === y);
-          if (!node || node.type === 'start' || node.type === 'end') return s; // 起终点唯一，不复制
+          if (!node || node.type === 'start' || node.type === 'end') return s;
           const w = node.w ?? 1;
           const h = node.h ?? 1;
           const overlaps = (cx: number, cy: number) =>
@@ -402,60 +486,8 @@ export const useStore = create<StoreState>()(
             mm.id === mid ? { ...mm, nodes: [...mm.nodes, copy] } : mm
           );
           return {
-            ...withHistory(s, { ...s.project, maps }),
+            ...withHistory(s, s.library, { ...s.project, maps }),
             ui: { ...s.ui, selectedNode: `${nx},${ny}` },
-          };
-        }),
-
-      addEntity: (e) =>
-        set((s) => {
-          const p = s.project;
-          const np: Project = { ...p };
-          if (e.kind === 'monster') np.monsters = [...p.monsters, e];
-          else if (e.kind === 'item') np.items = [...p.items, e];
-          else if (e.kind === 'building') np.buildings = [...p.buildings, e];
-          else if (e.kind === 'road') np.roads = [...p.roads, e];
-          else if (e.kind === 'class') np.classes = [...p.classes, e];
-          return {
-            ...withHistory(s, np),
-            ui: { ...s.ui, selectedEntityId: e.id },
-          };
-        }),
-
-      updateEntity: (id, patch) =>
-        set((s) => ({
-          project: replaceEntity(s.project, id, patch),
-        })),
-
-      removeEntity: (id) =>
-        set((s) => ({
-          ...withHistory(s, removeEntityFrom(s.project, id)),
-          ui: {
-            ...s.ui,
-            selectedEntityId:
-              s.ui.selectedEntityId === id ? null : s.ui.selectedEntityId,
-          },
-        })),
-
-      duplicateEntity: (id) =>
-        set((s) => {
-          const src = findEntity(s.project, id);
-          if (!src) return s;
-          const copy = {
-            ...(JSON.parse(JSON.stringify(src)) as Entity),
-            id: genId(src.kind[0]),
-            name: `${src.name} 副本`,
-          };
-          const p = s.project;
-          const np: Project = { ...p };
-          if (copy.kind === 'monster') np.monsters = [...p.monsters, copy];
-          else if (copy.kind === 'item') np.items = [...p.items, copy];
-          else if (copy.kind === 'building') np.buildings = [...p.buildings, copy];
-          else if (copy.kind === 'road') np.roads = [...p.roads, copy];
-          else if (copy.kind === 'class') np.classes = [...p.classes, copy];
-          return {
-            ...withHistory(s, np),
-            ui: { ...s.ui, selectedEntityId: copy.id },
           };
         }),
 
@@ -469,18 +501,23 @@ export const useStore = create<StoreState>()(
             selectedMapId: p.maps[0]?.id ?? '',
             selectedNode: null,
             tool: 'select',
+            markTarget: 'start',
             rightTab: 'template',
           },
         })),
+
+      loadLibrary: (lib) =>
+        set((s) => ({ library: lib, past: [], future: [] })),
 
       undo: () =>
         set((s) => {
           if (!s.past.length) return s;
           const prev = s.past[s.past.length - 1];
           return {
-            project: prev,
+            library: prev.library,
+            project: prev.project,
             past: s.past.slice(0, -1),
-            future: [s.project, ...s.future].slice(0, HISTORY_LIMIT),
+            future: [{ library: s.library, project: s.project }, ...s.future].slice(0, HISTORY_LIMIT),
             ui: { ...s.ui, selectedNode: null },
           };
         }),
@@ -490,26 +527,30 @@ export const useStore = create<StoreState>()(
           if (!s.future.length) return s;
           const next = s.future[0];
           return {
-            project: next,
-            past: [...s.past, s.project].slice(-HISTORY_LIMIT),
+            library: next.library,
+            project: next.project,
+            past: [...s.past, { library: s.library, project: s.project }].slice(-HISTORY_LIMIT),
             future: s.future.slice(1),
             ui: { ...s.ui, selectedNode: null },
           };
         }),
     }),
     {
-      name: 'poprpg_project',
+      name: 'poprpg',
       partialize: (s) => ({
+        library: s.library,
         project: s.project,
         selectedMapId: s.ui.selectedMapId,
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<{
+          library: Library;
           project: Project;
           selectedMapId: string;
         }>;
         return {
           ...current,
+          library: p.library ?? current.library,
           project: p.project ?? current.project,
           ui: {
             ...current.ui,
@@ -520,3 +561,41 @@ export const useStore = create<StoreState>()(
     }
   )
 );
+
+// 新建空白组件（按类别给最小可用默认）
+function makeBlank(kind: EntityKind, id: string): AnyComponent {
+  const base = { id, name: '新组件', icon: '❓' };
+  switch (kind) {
+    case 'road':
+      return { ...base, kind: 'road' };
+    case 'building':
+      return { ...base, kind: 'building', encounter: 'empty' };
+    case 'item':
+      return { ...base, kind: 'item', itemKind: 'equipment', slots: ['weapon'], modifiers: {} };
+    case 'monster':
+      return {
+        ...base,
+        kind: 'monster',
+        stats: { hp: [1, 1], mp: [0, 0], patk: [1, 1], matk: [0, 0], pdef: [0, 0], mdef: [0, 0] },
+      };
+    case 'class':
+      return {
+        ...base,
+        kind: 'class',
+        base_stats: { hp: 1, mp: 0, patk: 1, matk: 0, pdef: 0, mdef: 0 },
+        free_points: 0,
+        buffs: {},
+      };
+    case 'skill':
+      return {
+        ...base,
+        kind: 'skill',
+        dim: 'patk',
+        target: 'opponent',
+        vs: 'auto',
+        bonus: 0,
+        apply: 'hp',
+        cost: {},
+      };
+  }
+}
