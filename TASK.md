@@ -288,13 +288,13 @@
       ② 有 `check` 就 `resolveCheck`；**没写 `check` → 直接成功**
       ③ 按结果执行后果块（`text` / `cost` / `point_reward` / `grant` / `effects`）
       ④ `once: true` 且成功 → 把该节点降级为 `empty`
-- [ ] **纯函数 `tickStates(player)`**（§4.8.10）：**每回合结束**结算——
+- [ ] **纯函数 `tickStates(player)`**（§4.8.10）：**每回合【开始】先判存活、再结算**——
       每个状态先按 `per_turn` 增减 `hp` / `mp`，再 `duration − 1`，归零移除；返回本回合结算明细
 - [ ] **纯函数 `applyEffects(target, effects)`**（§4.8.10，**五个 `op`**）：
       `add_stat` 改数值 / `add_tag` 挂状态（**`duration` 夹到 `state.max_duration`**）/ `remove_tag` 解状态
       / **`learn_skill` 把技能加进玩家技能栏**（已在栏内 → 返回 `alreadyLearned`，**不消耗道具**）
       / **`forget_skill` 从技能栏移除**（不在栏内 → 静默跳过，不报错）
-- [ ] **玩家技能栏**（`learnedSkills: string[]`）：**开局 = `['basic_attack', 'basic_magic']`（保底对）**，**不在 `project` 里**——
+- [ ] **玩家技能栏**（`learnedSkills: string[]`）：**默认模板开局 = `['basic_attack', 'basic_magic']`（保底对；作者可在设计中移除 / 改 `cost`）**，**不在 `project` 里**——
       它是**游玩态数据**，进 `.psave` 不进 `.pmod`（§4.8.3）；`resolveSkill` 的候选就是这个栏
 - [ ] **怪物命中施状态**（§4.1）：技能命中后调 `applyEffects(player, monster.effects)`（**与技能 `effects` 是两条独立来源**，都执行）
 - [ ] **纯函数 `resolveShop(project, library, building, rules)`**（§4.8.11）：
@@ -375,7 +375,7 @@
 - **游玩态**：去网格线留坐标参照；正交移动（对角线不可走，每步 1 格，可原路返回，**走完 N 步算一个回合**）；
   踩节点触发 treasure / monster / **event** / **shop** / mimic 结算；
   **技能施放（含 `target: self` 的治疗 / 增益）+ 对手反击 + 怪物按权重挑技能**；**读技能书学技能 / `forget_skill` 被夺走**；加点到 6 属性；
-  装备穿戴（多槽 / 挤占规则）；**消耗品随时用、不占回合**；**状态每回合 tick（`duration` / `per_turn` / `modifiers`）**；
+  装备穿戴（多槽 / 挤占规则）；**消耗品随时用、不占回合**；**状态每回合【开始】tick（`duration` / `per_turn` / `modifiers`）**；
   **背包上限检查**；开局按 `class_pool` 随机 / 固定职业、技能栏为保底对 `basic_attack` ＋ `basic_magic`、`starting_items` 塞进背包
 - **骰子系统**：预设全类型（d4/d6/d8/d10/d12/d20/d100）；组件自带合适骰子；转盘 / 幸运转盘 UI；点击投掷
 - **`.psave` 进度存档**：与 `.pmod` 分离，存已揭晓奖励 / 骰子结果 / 位置，支持多周目
@@ -474,7 +474,7 @@
   判定**复用力值链**，所以提升属性 / 换装备能提高成功率
 - **骰子是核心不是运气**：编辑器必须把**必成 / 必败**摆在眼前；必败提示"现在做这个纯属浪费时间，先提升属性"。
   **不做"必须掷出 6"这种纯概率门**（§1.1 / §4.8.9）
-- **状态 = 标签 + 回合数**（§4.8.10）：`{ tag, duration, per_turn?, modifiers? }`；**每回合结束 tick 一次**；
+- **状态 = 标签 + 回合数**（§4.8.10）：`{ tag, duration, per_turn?, modifiers? }`；**每回合【开始】先判存活再 tick 一次**；
   `duration` 必填且不超 `state.max_duration`。**状态 `tag` 进能力集合**——所以"御火符给 `火抗` 3 回合"能临时过火焰山；
   **`modifiers` 进力值链 ② 加法环**——所以"力量祝福 3 回合物攻 +2"能生效
 - **`effects` 五种 `op`**（§4.8.10）：`add_stat` 改数值 / `add_tag` 挂状态 / `remove_tag` 解状态 /
