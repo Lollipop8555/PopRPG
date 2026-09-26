@@ -1,1 +1,0 @@
-{"root":["./src/app.tsx","./src/engine.test.ts","./src/engine.ts","./src/main.tsx","./src/pmod.ts","./src/presets.ts","./src/store.ts","./src/types.ts","./src/utils.ts","./src/validate.ts","./src/components/inspector.tsx","./src/components/kitpanel.tsx","./src/components/mapcanvas.tsx","./src/components/tagbackref.tsx","./src/components/toolbar.tsx"],"version":"5.9.3"}
