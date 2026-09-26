@@ -208,7 +208,7 @@ nodes:
 ### 4.6 地图 `map`
 - `name`
 - `start: [x, y]`、`end: [x, y]`（每张图强制恰好一个）
-- `nodes`: 每格一个映射 `{ x, y, type, ref? }`；`type ∈ start | end | road | building`，`building` 需带 `ref` 指向建筑段里的 `id`
+- `nodes`: 每格一个映射 `{ x, y, type, ref?, w?, h? }`；`type ∈ start | end | road | building`，`building` 需带 `ref` 指向建筑段里的 `id`。**建筑大小 `w`/`h`（单位：格，默认 1）放在地图节点上**，因此同一类型建筑可自由设定不同尺寸（如 2×2 仪式感宝箱屋、巨大的 Boss 宫殿）。**建筑与道路一样作为整块判定**，不再区分入口/出口方位。
 - **可走图 = 已放置节点集合**（road + building + start + end），未放置格视为不可通行
 - 多图有序；导出/游玩时上一张 `end` 自动成为下一张 `start`
 
