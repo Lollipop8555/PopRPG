@@ -1,7 +1,7 @@
 # Phase B — PLAY（游玩页，引擎 + UI，build 完成后做）
 
 > **里程碑范围**：游玩页框架/路由加载 / 开局 / 网格移动与回合循环 / 战斗引擎与 UI / 骰子公示 / 技能施放交互 / 状态结算 / 建筑遭遇 / 商店事件战利品 / 装备消耗品背包 / 存档。
-> **上层索引**：[`../task.md`](../task.md)　**设计依据**：[`../docs/DESIGN.md`](../docs/DESIGN.md) §7.1（游玩态）/ §7.2（骰子）/ §7.3（存档）/ §4.8（引擎，纯函数已在 A8 实现）
+> **上层索引**：[`../task.md`](../task.md)　**设计依据**：[`../docs/design/06-future.md`](../docs/design/06-future.md)(§7.1 游玩态/§7.2 骰子/§7.3 存档) · [`../docs/design/03-engine.md`](../docs/design/03-engine.md)(§4.8 引擎，纯函数已在 A8 实现)（索引见 [`../docs/DESIGN.md`](../docs/DESIGN.md)）
 > **前置**：[`task/01-build.md`](./01-build.md)（A 验收通过后才进 B）　**顺序约束**：先完整 build，再 play。
 > **加载 `.pmod` → 开局 → 移动/战斗/状态/遭遇/商店 → 存档**。
 

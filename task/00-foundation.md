@@ -1,7 +1,7 @@
 # Phase 0 — 基座 (Foundation)
 
 > **里程碑范围**：脚手架 / 路由 / 组件库 store / 项目瘦身 / 6 属性骨架 / 类型框架 / `.pmod` 解析 / 来源派生 / 标签反查。
-> **上层索引**：[`../task.md`](../task.md)（总体路线与里程碑索引）　**设计依据**：[`../docs/DESIGN.md`](../docs/DESIGN.md) §3.3 / §4.0 / §4.7 / §7.0
+> **上层索引**：[`../task.md`](../task.md)（总体路线与里程碑索引）　**设计依据**：[`../docs/design/01-pmod.md`](../docs/design/01-pmod.md)(§3) · [`../docs/design/02-data-model.md`](../docs/design/02-data-model.md)(§4.0/§4.7) · [`../docs/design/06-future.md`](../docs/design/06-future.md)(§7.0)（索引见 [`../docs/DESIGN.md`](../docs/DESIGN.md)）
 > **前置**：无　**顺序**：本阶段是后续 BUILD/PLAY 的地基，M0 项已基本完成，剩路由与类型框架待收尾。
 
 ---
