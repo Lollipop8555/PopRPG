@@ -1,7 +1,7 @@
 /**
  * 事件判定（§4.8.9）：**门槛 + 手艺**两层各自独立。
  *
- * ① 门槛 `gate` —— 能不能碰（标签）
+ * ① 门槛 `gate` —— 能否参与（标签）
  * ② 判定 `check` —— 做不做得成（复用力值链：属性 + 装备 + 职业% + 掷骰 vs 固定难度）
  *
  * 编辑器要能实时算出「必成 / 必败」，这里提供 `checkAnalysis`（命中率 + verdict）。
@@ -134,7 +134,7 @@ function applyOutcome(
 /**
  * 走一遍事件（§4.8.9）：
  * - 门槛不满足且 missing = block → `blocked`（连尝试的选项都不给）
- * - 门槛不满足且 missing = penalty → 允许强闯：先承受额外代价，再按失败分支结算
+ * - 门槛不满足且 missing = penalty → 允许强行尝试：先承受额外代价，再按失败分支结算
  * - 过了门槛后没有 check → 必成；有 check → 掷骰比手艺
  */
 export function resolveEvent(unit: Unit, event: EventBlock, opts: EventOptions): EventResult {
@@ -150,7 +150,7 @@ export function resolveEvent(unit: Unit, event: EventBlock, opts: EventOptions):
     }
     if (pass.penalty) {
       current = payMapCost(current, pass.penalty)
-      logs.push('未满足门槛且允许强闯：先承受额外代价，再按失败分支结算')
+      logs.push('未满足门槛且允许强行尝试：先承受额外代价，再按失败分支结算')
       return { verdict: 'fail', ...applyOutcome(current, event.on_fail, opts), logs }
     }
     logs.push(`门槛条件满足（${gate.tags.join(' / ')}）`)

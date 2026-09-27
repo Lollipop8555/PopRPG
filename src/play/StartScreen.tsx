@@ -2,8 +2,11 @@
  * 开局（B1 / §7.1）：选出身 → 出发。
  * 职业只提供**先天的属性配置**（属性起点 + 自由点 + 优劣百分比 + 背包 + 家当），**不提供技能**（§4.2.3）。
  *
- * 出身由 `rules.class_pool` 决定（§7.1）：池长度 1 = 固定，>1 = 随机。
- * 作者**没配置**职业池时才回退到「玩家手选任意启用职业」。
+ * 出身怎么定：
+ * - `rules.class_pool` 配了职业 → 这些是**给玩家挑的卡片**（多职业=让玩家选，不是系统替你指定）。
+ * - 池里只有 1 个 → 那张卡直接选中即可。
+ * - 想交给运气 → 玩家**自己点「掷骰决定出身」**摇一个（不是加载时静默随机）。
+ * - 作者没配职业池 → 回退到「玩家手选任意启用职业」。
  */
 
 import { useState } from 'react'
@@ -19,24 +22,30 @@ export default function StartScreen({
   onStart: (classId: string) => void
   onCancel: () => void
 }) {
-  const [rolledId] = useState(() => rollClass(scenario) ?? scenario.library.classes[0]?.id)
-  const poolConfigured =
-    scenario.rules.class_pool.length > 0 &&
-    scenario.rules.class_pool.some(
-      (id) => scenario.enabledIds.includes(id) && scenario.library.classes.some((c) => c.id === id),
-    )
-  const autoClass = poolConfigured ? scenario.library.classes.find((c) => c.id === rolledId) : undefined
+  // 作者配的职业池（过滤掉未启用 / 不存在的）；没配则退回全部启用职业
+  const pool = scenario.rules.class_pool
+    .filter((id) => scenario.enabledIds.includes(id) && scenario.library.classes.some((c) => c.id === id))
+    .map((id) => scenario.library.classes.find((c) => c.id === id)!)
+  const list = pool.length > 0 ? pool : scenario.library.classes
 
-  const handPick = scenario.rules.class_pool.filter(
-    (id) => scenario.enabledIds.includes(id) && scenario.library.classes.some((c) => c.id === id),
-  )
-  const classes = handPick.length > 0 ? handPick.map((id) => scenario.library.classes.find((c) => c.id === id)!) : scenario.library.classes
+  const [selectedId, setSelectedId] = useState<string | undefined>(list.length === 1 ? list[0]?.id : undefined)
+  const [rolling, setRolling] = useState(false)
+  const selected = list.find((c) => c.id === selectedId)
+
+  // 玩家自己掷骰决定出身（带一个短暂的摇骰过程）
+  const roll = () => {
+    setRolling(true)
+    setTimeout(() => {
+      setSelectedId(rollClass(scenario) ?? list[0]?.id)
+      setRolling(false)
+    }, 650)
+  }
 
   return (
-    <div className="play-shell">
+    <div className="play-shell start-screen">
       <div className="panel topbar">
         <span className="title hand">{scenario.name}</span>
-        <button className="btn small" onClick={onCancel}>
+        <button className="btn" onClick={onCancel}>
           换一局
         </button>
       </div>
@@ -62,75 +71,59 @@ export default function StartScreen({
 
           <div className="sketch-line" style={{ margin: '10px 0' }} />
 
-          {autoClass ? (
-            <>
-              <div className="panel-title hand" style={{ fontSize: 14, marginBottom: 6 }}>
-                这一局的出身由命运决定
-              </div>
-              <div className="panel" style={{ marginBottom: 8, padding: 10, background: '#fffdf5' }}>
-                <div className="panel-head" style={{ justifyContent: 'space-between' }}>
-                  <span>
-                    {autoClass.icon} {autoClass.name}
-                  </span>
-                  <button className="btn small primary" onClick={() => onStart(autoClass.id)}>
-                    出发
-                  </button>
+          <div className="panel-title hand" style={{ fontSize: 14, marginBottom: 2 }}>
+            选择出身
+          </div>
+          <p className="faint" style={{ marginTop: 0, marginBottom: 8 }}>
+            {list.length <= 1
+              ? '本局只有这一种出身。'
+              : '挑一张卡片决定你的出身；想交给运气就掷骰。'}
+          </p>
+
+          {list.length === 0 && <div className="hintbox warn">这一局还没有可选职业。</div>}
+
+          <div className="class-cards">
+            {list.map((cls) => (
+              <button
+                key={cls.id}
+                type="button"
+                className={`class-card${selectedId === cls.id ? ' selected' : ''}`}
+                onClick={() => setSelectedId(cls.id)}
+              >
+                <div className="class-card-head">
+                  <span className="class-icon">{cls.icon}</span>
+                  <span className="class-name">{cls.name}</span>
                 </div>
-                {autoClass.desc && <div className="muted">{autoClass.desc}</div>}
-                <div className="row" style={{ gap: 4, marginTop: 4 }}>
-                  <span className="badge">开局 {autoClass.free_points} 点</span>
-                  <span className="badge">背包 {autoClass.inventory_size === 0 ? '∞' : (autoClass.inventory_size ?? 50)}</span>
-                  {Object.entries(autoClass.buffs ?? {}).map(([key, value]) => (
+                {cls.desc && <div className="muted">{cls.desc}</div>}
+                <div className="row" style={{ gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
+                  <span className="badge">开局 {cls.free_points} 点</span>
+                  <span className="badge">背包 {cls.inventory_size === 0 ? '∞' : (cls.inventory_size ?? 50)}</span>
+                  {Object.entries(cls.buffs ?? {}).map(([key, value]) => (
                     <span key={key} className={`badge ${(value ?? 100) >= 100 ? 'on' : 'warn'}`}>
                       {key} ×{Math.round((value ?? 100))}%
                     </span>
                   ))}
                 </div>
-                {!!autoClass.starting_items?.length && (
+                {!!cls.starting_items?.length && (
                   <div className="faint" style={{ marginTop: 4 }}>
                     家当：
-                    {autoClass.starting_items.map((id) => scenario.library.items.find((i) => i.id === id)?.name ?? id).join('、')}
+                    {cls.starting_items.map((id) => scenario.library.items.find((i) => i.id === id)?.name ?? id).join('、')}
                   </div>
                 )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="panel-title hand" style={{ fontSize: 14, marginBottom: 6 }}>
-                选择职业
-              </div>
-              {classes.length === 0 && <div className="hintbox warn">这一局还没有可选职业。</div>}
-              {classes.map((cls) => (
-                <div key={cls.id} className="panel" style={{ marginBottom: 8, padding: 10, background: '#fffdf5' }}>
-                  <div className="panel-head" style={{ justifyContent: 'space-between' }}>
-                    <span>
-                      {cls.icon} {cls.name}
-                    </span>
-                    <button className="btn small primary" onClick={() => onStart(cls.id)}>
-                      就这个出发
-                    </button>
-                  </div>
-                  {cls.desc && <div className="muted">{cls.desc}</div>}
-                  <div className="row" style={{ gap: 4, marginTop: 4 }}>
-                    <span className="badge">开局 {cls.free_points} 点</span>
-                    <span className="badge">背包 {cls.inventory_size === 0 ? '∞' : (cls.inventory_size ?? 50)}</span>
-                    {Object.entries(cls.buffs ?? {}).map(([key, value]) => (
-                      <span key={key} className={`badge ${(value ?? 100) >= 100 ? 'on' : 'warn'}`}>
-                        {key} ×{Math.round((value ?? 100))}%
-                      </span>
-                    ))}
-                  </div>
-                  {!!cls.starting_items?.length && (
-                    <div className="faint" style={{ marginTop: 4 }}>
-                      家当：
-                      {cls.starting_items.map((id) => scenario.library.items.find((i) => i.id === id)?.name ?? id).join('、')}
-                      （均为道具；技能书同样可丢弃或出售）
-                    </div>
-                  )}
-                </div>
-              ))}
-            </>
-          )}
+              </button>
+            ))}
+          </div>
+
+          <div className="start-actions">
+            {list.length > 1 && (
+              <button className="btn" onClick={roll} disabled={rolling}>
+                {rolling ? '🎲 掷骰中…' : '🎲 掷骰决定出身'}
+              </button>
+            )}
+            <button className="btn primary" disabled={!selected} onClick={() => selected && onStart(selected.id)}>
+              出发
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ import type { AnyComponent, PoolEntry, PoolRef } from '../../../types'
 import { useLibraryStore } from '../../../store/library'
 import { useProjectStore } from '../../../store/project'
 import { resolveItemPool, resolveMonsterPool } from '../../../engine/pool'
+import { collectKnownTags } from '../../../lib/refs'
 import { Field, NumberBox, SelectBox } from '../../../ui/primitives'
 import TagsInput from './TagsInput'
 
@@ -96,6 +97,7 @@ export default function PoolEditor({
             label="标签条件"
             value={pool.filter?.tags ?? []}
             onChange={(tags) => onChange({ ...pool, filter: { ...pool.filter, tags: tags.length ? tags : undefined } })}
+            suggestions={collectKnownTags(library)}
             hint="多个标签需全部满足"
           />
         </>

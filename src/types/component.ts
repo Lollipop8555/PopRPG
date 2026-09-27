@@ -43,7 +43,7 @@ export type GateMode = 'any' | 'all'
  * 权限不满足时怎么办：
  * - `block`   走不进去
  * - `penalty` 能进，但额外付 penalty
- * （事件块语义相同：`penalty` 表示允许强闯，后果按 `on_fail` 结算，§4.8.9）
+ * （事件块语义相同：`penalty` 表示允许强行尝试，后果按 `on_fail` 结算，§4.8.9）
  */
 export type GateMissing = 'block' | 'penalty'
 
@@ -165,7 +165,7 @@ export interface EventOutcome {
   effects?: EffectOp[]
 }
 
-/** 事件块 = 门槛 gate（能不能碰）+ 判定 check（做不做得成） */
+/** 事件块 = 门槛 gate（能否参与）+ 判定 check（做不做得成） */
 export interface EventBlock {
   text?: string
   gate?: Gate

@@ -131,6 +131,20 @@ export function tallyUsage(library: Library, enabledIds: string[]): UsageTally {
   return { referenced, placed: new Map<string, number>() }
 }
 
+/**
+ * 项目里出现过的所有标签（去重排序）—— 给「标签条件 / 权限 / 标签」输入框做联想，
+ * 免得用户凭记忆手打、打错对不上。
+ */
+export function collectKnownTags(library: Library): string[] {
+  const set = new Set<string>()
+  for (const key of LIBRARY_KEYS) {
+    for (const def of library[key] as AnyComponent[]) {
+      for (const t of def.tags ?? []) set.add(t)
+    }
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
+}
+
 /** 哪些带这个标签的组件**已启用**（给道路 / 建筑 / 事件权限框的实时反查，§5.6） */
 export function componentsWithTag(library: Library, enabledIds: string[], tag: string): AnyComponent[] {
   const out: AnyComponent[] = []

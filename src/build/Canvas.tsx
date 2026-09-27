@@ -24,7 +24,7 @@ import { fallbackColor, withAlpha } from '../lib/color'
 const MIN_ZOOM = 16
 const MAX_ZOOM = 96
 
-type DragKind = 'none' | 'pan' | 'paint' | 'erase' | 'move' | 'resize' | 'box' | 'link'
+type DragKind = 'none' | 'pan' | 'paint' | 'paintRect' | 'erase' | 'move' | 'resize' | 'box' | 'link'
 
 export default function Canvas() {
   const project = useProjectStore()
@@ -40,6 +40,8 @@ export default function Canvas() {
     node?: MapNode
     dir?: ResizeDir
     painted?: Set<string>
+    /** paintRect：拖拽起点格（建筑被定义成一个节点，用矩形拖出 w/h） */
+    rectAnchor?: { x: number; y: number }
   }>({ kind: 'none', lastScreen: [0, 0] })
 
   const mapId = project.maps.find((m) => m.id === ui.currentMapId)?.id ?? project.maps[0]?.id
@@ -154,9 +156,24 @@ export default function Canvas() {
           ui.notify('请先在左侧组件库选择道路或建筑，再切换到「放置」模式', 'warn')
           return
         }
-        dragRef.current = { kind: 'paint', lastScreen: [e.clientX, e.clientY], painted: new Set() }
-        beginBatch()
-        paintAt(cell)
+        if (kitRef.kind === 'road') {
+          // 道路：逐格铺（可拖刷出任意走向）
+          dragRef.current = { kind: 'paint', lastScreen: [e.clientX, e.clientY], painted: new Set() }
+          beginBatch()
+          paintAt(cell)
+        } else {
+          // 建筑：**一个节点**，拖拽定义矩形（w/h）；整座就是这一个节点
+          const def = kitRef.def as { id: string }
+          dragRef.current = {
+            kind: 'paintRect',
+            lastScreen: [e.clientX, e.clientY],
+            rectAnchor: { x: cell[0], y: cell[1] },
+          }
+          beginBatch()
+          const node: MapNode = { x: cell[0], y: cell[1], w: 1, h: 1, type: 'building', ref: def.id }
+          useProjectStore.getState().placeNode(map.id, node)
+          dragRef.current.node = node
+        }
         break
       }
       case 'link': {
@@ -212,6 +229,10 @@ export default function Canvas() {
     }
     if (drag.kind === 'paint') {
       paintAt(cell)
+      return
+    }
+    if (drag.kind === 'paintRect') {
+      paintRectAt(cell)
       return
     }
     if (drag.kind === 'erase') {
@@ -275,6 +296,25 @@ export default function Canvas() {
     if (!kitRef || !map) return
     const def = kitRef.def as { id: string }
     useProjectStore.getState().placeNode(map.id, { x: cell[0], y: cell[1], type: kitRef.kind === 'road' ? 'road' : 'building', ref: def.id })
+  }
+
+  /** 建筑：用一个节点覆盖「锚点 → 当前格」的矩形（拖拽出 w/h）。整座就是这一个节点。 */
+  function paintRectAt(cell: [number, number]) {
+    const drag = dragRef.current
+    const a = drag.rectAnchor
+    if (!a || !map || !kitRef) return
+    const x = Math.min(a.x, cell[0])
+    const y = Math.min(a.y, cell[1])
+    const w = Math.abs(cell[0] - a.x) + 1
+    const h = Math.abs(cell[1] - a.y) + 1
+    const prev = drag.node
+    if (prev && prev.x === x && prev.y === y && (prev.w ?? 1) === w && (prev.h ?? 1) === h) return
+    const def = kitRef.def as { id: string }
+    const store = useProjectStore.getState()
+    if (prev) store.removeNodeAt(map.id, prev.x, prev.y)
+    const next: MapNode = { x, y, w, h, type: 'building', ref: def.id }
+    store.placeNode(map.id, next)
+    drag.node = next
   }
 
   function eraseAt(cell: [number, number]) {

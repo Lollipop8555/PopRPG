@@ -53,10 +53,17 @@ export default function DiceHud({
         ) : (
           <div className="faint">尚未掷骰</div>
         )}
-        <div className="faint">{session.stepsLeft > 0 ? `还能走 ${session.stepsLeft} 步` : '步数已用尽'}</div>
+        <div className="faint">
+          {session.awaitingEncounter
+            ? '点「掷骰」结算当前遭遇'
+            : session.stepsLeft > 0
+              ? `还能走 ${session.stepsLeft} 步`
+              : '步数已用尽'}
+        </div>
       </div>
       <button className="btn primary" disabled={!canRoll || spinning} onClick={onRoll} style={{ whiteSpace: 'nowrap' }}>
-        <StepForward size={13} /> {session.stepsLeft > 0 ? '下一回合' : '投掷前进'}
+        <StepForward size={13} />{' '}
+        {session.awaitingEncounter ? '掷骰' : session.stepsLeft > 0 ? '下一回合' : '投掷前进'}
       </button>
     </div>
   )

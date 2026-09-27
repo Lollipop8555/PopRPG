@@ -151,8 +151,9 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
             stroke="var(--ink)"
             strokeWidth={2}
           />
+          {/* 主角的图标 = 当前职业的 icon（无职业时给个中性兜底） */}
           <text x={session.pos[0] * CELL + CELL / 2} y={session.pos[1] * CELL + CELL / 2 + 7} fontSize={20} textAnchor="middle">
-            🧑‍🚀
+            {session.player.cls?.icon ?? '🙂'}
           </text>
         </g>
       </g>

@@ -8,17 +8,45 @@ import type { BuildingDef } from '../types'
 import type { Rng } from '../engine/dice'
 import { resolveMimic, resolveMonster } from '../engine/pool'
 import type { Session } from '../types/session'
-import { cellKey, log, logs, skillIndex } from './kit'
+import { buildingKey, log, logs, skillIndex } from './kit'
 import { startCombat } from './combat'
 import { openShop, openTreasure, runEvent } from './reward'
 
-export function enterBuilding(s: Session, building: BuildingDef, cell: [number, number], rng?: Rng): Session {
-  const key = cellKey(s.mapIndex, cell)
-  const { library, enabledIds, rules } = s.scenario
+/**
+ * 这次的建筑遭遇要不要**玩家掷骰**才结算（§7.2）。
+ * 只有真正会掷骰 / 揭晓的行为才算：开箱、怪物房、商店、带判定的门。
+ * 空地、已了结的事件、已开过的宝箱 = 不掷骰，直接走过去。
+ */
+export function encounterNeedsRoll(s: Session, building: BuildingDef, cell: [number, number]): boolean {
+  const done = s.onceDone.includes(buildingKey(s, cell))
+  switch (building.encounter) {
+    case 'treasure':
+      return !done
+    case 'monster':
+      return true
+    case 'shop':
+      return true
+    case 'event':
+      return !done && !!building.event?.check
+    default:
+      return false
+  }
+}
 
-  // `once` 成功过的事件会降级成普通空地（§4.8.9）
-  if (building.encounter === 'event' && s.onceDone.includes(key)) {
+export function enterBuilding(s: Session, building: BuildingDef, cell: [number, number], rng?: Rng): Session {
+  // 「建筑键」：以节点为单位 —— 一个节点=一座建筑（多格建筑同一节点，相邻两座各算各的）
+  const key = buildingKey(s, cell)
+  const { library, enabledIds, rules } = s.scenario
+  const done = s.onceDone.includes(key)
+
+  // `once` 成功过的事件 → 整座降级成普通空地（§4.8.9）
+  if (building.encounter === 'event' && done) {
     return log(s, `${building.name}：这里已经了结过了`)
+  }
+
+  // 宝箱是一次性的：**整座**开过一次就空。注意：只"不再产出"，绝不拦路 —— 踩上去照样移动
+  if (building.encounter === 'treasure' && done) {
+    return log(s, `${building.name}：已经空了`)
   }
 
   switch (building.encounter) {
@@ -26,6 +54,10 @@ export function enterBuilding(s: Session, building: BuildingDef, cell: [number, 
       return log(s, `${building.name}：什么也没有发生`)
 
     case 'treasure': {
+      // 开过（或触发过伪装）就把这座建筑记为已用，杜绝反复进反复领（多格建筑是同一个节点）
+      const markDone = (sess: Session): Session =>
+        sess.onceDone.includes(key) ? sess : { ...sess, onceDone: [...sess.onceDone, key] }
+
       // 宝箱怪物：先按 chance 判定伪装（命中 → 先打架，打赢走战利品算法）
       const mimic = building.mimic
       if (mimic?.monster) {
@@ -34,11 +66,11 @@ export function enterBuilding(s: Session, building: BuildingDef, cell: [number, 
         if (rollValue < chance) {
           const monster = resolveMimic(library, mimic.monster, rules, { rng, skills: skillIndex(s) })
           if (monster) {
-            return startCombat(log(s, `触发伪装怪物：${monster.name}`, 'bad'), monster, rng)
+            return startCombat(markDone(log(s, `触发伪装怪物：${monster.name}`, 'bad')), monster, rng)
           }
         }
       }
-      return openTreasure(s, building, rng)
+      return markDone(openTreasure(s, building, rng))
     }
 
     case 'monster': {

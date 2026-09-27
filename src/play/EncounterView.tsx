@@ -30,7 +30,7 @@ export default function EncounterView({
           <span className="hand" style={{ fontSize: 16 }}>
             {encounter.title}
           </span>
-          <button className="btn small" onClick={onClose}>
+          <button className="btn primary encounter-confirm" onClick={onClose}>
             确认
           </button>
         </div>
@@ -40,7 +40,7 @@ export default function EncounterView({
         {/* 事件：把判定摆明白 */}
         {encounter.event && (
           <div className={`hintbox ${encounter.event.verdict === 'success' ? 'ok' : encounter.event.verdict === 'blocked' ? 'warn' : 'error'}`}>
-            {encounter.event.verdict === 'blocked' && <div>门槛没过 —— 带上对应的东西再来。</div>}
+            {encounter.event.verdict === 'blocked' && <div>未满足门槛条件 —— 请备齐所需标签后再尝试。</div>}
             {encounter.event.verdict !== 'blocked' && (
               <div>
                 判定：{encounter.event.roll !== undefined ? `掷出 ${encounter.event.roll}` : '没有判定'} → 手艺{' '}
@@ -52,14 +52,22 @@ export default function EncounterView({
           </div>
         )}
 
-        {/* 宝箱 / 战利品：揭晓 */}
+        {/* 宝箱 / 战利品：揭晓（大卡片，图 + 名 + 数量） */}
         {!!encounter.pieces?.length && (
-          <div className="row" style={{ gap: 6, marginTop: 6 }}>
-            {encounter.pieces.map((p, i) => (
-              <span key={i} className="chip good">
-                {nameOf(p.id)} ×{p.count}
-              </span>
-            ))}
+          <div className="reward-block">
+            <div className="reward-title">获得</div>
+            <div className="reward-grid">
+              {encounter.pieces.map((p, i) => {
+                const item = session.scenario.library.items.find((x) => x.id === p.id)
+                return (
+                  <div key={i} className="reward-card" title={item?.desc ?? item?.name ?? p.id}>
+                    <span className="reward-ico">{item?.icon ?? '❔'}</span>
+                    <span className="reward-name">{item?.name ?? p.id}</span>
+                    <span className="reward-count">×{p.count}</span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
         {encounter.pieces?.length === 0 && encounter.kind === 'treasure' && (

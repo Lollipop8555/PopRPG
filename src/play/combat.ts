@@ -43,7 +43,7 @@ function recordPower(session: Session, b: PowerBreakdown, label: string): Sessio
 export function startCombat(s: Session, monster: MonsterUnit, rng?: Rng): Session {
   const entered = log(
     { ...s, monster, phase: 'combat', awaitingRound: false, combatStage: 'player' },
-    `遭遇 ${monster.icon}${monster.name}：hp ${monster.resources.hp} · 物攻 ${monster.stats.patk} · 物防 ${monster.stats.pdef}（本场固定）`,
+    `遭遇 ${monster.icon}${monster.name}：hp ${monster.resources.hp} · 物攻 ${monster.stats.patk} · 物防 ${monster.stats.pdef}`,
     'bad',
   )
   // 交锋也是一个回合 → 同样走「先判存活、再 tick」的开头

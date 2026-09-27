@@ -9,6 +9,8 @@
   /* 唯一间距 token（§5.1） */
   --gap: 10px;
   --topbar-h: 52px;
+  /* 游玩页顶栏：只展示状态，压矮 */
+  --play-topbar-h: 34px;
 
   --paper: #f6efe0;
   --paper-deep: #efe4cc;

@@ -14,7 +14,7 @@ import { resolveEvent, checkAnalysis } from '../engine/event'
 import { resolveItemPool, resolveReward } from '../engine/pool'
 import type { MonsterUnit } from '../engine/units'
 import type { EncounterState, Session } from '../types/session'
-import { cellKey, log, logs, recordRoll, skillIndex } from './kit'
+import { buildingKey, log, logs, recordRoll, skillIndex } from './kit'
 
 /* ------------------------------------------------------------------ */
 /* 通用的「给东西」                                                     */
@@ -141,7 +141,7 @@ export function openShop(s: Session, building: BuildingDef, cell: [number, numbe
     title: building.name,
     text: `用${currencyName}换东西（价格是当场掷出来的）`,
     goods,
-    nodeKey: cellKey(s.mapIndex, cell),
+    nodeKey: buildingKey(s, cell), // 商店也以「建筑」为单位（多格同一座）
   }
   return { ...s, phase: 'encounter', encounter }
 }
@@ -189,9 +189,9 @@ export function runEvent(s: Session, building: BuildingDef, cell: [number, numbe
   })
 
   let next = afterGrant
+  const onceKey = buildingKey(s, cell) // 以节点为单位（多格建筑同一节点）
   if (block.once && result.verdict === 'success') {
-    const key = cellKey(s.mapIndex, cell)
-    if (!next.onceDone.includes(key)) next = { ...next, onceDone: [...next.onceDone, key] }
+    if (!next.onceDone.includes(onceKey)) next = { ...next, onceDone: [...next.onceDone, onceKey] }
   }
 
   const encounter: EncounterState = {
@@ -208,7 +208,7 @@ export function runEvent(s: Session, building: BuildingDef, cell: [number, numbe
       target: block.check?.target,
       rate: analysis?.rate,
     },
-    onceKey: cellKey(s.mapIndex, cell),
+    onceKey,
   }
   return { ...next, phase: 'encounter', encounter }
 }

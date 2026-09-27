@@ -53,11 +53,15 @@ describe('游玩主界面', () => {
     expect(screen.getByText(/法师/)).toBeTruthy()
   })
 
-  it('开局界面（自动分支：职业池有值）出身由命运决定', () => {
+  it('开局界面（职业池 >1）给玩家挑卡片，并可自愿「掷骰决定出身」', () => {
     const pooled = { ...scenario, rules: { ...scenario.rules, class_pool: ['knight', 'mage'] } }
     render(<StartScreen scenario={pooled} onStart={() => {}} onCancel={() => {}} />)
     expect(screen.getByText('这一局的世界')).toBeTruthy()
-    expect(screen.getByText(/这一局的出身由命运决定/)).toBeTruthy()
-    expect(screen.getByText(/骑士|法师/)).toBeTruthy()
+    // 不是加载时静默随机：文案是"挑卡片 / 想交给运气就掷骰"
+    expect(screen.getByText(/挑一张卡片决定你的出身/)).toBeTruthy()
+    expect(screen.getByText(/掷骰决定出身/)).toBeTruthy()
+    // 两张卡片都在（供玩家挑选）
+    expect(screen.getByText('骑士')).toBeTruthy()
+    expect(screen.getByText('法师')).toBeTruthy()
   })
 })

@@ -6,7 +6,7 @@
 import type { Gate, MapCost } from '../../../types'
 import { useLibraryStore } from '../../../store/library'
 import { useProjectStore } from '../../../store/project'
-import { componentsWithTag } from '../../../lib/refs'
+import { collectKnownTags, componentsWithTag } from '../../../lib/refs'
 import { costText } from '../../../lib/human'
 import { Field, NumberBox, SelectBox } from '../../../ui/primitives'
 import TagsInput from './TagsInput'
@@ -89,6 +89,7 @@ export function GateEditor({
         label={label}
         value={tags}
         onChange={(next) => patch({ tags: next })}
+        suggestions={collectKnownTags(library)}
         hint="标签为自由文本，引擎不解析其语义，仅按标签进行匹配"
       />
 

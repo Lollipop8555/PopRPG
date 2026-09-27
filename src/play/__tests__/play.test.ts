@@ -200,7 +200,7 @@ describe('B7 遭遇与商店事件（验收 11 / 14）', () => {
     expect(low.monster!.stats.hp).not.toBe(high.monster!.stats.hp)
   })
 
-  it('事件：没有门槛标签就 blocked（连尝试都不给）；带上撬锁工具就能试', () => {
+  it('事件：没有门槛标签就 blocked（连尝试都不给）；备齐撬锁工具即可尝试', () => {
     const s = knight(0.5)
     const door = findBuilding(s, 'stone_door')
     const blocked = runEvent(s, door, [7, 1], fixed(0.5))

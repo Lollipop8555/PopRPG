@@ -163,7 +163,7 @@ function EventEditor({ event, onChange }: { event?: EventBlock; onChange: (part:
         <TextBox value={block.text ?? ''} rows={2} onChange={(text) => onChange({ text })} placeholder="触发时展示的文本" />
       </Field>
 
-      <GateEditor value={block.gate} onChange={(gate) => onChange({ gate })} label="① 门槛（能不能碰）" />
+      <GateEditor value={block.gate} onChange={(gate) => onChange({ gate })} label="① 门槛（能否参与）" />
 
       <Field label="② 判定（是否成功）" hint={check ? undefined : '不写判定 = 过了门槛就必成（纯叙事 / 有钥匙就能开）'}>
         <Toggle

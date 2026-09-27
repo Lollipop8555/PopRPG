@@ -42,7 +42,7 @@ describe('门槛 gate 两个分支', () => {
     expect(res.pointReward).toBe(0)
   })
 
-  it('missing: penalty → 允许强闯，承受额外代价并走失败分支', () => {
+  it('missing: penalty → 允许强行尝试，承受额外代价并走失败分支', () => {
     const event: EventBlock = {
       text: '',
       gate: { tags: ['撬锁'], missing: 'penalty', penalty: { hp: 3 } },
@@ -54,7 +54,7 @@ describe('门槛 gate 两个分支', () => {
     expect(res.unit.resources.hp).toBe(0) // 3 + 2 都扣掉了
   })
 
-  it('有门把手：带上撬锁工具就能过门槛', () => {
+  it('有门把手：备齐撬锁工具即可通过门槛', () => {
     const unit = makePlayerUnit({ cls: knight, equipped: [PRESET_ITEMS.find((i) => i.id === 'lockpick')!] })
     const res = resolveEvent(unit, { text: '', gate, check: { add: 'none', target: 1 } }, opts)
     expect(res.verdict).toBe('success')

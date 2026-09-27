@@ -10,20 +10,22 @@ import type { Session } from '../types/session'
 import { ABILITY_KEYS, STAT_LABEL } from '../types'
 import { usePlayStore } from '../store/play'
 import { downloadSave } from '../io/psave'
-import { mapName } from './flow'
+import { canMoveAnywhere, mapName } from './flow'
+import { currentNodeInfo, gateSummary } from './kit'
 import MapView from './MapView'
 import StatusPanel, { Bar } from './StatusPanel'
-import CombatPanel from './CombatPanel'
+import BattleDialog from './BattleDialog'
 import SkillBar from './SkillBar'
 import BagPanel from './BagPanel'
 import DiceLog from './DiceLog'
+import EquipPanel from './EquipPanel'
 import DiceHud from './DiceHud'
 import RadarChart from './RadarChart'
 import EncounterView from './EncounterView'
 import Overlay from '../ui/Overlay'
 import { navigate } from '../app/router'
 
-type Drawer = 'status' | 'bag' | 'log' | null
+type Drawer = 'status' | 'bag' | 'log' | 'equip' | null
 
 export default function GameScreen({ session }: { session: Session }) {
   const play = usePlayStore()
@@ -48,10 +50,11 @@ export default function GameScreen({ session }: { session: Session }) {
 
   const finished = session.phase === 'won' || session.phase === 'dead'
   const { player } = session
-  const canAct = session.phase === 'combat' && session.combatStage === 'player'
+  const env = currentNodeInfo(session)
+  const gate = env.gate
 
   return (
-    <div className="play-shell">
+    <div className="play-shell game">
       {/* 顶栏：只放这一局的信息，不放操作 */}
       <div className="panel topbar">
         <span className="title hand">{session.scenario.name}</span>
@@ -61,88 +64,123 @@ export default function GameScreen({ session }: { session: Session }) {
       </div>
 
       <div className="play-body">
-        {/* 地图 = 主视觉，铺满整个舞台 */}
+        {/* 地图 = 主视觉，铺满整屏（无边距、无边框） */}
         <div className="play-stage panel">
-          <MapView session={session} onStep={(cell) => { if (!pending) play.step(cell) }} />
-          {!finished && (
-            <div className="map-hint">
-              {pending
-                ? '掷骰中…'
-                : session.stepsLeft > 0
-                  ? `点地图上高亮的一格前进 · 本回合还剩 ${session.stepsLeft} 步`
-                  : '本回合步数已用尽 —— 点底栏骰子区的「下一回合」掷新骰'}
-            </div>
-          )}
+          <MapView
+            session={session}
+            onStep={(cell) => {
+              if (!pending && !session.awaitingEncounter) play.step(cell)
+            }}
+          />
         </div>
 
-        {drawer && (
-          <div className="hud-drawer">
-            {drawer === 'status' && (
-              <StatusPanel session={session} onAllocate={(key) => play.allocate(key)} onClose={() => setDrawer(null)} />
-            )}
-            {drawer === 'bag' && (
-              <BagPanel
-                session={session}
-                onUse={(id) => play.use(id)}
-                onEquip={(id) => play.equip(id)}
-                onUnequip={(id) => play.unequip(id)}
-                onClose={() => setDrawer(null)}
-              />
-            )}
-            {drawer === 'log' && <DiceLog session={session} onClose={() => setDrawer(null)} />}
-          </div>
-        )}
+        {/* 交锋：进入即弹出独立对话框，以文字呈现整场战斗 */}
+        {session.monster && <BattleDialog session={session} />}
 
-        {/* 交锋：悬浮在底栏上方 */}
-        {session.monster && (
-          <div className="hud-combat">
-            <CombatPanel session={session} onDefend={(will) => play.requestRoll({ kind: 'defend', willDefend: will })} />
-          </div>
-        )}
-
-        {/* 底栏：资源 + 雷达 / 技能格 / 骰子区 / 菜单，操作全在这一条上 */}
-        <div className="hud-bar panel">
-          <div className="hud-vitals">
-            <div className="hud-face">
-              {player.cls?.icon} {player.cls?.name ?? '无职业'}
+        {/* 底部悬浮栈：抽屉 / 环境提示 / 操作栏，都叠在地图上方（沉浸感） */}
+        <div className="hud-bottom">
+          {drawer && (
+            <div className="hud-drawer">
+              {drawer === 'status' && (
+                <StatusPanel session={session} onAllocate={(key) => play.allocate(key)} onClose={() => setDrawer(null)} />
+              )}
+              {drawer === 'bag' && (
+                <BagPanel
+                  session={session}
+                  onUse={(id) => play.use(id)}
+                  onEquip={(id) => play.equip(id)}
+                  onUnequip={(id) => play.unequip(id)}
+                  onClose={() => setDrawer(null)}
+                />
+              )}
+              {drawer === 'log' && <DiceLog session={session} onClose={() => setDrawer(null)} />}
+              {drawer === 'equip' && (
+                <EquipPanel
+                  session={session}
+                  onEquip={(id) => play.equip(id)}
+                  onUnequip={(id) => play.unequip(id)}
+                  onClose={() => setDrawer(null)}
+                />
+              )}
             </div>
-            <Bar label="hp" value={player.resources.hp} max={player.stats.hp} tone="hp" />
-            <Bar label="mp" value={player.resources.mp} max={player.stats.mp} tone="mp" />
-          </div>
+          )}
 
-          <div className="hud-radar">
-            <RadarChart
-              values={ABILITY_KEYS.map((k) => player.stats[k])}
-              labels={ABILITY_KEYS.map((k) => STAT_LABEL[k])}
-              size={64}
+          {!finished && (
+            <div className="map-hint">
+              <div className="env-row">
+                <span className="env-pos">📍 {session.pos[0]},{session.pos[1]}</span>
+                <span className="env-node">
+                  {env.icon ? `${env.icon} ` : ''}
+                  {env.name}
+                </span>
+                {gate && (
+                  <span className="badge warn" title={gateSummary(gate)}>
+                    🔒 {gateSummary(gate)}
+                  </span>
+                )}
+                <span className="env-states">
+                  {player.states.length === 0 ? (
+                    <span className="faint">无状态</span>
+                  ) : (
+                    player.states.map((st) => (
+                      <span key={st.tag} className="chip state" title={`来源：${st.source}`}>
+                        {st.tag}·{st.duration}
+                      </span>
+                    ))
+                  )}
+                </span>
+              </div>
+              <div className="env-move faint">
+                {pending
+                  ? '掷骰中…'
+                  : session.awaitingEncounter
+                    ? '踩到遭遇 —— 点底栏骰子区的「掷骰」自己掷骰结算'
+                    : session.stepsLeft > 0 && canMoveAnywhere(session)
+                      ? `点地图上高亮的一格前进 · 本回合还剩 ${session.stepsLeft} 步`
+                      : session.stepsLeft > 0
+                        ? `还剩 ${session.stepsLeft} 步，但不足以走进任何一格 —— 点「下一回合」掷新骰`
+                        : '本回合步数已用尽 —— 点底栏骰子区的「下一回合」掷新骰'}
+              </div>
+            </div>
+          )}
+
+          {/* 底栏：资源 + 雷达 / 技能格 / 骰子区 / 菜单，操作全在这一条上 */}
+          <div className="hud-bar panel">
+            <div className="hud-vitals">
+              <div className="hud-face">
+                {player.cls?.icon} {player.cls?.name ?? '无职业'}
+              </div>
+              <Bar label="hp" value={player.resources.hp} max={player.stats.hp} tone="hp" />
+              <Bar label="mp" value={player.resources.mp} max={player.stats.mp} tone="mp" />
+            </div>
+
+            <div className="hud-radar">
+              <RadarChart
+                values={ABILITY_KEYS.map((k) => player.stats[k])}
+                labels={ABILITY_KEYS.map((k) => STAT_LABEL[k])}
+                size={64}
+              />
+            </div>
+
+            <div className="hud-center">
+              <SkillBar session={session} selected={selected} onSelect={setSelected} />
+            </div>
+
+            <DiceHud
+              session={session}
+              canRoll={!!(session.awaitingRound || session.awaitingEncounter) && !finished && !pending}
+              spinning={!!pending}
+              onRoll={() =>
+                play.requestRoll(session.awaitingEncounter ? { kind: 'encounter' } : { kind: 'nextRound' })
+              }
             />
-          </div>
 
-          <div className="hud-center">
-            <SkillBar session={session} selected={selected} onSelect={setSelected} />
-            {canAct && (
-              <button
-                className="btn primary"
-                disabled={!!pending}
-                onClick={() => selected && play.requestRoll({ kind: 'attack', skillId: selected })}
-              >
-                {selected ? '攻击' : '先选一招'}
+            {/* 底栏最右：菜单入口（点击弹出独立对话框） */}
+            <div className="hud-menu">
+              <button className="btn small" title="菜单" onClick={() => setMenuOpen(true)}>
+                <Menu size={18} />
               </button>
-            )}
-          </div>
-
-          <DiceHud
-            session={session}
-            canRoll={!!session.awaitingRound && !finished && !pending}
-            spinning={!!pending}
-            onRoll={() => play.requestRoll({ kind: 'nextRound' })}
-          />
-
-          {/* 底栏最右：菜单入口（点击弹出独立对话框） */}
-          <div className="hud-menu">
-            <button className="btn small" title="菜单" onClick={() => setMenuOpen(true)}>
-              <Menu size={18} />
-            </button>
+            </div>
           </div>
         </div>
       </div>
@@ -168,6 +206,9 @@ export default function GameScreen({ session }: { session: Session }) {
               </button>
               <button className="btn" onClick={() => { setDrawer('log'); setMenuOpen(false) }}>
                 流水
+              </button>
+              <button className="btn" onClick={() => { setDrawer('equip'); setMenuOpen(false) }}>
+                装备
               </button>
               <button className="btn" onClick={() => { downloadSave(session); setMenuOpen(false) }}>
                 存档

@@ -59,9 +59,9 @@ export default function BagPanel({
               <button
                 className="btn small bag-act"
                 onClick={() => (consumable ? onUse(entry.id) : onEquip(entry.id))}
-                title={consumable ? '使用' : '穿戴'}
+                title={consumable ? '使用' : '装备'}
               >
-                {consumable ? '用' : '穿'}
+                {consumable ? '使用' : '装备'}
               </button>
             </div>
           )
@@ -80,7 +80,7 @@ export default function BagPanel({
                 <span className="bag-ico">{item.icon}</span>
                 <span className="bag-name">{item.name}</span>
                 <button className="btn small bag-act" onClick={() => onUnequip(item.id)}>
-                  脱
+                  卸下
                 </button>
               </div>
             ))}

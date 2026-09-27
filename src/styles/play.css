@@ -9,32 +9,74 @@
   min-height: 0;
 }
 
+/* 游玩中：地图铺满整屏（无边距），状态条 / 底栏 / 提示都**悬浮**在地图上方（沉浸感） */
+.play-shell.game {
+  display: block;
+  position: relative;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.play-shell.game .play-body {
+  position: absolute;
+  inset: 0;
+}
+
+/* 顶部状态条：悬浮在地图上面（局名 / 地图 / 回合 / 步数） */
+.play-shell.game .topbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  height: var(--play-topbar-h);
+  padding: 0 12px;
+  z-index: 6;
+  background: rgba(253, 250, 242, 0.88);
+  backdrop-filter: blur(4px);
+}
+
+.play-shell.game .topbar .title {
+  font-size: 14px;
+}
+
 /* 游戏 HUD（LoL / 暗黑那种贴边布局）：地图铺满，底栏放资源 + 技能格 + 骰子区 */
 .play-body {
   position: relative;
   min-height: 0;
 }
 
+/* 地图舞台：无边距、无边框，铺满整个舞台（沉浸感） */
 .play-body .play-stage {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 4px;
+  display: block;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
-/* 底部弹出面板（bottom sheet）：从底栏上方升起，宽度适中、居中
-   （用 left/right + margin:auto 居中，避免与入场动画的 transform 冲突） */
-.hud-drawer {
+/* 底部悬浮栈：抽屉 / 环境提示 / 操作栏，自下而上叠在地图上 */
+.play-body .hud-bottom {
   position: absolute;
-  left: 0;
-  right: 0;
-  margin: 0 auto;
-  bottom: 104px;
-  width: min(440px, calc(100vw - 20px));
-  max-height: min(56%, 460px);
-  overflow: auto;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   z-index: 4;
+}
+
+/* 底部弹出面板（bottom sheet）：从底栏上方升起，宽度适中、居中 */
+.hud-drawer {
+  position: relative;
+  width: min(440px, 100%);
+  max-height: min(52vh, 460px);
+  margin: 0 auto;
+  overflow: auto;
   animation: sheet-up 180ms ease-out;
 }
 
@@ -55,17 +97,15 @@
   }
 }
 
-/* 底部 HUD 栏：左资源 / 中技能格 / 右骰子区 */
+/* 底部操作栏：左资源 / 中技能格 / 右骰子区（在悬浮栈里，不再自己定位） */
 .play-body .hud-bar {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
+  position: static;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 6px 8px;
-  z-index: 3;
+  background: rgba(253, 250, 242, 0.92);
+  backdrop-filter: blur(4px);
 }
 
 .hud-vitals {
@@ -105,14 +145,6 @@
   align-items: center;
   gap: 10px;
   overflow-x: auto;
-}
-
-.hud-combat {
-  position: absolute;
-  right: 10px;
-  bottom: 104px;
-  width: 300px;
-  z-index: 3;
 }
 
 .skill-slots {
@@ -183,11 +215,53 @@
 }
 
 .map-hint {
-  padding: 5px 8px 3px;
-  text-align: center;
+  padding: 6px 8px 5px;
   font-family: var(--font-cn);
   font-size: 12.5px;
   color: var(--ink-faint);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px dashed var(--line-soft);
+}
+
+/* 游玩页：环境 / 移动提示做成悬浮小面板（在悬浮栈里，位于操作栏之上） */
+.play-shell.game .map-hint {
+  padding: 6px 12px 5px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-rough);
+  background: rgba(253, 250, 242, 0.88);
+  backdrop-filter: blur(4px);
+  box-shadow: var(--shadow);
+}
+
+/* 探索期常驻「环境提示」条：坐标 + 当前位置/建筑 + 锁要求 + 当前状态 */
+.env-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.env-pos {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+.env-node {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.env-states {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.env-move {
+  font-size: 12px;
 }
 
 .map-cell.blocked {
@@ -278,6 +352,77 @@
 .chip.good {
   border-color: #a9c4a0;
   color: #3f6a38;
+}
+
+/* 宝箱 / 战利品揭晓：大卡片 */
+.reward-block {
+  margin-top: 8px;
+}
+
+.reward-title {
+  font-family: var(--font-cn);
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.reward-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reward-card {
+  position: relative;
+  flex: 0 0 auto;
+  width: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 6px 9px;
+  background: var(--paper-card);
+  border: 1.4px solid #a9c4a0;
+  border-radius: 13px 9px 14px 10px / 10px 14px 9px 13px;
+}
+
+.reward-ico {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.reward-name {
+  font-family: var(--font-cn);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+  text-align: center;
+  word-break: break-all;
+}
+
+.reward-count {
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 遭遇弹层的主确认按钮：游戏感，别缩成 Excel 的小格子 */
+.encounter-confirm {
+  padding: 9px 24px;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  min-height: 40px;
+  border-width: 1.6px;
+  box-shadow: 2px 3px 0 rgba(120, 96, 60, 0.18);
+}
+
+.encounter-confirm:hover {
+  background: #f6ecd4;
+}
+
+.encounter-confirm:active {
+  transform: translateY(2px) rotate(-0.4deg);
+  box-shadow: 0 1px 0 rgba(120, 96, 60, 0.18);
 }
 
 /* 技能按钮 */
@@ -387,7 +532,7 @@
 @media (max-width: 880px) {
   /* 窄屏：面板占满可用宽度，不再被固定值挤成一团 */
   .hud-drawer {
-    width: calc(100vw - 20px);
+    width: 100%;
   }
 
   .hud-vitals {
@@ -432,6 +577,89 @@
   .map-hint {
     font-size: 11.5px;
   }
+}
+
+/* 交锋对话框（文字战斗画面，§4.8.3） */
+.battle {
+  width: min(560px, 100%);
+}
+
+.battle-foe {
+  margin: 6px 0;
+}
+
+.battle-log {
+  flex: 1;
+  min-height: 140px;
+  margin: 6px 0;
+  overflow: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-rough);
+  padding: 8px 10px;
+  background: var(--paper);
+}
+
+/* 按回合切分：每组之间用虚线隔开 */
+.battle-round + .battle-round {
+  margin-top: 8px;
+  border-top: 1px dashed var(--line-soft);
+  padding-top: 8px;
+}
+
+.battle-round-head {
+  font-family: var(--font-cn);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+
+.battle-dice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+}
+
+.battle-self {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.battle-vitals {
+  display: flex;
+  gap: 10px;
+}
+
+.battle-self .bar {
+  flex: 1;
+}
+
+.battle-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px dashed var(--line-soft);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.battle-actions .skill-slots {
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.battle-rolling {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-cn);
+  font-size: 13px;
+  color: var(--ink-soft);
 }
 
 /* 游玩主页：游戏封面（替代工具式表单入口，§7.0） */
@@ -518,10 +746,11 @@
 
 .cover-start {
   font-family: var(--font-cn);
-  font-size: 19px;
+  font-size: 22px;
   font-weight: 700;
-  padding: 10px 34px;
-  margin-top: 2px;
+  padding: 14px 46px;
+  min-height: 54px;
+  margin-top: 4px;
 }
 
 .cover-more {
@@ -543,6 +772,89 @@
   font-size: 11px;
   color: var(--ink-faint);
   margin-top: 2px;
+}
+
+/* 仅首页（LoadScreen）：放大封面上的次级开始方式按钮，不动全局 .btn */
+.cover-more .btn {
+  min-height: 42px;
+  font-size: 15px;
+  padding: 10px 18px;
+  justify-content: center;
+}
+
+.cover-more .btn.small {
+  min-height: 34px;
+  font-size: 13px;
+  padding: 6px 12px;
+}
+
+/* 仅选择角色界面（StartScreen）：放大出身 / 职业的出发按钮，不动全局 .btn */
+.start-screen .btn {
+  min-height: 42px;
+  font-size: 15px;
+  padding: 10px 18px;
+  justify-content: center;
+}
+
+.start-screen .btn.small {
+  min-height: 34px;
+  font-size: 13px;
+  padding: 6px 12px;
+}
+
+/* 出身卡片网格（替代原来的竖排列表） */
+.start-screen .class-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  margin: 4px 0 12px;
+}
+
+.start-screen .class-card {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  border: 1.5px solid var(--line);
+  border-radius: 14px 10px 16px 9px / 10px 16px 9px 14px;
+  background: #fffdf5;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.1s, box-shadow 0.1s, transform 0.06s ease;
+}
+
+.start-screen .class-card:hover {
+  border-color: var(--blue);
+}
+
+.start-screen .class-card.selected {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(93, 138, 83, 0.28);
+}
+
+.start-screen .class-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.start-screen .class-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.start-screen .class-name {
+  font-family: var(--font-cn);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.start-screen .start-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 /* 背包：手绘格子（图标 + 数量角标 + 操作），不罗列成列表 */
@@ -574,6 +886,100 @@
   line-height: 1.2;
   text-align: center;
   color: var(--ink-soft);
+}
+
+/* 装备面板：按部位（头/手/脚/身/武器）分行 */
+.equip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.equip-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  border: 1px dashed var(--line-soft);
+  border-radius: 12px 9px 13px 8px / 9px 13px 8px 12px;
+  padding: 6px 8px;
+}
+
+/* 行尾的更换按钮：纵向居中，不被信息高度拉伸 */
+.equip-change {
+  align-self: center;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.equip-slot {
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-cn);
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  border-right: 1px dashed var(--line-soft);
+  padding-right: 8px;
+}
+
+.equip-items {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.equip-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 装备气泡内的选项行 */
+.pop-title {
+  padding: 6px 8px;
+  font-family: var(--font-cn);
+  font-size: 12px;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.pop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 6px 8px;
+  cursor: pointer;
+  font-family: var(--font-cn);
+  color: var(--ink);
+}
+
+.pop-row:hover {
+  background: var(--line-soft);
+}
+
+.equip-ico {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.equip-name {
+  font-family: var(--font-cn);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
 }
 
 .bag-count {

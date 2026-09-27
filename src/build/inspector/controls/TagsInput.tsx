@@ -1,6 +1,6 @@
 /** 标签输入框：回车 / 逗号加一个，点 × 删一个（§4.0 tags 的三个用途共用同一个字段） */
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Field } from '../../../ui/primitives'
 
 export default function TagsInput({
@@ -17,6 +17,7 @@ export default function TagsInput({
   suggestions?: string[]
 }) {
   const [draft, setDraft] = useState('')
+  const listId = useId()
   const tags = value ?? []
 
   const add = (raw: string) => {
@@ -57,9 +58,9 @@ export default function TagsInput({
             setDraft('')
           }
         }}
-        list="tag-suggestions"
+        list={listId}
       />
-      <datalist id="tag-suggestions">
+      <datalist id={listId}>
         {suggestions.map((s) => (
           <option key={s} value={s} />
         ))}

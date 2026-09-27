@@ -52,9 +52,9 @@ export interface EncounterState {
   goods?: { id: string; price: number; currency: string }[]
   /** 本次给的自由度点数 */
   pointReward?: number
-  /** 事件 once 用：这格处理完就降级为普通空地 */
+  /** 事件 once 用：这座建筑处理完就降级为普通空地（以建筑节点为单位） */
   onceKey?: string
-  /** 商店所在节点（付完钱要记） */
+  /** 商店所在建筑（以节点为单位；多格建筑同一座） */
   nodeKey?: string
 }
 
@@ -81,6 +81,11 @@ export interface Session {
   combatStage?: CombatStage
   /** 正在展示的弹层 */
   encounter?: EncounterState
+  /**
+   * 建筑遭遇**等玩家掷骰**才结算（§7.2 点击投掷）。
+   * 玩家踩上遭遇格后先记在这里；点骰子区「掷骰」才真正调 `enterBuilding` 结算。
+   */
+  awaitingEncounter?: { ref: string; cell: [number, number] }
   /** 已经用掉 once 的格子：`mapIndex:x,y` */
   onceDone: string[]
   /** 上一步有没有踩到过（避免同一格反复触发） */

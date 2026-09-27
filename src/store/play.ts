@@ -9,9 +9,9 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { StatKey } from '../types'
 import type { Session } from '../types/session'
-import { allocatePoint, nextRound, startSession, stepTo } from '../play/flow'
+import { allocatePoint, canMoveAnywhere, nextRound, startSession, stepTo } from '../play/flow'
 import { playerAttack, resolveDefense } from '../play/combat'
-import { closeEncounter } from '../play/encounter'
+import { closeEncounter, enterBuilding } from '../play/encounter'
 import { buyGood } from '../play/reward'
 import { equipItem, unequip, useItem } from '../play/inventory'
 import { pickStorage } from './storage'
@@ -21,6 +21,8 @@ export type PendingAction =
   | { kind: 'attack'; skillId: string }
   | { kind: 'defend'; willDefend: boolean }
   | { kind: 'nextRound' }
+  /** 结算当前建筑遭遇（开锁判定 / 开箱 / 怪物 / 商店）—— 玩家点「掷骰」触发 */
+  | { kind: 'encounter' }
 
 interface PlayStore {
   session?: Session
@@ -145,7 +147,17 @@ export const usePlayStore = create<PlayStore>()(
         let next = current
         if (pendingAction.kind === 'attack') next = playerAttack(current, pendingAction.skillId)
         else if (pendingAction.kind === 'defend') next = resolveDefense(current, pendingAction.willDefend)
-        else next = nextRound(current)
+        else if (pendingAction.kind === 'encounter') {
+          const at = current.awaitingEncounter
+          const building = at ? current.scenario.library.buildings.find((b) => b.id === at.ref) : undefined
+          if (!at || !building) {
+            next = { ...current, awaitingEncounter: undefined }
+          } else {
+            const after = enterBuilding({ ...current, awaitingEncounter: undefined }, building, at.cell)
+            // 与 stepTo 一致：步数用尽 / 剩余步数走不动任何一格 → 本回合移动结束
+            next = after.stepsLeft <= 0 || !canMoveAnywhere(after) ? { ...after, awaitingRound: true } : after
+          }
+        } else next = nextRound(current)
         set({ session: next, pendingAction: null })
         const last = next.rolls[next.rolls.length - 1]
         return last ? { label: last.label, pips: last.pips } : undefined

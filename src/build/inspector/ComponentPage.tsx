@@ -6,7 +6,7 @@
 import { ComponentKind } from '../../types'
 import type { AnyComponent } from '../../types'
 import { isMapPiece } from '../../types'
-import { findComponent, skillSources, tallyUsage } from '../../lib/refs'
+import { collectKnownTags, findComponent, skillSources, tallyUsage } from '../../lib/refs'
 import { useLibraryStore } from '../../store/library'
 import { useProjectStore } from '../../store/project'
 import { commit } from '../../store/commit'
@@ -111,6 +111,7 @@ export default function ComponentPage() {
       <TagsInput
         value={def.tags}
         onChange={(tags) => patch({ tags: tags.length ? tags : undefined })}
+        suggestions={collectKnownTags(library)}
         hint="用途：① 池的筛选条件 ② 通行能力 ③ 分组与搜索"
       />
 

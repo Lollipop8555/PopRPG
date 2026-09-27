@@ -157,9 +157,9 @@ export default function RulesPage() {
         label="开局职业池 class_pool"
         hint={
           rules.class_pool.length === 1
-            ? '只有 1 个 = 固定职业'
+            ? '只有 1 个 = 直接选定这个职业'
             : rules.class_pool.length > 1
-              ? `${rules.class_pool.length} 个 = 开局随机`
+              ? `${rules.class_pool.length} 个 = 开局给玩家挑卡片（想交给运气可自己掷骰）`
               : '空的 = 开局没有职业可选（玩家属性全靠 0 起点）'
         }
       >

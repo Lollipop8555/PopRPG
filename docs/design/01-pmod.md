@@ -249,7 +249,7 @@
   buffs: { hp: 110, patk: 120, pdef: 110, matk: 80 }                  # 百分比放大
   inventory_size: 50                                                  # 背包格数（省略 = 50；0 = 无限，§4.2.4）
   starting_items: [red_potion]                                        # 出生时的家当（可选）
-  desc: 近战坚韧，物理见长，法术薄弱。
+  desc: 物理攻击较强、法术攻击较弱的近战。
   # 没有 skills —— 职业不限定你能学什么（§4.8.3）
 - id: mage
   name: 法师
@@ -257,10 +257,10 @@
   base_stats: { hp: 3, mp: 4, patk: 0, matk: 3, pdef: 0, mdef: 2 }
   free_points: 25
   buffs: { hp: 90, matk: 130, mdef: 120, patk: 80 }
-  inventory_size: 30                                                  # 书多的人背得少
+  inventory_size: 30                                                  # 书多的人可携带量少
   starting_items: [blue_potion, scroll_of_fireball]                   # 出生带一本《火球术》——但它只是道具，可丢弃可出售
-  desc: 脆皮高魔，物攻 -20%、魔攻 +30%。
-  # 那个 -20% 就是他终生承受的先天缺陷：可以练成战士，但代价是真的
+  desc: 生命值偏低、魔攻突出，物攻 -20%、魔攻 +30%。
+  # 那个 -20% 使他的物攻先天低于基准：可以练成战士，但需更多资源投入
 ```
 
 ### 技能
@@ -370,7 +370,7 @@ shop:                               # 商店默认定价（§4.8.11）；组件�
   price: { algo: value, dice: 1D6, range: [5, 15] }
 event:                              # 事件默认判定骰（§4.8.9）；难度值与后果在事件组件上（那是内容）
   dice: 2D6
-class_pool: [knight, mage]          # 长度 1 = 固定职业；>1 = 开局随机
+class_pool: [knight, mage]          # 开局给玩家挑的出身卡片；长度 1 = 只有一种；>1 = 手选（可自愿「掷骰决定出身」）
 ```
 
 ## 地图

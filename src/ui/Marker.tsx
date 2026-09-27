@@ -16,7 +16,7 @@ export function StartFlagMark({ selected }: { selected?: boolean }) {
       <path d="M 30 58 Q 28.5 74 31 90" fill="none" stroke="#6b5f4e" strokeWidth={5} />
       {/* 旗杆底座：一小笔土坡 */}
       <path d="M 18 90 Q 30 85.5 43 91" fill="none" stroke="#6b5f4e" strokeWidth={4} />
-      {/* 三角旗面（边缘故意不直，像随手画的三角旗） */}
+      {/* 三角旗面（边缘故意不直，像徒手勾画的三角旗） */}
       <path
         d="M 30 20 Q 58 27 87 39 Q 57 50 30 57 Z"
         fill={selected ? '#e0a08c' : '#d98b76'}

@@ -8,12 +8,12 @@
 
 import type { BuildingDef, ClassDef, RoadDef, StatKey } from '../types'
 import type { Rng } from '../engine/dice'
-import { remainingPoints, canPass, capabilities, payMapCost, makePlayerUnit, type PlayerUnit } from '../engine/units'
+import { remainingPoints, canPass, capabilities, payMapCost, makePlayerUnit, type PassResult, type PlayerUnit } from '../engine/units'
 import { addToInventory } from '../engine/item'
 import { tickStates } from '../engine/state'
-import type { Session } from '../types/session'
+import type { EncounterState, Session } from '../types/session'
 import { currentMap, log, logs, neighbors, nodeAtCell, recordRoll, roll, statLabel, syncPlayer } from './kit'
-import { enterBuilding } from './encounter'
+import { encounterNeedsRoll, enterBuilding } from './encounter'
 
 /* ------------------------------------------------------------------ */
 /* B1 开局                                                             */
@@ -71,7 +71,10 @@ export function startSession(scenario: Session['scenario'], classId: string): Se
   return { ...session, awaitingRound: true }
 }
 
-/** 开局职业池：长度 1 = 固定；>1 = 随机（§4.2.3 / §7.1） */
+/**
+ * 开局职业池里**掷一个**出身 —— 由玩家在开局界面点「掷骰决定出身」触发（§4.2.3 / §7.1）。
+ * 池长 0 → 退回第一个职业；池长 1 → 就是它；>1 → 从池里随机取一个。
+ */
 export function rollClass(scenario: Session['scenario'], rng?: Rng): string | undefined {
   const pool = scenario.rules.class_pool.filter((id) =>
     scenario.enabledIds.includes(id) && scenario.library.classes.some((c) => c.id === id),
@@ -136,11 +139,15 @@ export function nextRound(s: Session, rng?: Rng): Session {
   }
 
   const { session, pips } = roll(next, '移动步数', next.scenario.rules.move.dice, rng)
-  return log(
-    { ...session, stepsLeft: pips, phase: 'explore', awaitingRound: false },
+  const moved: Session = { ...session, stepsLeft: pips, phase: 'explore', awaitingRound: false }
+  // 掷出的步数连一格都走不动（如每格 2 步却只掷到 1 步）→ 本回合直接作废，让玩家马上能重掷
+  const stuck = !canMoveAnywhere(moved)
+  const rolled = log(
+    { ...moved, awaitingRound: stuck },
     `掷 ${next.scenario.rules.move.dice} = ${pips} → 本回合能走 ${pips} 步`,
     'dice',
   )
+  return stuck ? log(rolled, `${pips} 步不足以走进任何一格 —— 本回合到此为止，点「下一回合」再掷`, 'bad') : rolled
 }
 
 /* ------------------------------------------------------------------ */
@@ -171,6 +178,11 @@ export function stepTo(s: Session, cell: [number, number], rng?: Rng): StepResul
     const reason = '现在不是探索阶段'
     return { session: log(s, reason, 'bad'), moved: false, reason }
   }
+  // 有遭遇在等掷骰 → 先掷骰结算，别急着走
+  if (s.awaitingEncounter) {
+    const reason = '先点骰子区「掷骰」结算当前遭遇'
+    return { session: log(s, reason, 'bad'), moved: false, reason }
+  }
   if (s.stepsLeft <= 0) {
     const reason = '本回合步数已用尽 —— 点「下一回合」掷新骰'
     return { session: log(s, reason, 'bad'), moved: false, reason }
@@ -189,13 +201,40 @@ export function stepTo(s: Session, cell: [number, number], rng?: Rng): StepResul
   const found = defOf(s, node.ref)
   const def = found?.def
   const cost = def?.cost
-  const gate = def?.gate
+  // 锁 = 定义上的 gate。建筑的 event.gate 只对「事件」建筑算门锁；
+  // 换成宝箱 / 怪物房 / 商店后，残留的 event.gate 不该再把这格锁死（否则会"堵死"通道）
+  const eventGate =
+    found?.kind === 'building' && (def as BuildingDef).encounter === 'event'
+      ? (def as BuildingDef).event?.gate
+      : undefined
+  const gate = def?.gate ?? eventGate
 
-  // ① 权限
-  const pass = canPass(gate, capabilities(s.player))
+  // 已在**同一座建筑**内 → 房间内部移动不再验锁（"开了锁的房间，可以随便走"）。
+  // 锁只在「从外部踏入这座建筑」时判一次；内部换格不受门槛影响。
+  const cur = nodeAtCell(s, s.pos)
+  const insideSameBuilding =
+    found?.kind === 'building' && !!cur && cur.type === 'building' && cur.x === node.x && cur.y === node.y
+
+  // ① 权限：门槛不满足（缺=block）直接拦在门外，弹对话框说明，不移动、不标记 onceDone
+  const pass: PassResult = insideSameBuilding ? { pass: true } : canPass(gate, capabilities(s.player))
   if (!pass.pass) {
+    const name = def?.name ?? (node.type === 'road' ? '道路' : '建筑')
     const reason = `过不去 —— 需要 ${gate?.tags.join('、')}`
-    return { session: log(s, reason, 'bad'), moved: false, reason }
+    const session: Session = {
+      ...log(s, reason, 'bad'),
+      phase: 'encounter',
+      encounter: {
+        kind: 'event',
+        title: `${def?.icon ?? '🔒'} ${name}`,
+        text: gate?.tags.length
+          ? `这里上着锁：需要满足「${gate.tags.join(' / ')}」才能通过${
+              gate.mode === 'all' ? '（需全部满足）' : '（满足其一即可）'
+            }。`
+          : reason,
+        event: { verdict: 'blocked' },
+      } as EncounterState,
+    }
+    return { session, moved: false, reason }
   }
 
   // ② 消耗（步数 + 血量 / 法力，权限 penalty 也一起付）
@@ -224,13 +263,26 @@ export function stepTo(s: Session, cell: [number, number], rng?: Rng): StepResul
     next = log(next, '抵达终点，本张地图完成', 'good')
     return { session: advanceMap(next), moved: true }
   }
-  if (node.type === 'building' && found?.kind === 'building') {
+  // 建筑：只在**从外部踏入**这一座时结算遭遇；已在同一座内部换格 → 只是普通移动（可以随便走）
+  if (node.type === 'building' && found?.kind === 'building' && !insideSameBuilding) {
     const building = found.def as BuildingDef
+    // 要掷骰的遭遇（开锁判定 / 开箱 / 怪物 / 商店）→ 先停在这格，等玩家点「掷骰」再结算（§7.2 点击投掷）
+    if (encounterNeedsRoll(next, building, cell)) {
+      return { session: { ...next, awaitingEncounter: { ref: building.id, cell } }, moved: true }
+    }
     const after = enterBuilding(next, building, cell, rng)
-    // 步数刚好用尽即视为本回合移动已结束 → 等点「下一回合」
-    return { session: after.stepsLeft <= 0 ? { ...after, awaitingRound: true } : after, moved: true }
+    // 步数用尽、或剩余步数不足以再走任何一格 → 本回合移动结束，等点「下一回合」
+    return { session: endMoveIfStuck(after), moved: true }
   }
-  return { session: next.stepsLeft <= 0 ? { ...next, awaitingRound: true } : next, moved: true }
+  return { session: endMoveIfStuck(next), moved: true }
+}
+
+/**
+ * 一次移动的收尾：**步数用尽**，或**剩余步数已走不动任何一格**（如每格要 2 步却只剩 1 步）→ 本回合到此为止。
+ * 否则会卡死：既走不动、又不满足「下一回合」的条件。
+ */
+function endMoveIfStuck(s: Session): Session {
+  return s.stepsLeft <= 0 || !canMoveAnywhere(s) ? { ...s, awaitingRound: true } : s
 }
 
 /** 走到终点 → 进下一张图（起点自动接上一张终点，§4.6） */
@@ -250,13 +302,34 @@ export function mapName(s: Session): string {
 /** 这一格能不能踩（给 UI 高亮可走格） */
 export function canStep(s: Session, cell: [number, number]): boolean {
   if (s.phase !== 'explore' || s.stepsLeft <= 0) return false
+  if (s.awaitingEncounter) return false // 先掷骰结算遭遇，才能继续走
   if (!neighbors(s.pos).some(([x, y]) => x === cell[0] && y === cell[1])) return false
   const node = nodeAtCell(s, cell)
   if (!node) return false
   const found = defOf(s, node.ref)
   const stepCost = found?.def?.cost?.step ?? 1
   if (s.stepsLeft < stepCost) return false
-  return canPass(found?.def?.gate, capabilities(s.player)).pass
+  // 已在同一座建筑内 → 内部格随便走（不重复验锁）
+  const cur = nodeAtCell(s, s.pos)
+  if (found?.kind === 'building' && cur && cur.type === 'building' && cur.x === node.x && cur.y === node.y) return true
+  // 门锁与 stepTo 同一判断：定义上的 gate，或「事件」建筑 event 上的 gate
+  const def = found?.def
+  const eventGate =
+    found?.kind === 'building' && (def as BuildingDef).encounter === 'event'
+      ? (def as BuildingDef).event?.gate
+      : undefined
+  const gate = def?.gate ?? eventGate
+  return canPass(gate, capabilities(s.player)).pass
+}
+
+/**
+ * 现在还有没有走得动的一格（够这一步的消耗 + 过得了门槛 + 不是在等遭遇掷骰）。
+ * 「剩余步数不足以走任何一格」时（如每格 2 步却只剩 1 步）据此**自动结束本回合**，避免卡死。
+ */
+export function canMoveAnywhere(s: Session): boolean {
+  if (s.stepsLeft <= 0 || s.awaitingEncounter) return false
+  const probe: Session = s.phase === 'explore' ? s : { ...s, phase: 'explore' }
+  return neighbors(s.pos).some((cell) => canStep(probe, cell))
 }
 
 export function classOf(id: string | undefined, s: Session): ClassDef | undefined {
