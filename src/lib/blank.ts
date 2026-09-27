@@ -17,6 +17,7 @@ import type {
 } from '../types'
 import { zeroStatValues } from '../types'
 import { newComponentId } from './ids'
+import { randomComponentColor } from './color'
 
 export const DEFAULT_ICON: Record<ComponentKind, string> = {
   road: '🛤️',
@@ -45,7 +46,7 @@ function defaultStats(): Stats {
 /** 从零建一条库组件（§5.3「＋ 新建」） */
 export function blankComponent(kind: ComponentKind, itemKind: ItemKind = 'consumable'): AnyComponent {
   const id = newComponentId(kind)
-  const base = { id, name: DEFAULT_NAME[kind], icon: DEFAULT_ICON[kind] }
+  const base = { id, name: DEFAULT_NAME[kind], icon: DEFAULT_ICON[kind], color: randomComponentColor() }
   switch (kind) {
     case 'road':
       return { ...base, cost: { step: 1 } }
@@ -100,5 +101,5 @@ export function blankComponent(kind: ComponentKind, itemKind: ItemKind = 'consum
 /** 以现有条目为起点派生一条新库组件（原条目**不受影响**） */
 export function duplicateOf(kind: ComponentKind, source: AnyComponent): AnyComponent {
   const clone = structuredClone(source)
-  return { ...clone, id: newComponentId(kind), name: `${source.name} 副本` }
+  return { ...clone, id: newComponentId(kind), name: `${source.name} 副本`, color: clone.color ?? randomComponentColor() }
 }

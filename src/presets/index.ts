@@ -5,6 +5,8 @@
  */
 
 import type { AnyComponent, ComponentKind, Library } from '../types'
+import { LIBRARY_KEYS } from '../types'
+import { fallbackColor } from '../lib/color'
 import { PRESET_BACKGROUNDS } from './backgrounds'
 import { PRESET_BUILDINGS } from './buildings'
 import { PRESET_CLASSES } from './classes'
@@ -25,7 +27,7 @@ export {
 
 /** 一份深拷贝的预设库，播种时用（避免把模块常量直接交给 store 去改） */
 export function presetLibrary(): Library {
-  return structuredClone({
+  const lib = structuredClone({
     roads: PRESET_ROADS,
     buildings: PRESET_BUILDINGS,
     items: PRESET_ITEMS,
@@ -34,6 +36,12 @@ export function presetLibrary(): Library {
     skills: PRESET_SKILLS,
     backgrounds: PRESET_BACKGROUNDS,
   })
+  // 预设本身不带 color，这里按 id 给一个稳定区分色（不随机，刷新不变）
+  for (const key of LIBRARY_KEYS) {
+    const arr = lib[key] as AnyComponent[]
+    lib[key] = arr.map((c) => (c.color ? c : { ...c, color: fallbackColor(c.id) })) as never
+  }
+  return lib
 }
 
 /** id → 原始预设定义 */

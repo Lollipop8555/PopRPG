@@ -55,7 +55,7 @@ export function Field({
         <label>
           <span>{label}</span>
           {hint !== undefined && !showInline && typeof hint === 'string' && (
-            <span className="helpdot" title={hint}>
+            <span className="helpdot" role="img" aria-label={hint} data-tip={hint}>
               ?
             </span>
           )}

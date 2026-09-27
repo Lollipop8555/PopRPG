@@ -30,6 +30,7 @@ export interface ProjectStore extends Project {
   removeNodeAt: (mapId: string, x: number, y: number) => void
   moveNode: (mapId: string, from: [number, number], to: [number, number]) => void
   setNodeSize: (mapId: string, x: number, y: number, w: number, h: number) => void
+  setNodeRect: (mapId: string, fromX: number, fromY: number, x: number, y: number, w: number, h: number) => void
   placeMarker: (mapId: string, type: 'start' | 'end', x: number, y: number) => void
 }
 
@@ -160,6 +161,13 @@ export const useProjectStore = create<ProjectStore>()(
           maps: updateMap(s.maps, mapId, (m) => ({
             ...m,
             nodes: m.nodes.map((n) => (n.x === x && n.y === y ? { ...n, w, h } : n)),
+          })),
+        })),
+      setNodeRect: (mapId, fromX, fromY, x, y, w, h) =>
+        set((s) => ({
+          maps: updateMap(s.maps, mapId, (m) => ({
+            ...m,
+            nodes: m.nodes.map((n) => (n.x === fromX && n.y === fromY ? { ...n, x, y, w, h } : n)),
           })),
         })),
 

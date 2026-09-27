@@ -19,7 +19,7 @@ export default function Inspector() {
 
   return (
     <div className="panel inspector">
-      <div className="panel-head" style={{ justifyContent: 'flex-start', gap: 4 }}>
+      <div className="panel-head" style={{ justifyContent: 'flex-start', gap: 4, marginBottom: 8 }}>
         {TABS.map((t) => (
           <button
             key={t.id}

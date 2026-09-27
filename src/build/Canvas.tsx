@@ -18,6 +18,8 @@ import { useProjectStore } from '../store/project'
 import { beginBatch, commit } from '../store/commit'
 import { useUiStore } from '../store/ui'
 import { MapMarker } from '../ui/Marker'
+import { Footprint } from '../ui/Footprint'
+import { fallbackColor, withAlpha } from '../lib/color'
 
 const MIN_ZOOM = 16
 const MAX_ZOOM = 96
@@ -59,6 +61,7 @@ export default function Canvas() {
     kind: DragKind
     lastScreen: [number, number]
     node?: MapNode
+    dir?: ResizeDir
     painted?: Set<string>
   }>({ kind: 'none', lastScreen: [0, 0] })
 
@@ -160,8 +163,8 @@ export default function Canvas() {
         if (hit) {
           ui.selectNode(nodeKey(hit.x, hit.y))
           const [fx, fy] = fractionInCell(e, cell)
-          const onHandle = hit.type === 'building' && isResizeHandle(hit, cell, fx, fy)
-          dragRef.current = { kind: onHandle ? 'resize' : 'move', lastScreen: [e.clientX, e.clientY], node: hit }
+          const dir = hit.type === 'building' ? getResizeDir(hit, cell, fx, fy) : null
+          dragRef.current = { kind: dir ? 'resize' : 'move', lastScreen: [e.clientX, e.clientY], node: hit, dir: dir ?? undefined }
           beginBatch()
         } else {
           ui.clearSelection()
@@ -249,9 +252,16 @@ export default function Canvas() {
           drag.node = { ...drag.node, x: cell[0], y: cell[1] }
         }
       } else {
-        const w = Math.max(1, cell[0] - drag.node.x + 1)
-        const h = Math.max(1, cell[1] - drag.node.y + 1)
-        useProjectStore.getState().setNodeSize(map.id, drag.node.x, drag.node.y, w, h)
+        const f = { x: drag.node.x, y: drag.node.y, w: Math.max(1, drag.node.w ?? 1), h: Math.max(1, drag.node.h ?? 1) }
+        const right = f.x + f.w - 1
+        const bottom = f.y + f.h - 1
+        const d = drag.dir ?? 'se'
+        let x = f.x, y = f.y, w = f.w, h = f.h
+        if (d.includes('e')) w = Math.max(1, cell[0] - f.x + 1)
+        if (d.includes('w')) { x = Math.min(cell[0], right); w = right - x + 1 }
+        if (d.includes('s')) h = Math.max(1, cell[1] - f.y + 1)
+        if (d.includes('n')) { y = Math.min(cell[1], bottom); h = bottom - y + 1 }
+        useProjectStore.getState().setNodeRect(map.id, f.x, f.y, x, y, w, h)
       }
       return
     }
@@ -397,20 +407,13 @@ export default function Canvas() {
           const selected = ui.selectedNodeKey === nodeKey(node.x, node.y) || selectionKeys.has(nodeKey(node.x, node.y))
           const isStart = node.type === 'start'
           const isEnd = node.type === 'end'
+          const nodeColor = def?.color ?? fallbackColor(def?.id ?? node.type)
 
           return (
             <g key={`${node.x},${node.y}`}>
-              <rect
-                x={sx + 1}
-                y={sy + 1}
-                width={w - 2}
-                height={h - 2}
-                rx={6}
-                fill={isStart ? 'rgba(140,190,150,.35)' : isEnd ? 'rgba(200,140,130,.3)' : node.type === 'building' ? '#fbf3dd' : 'rgba(255,255,255,.55)'}
-                stroke={selected ? 'var(--ink)' : 'var(--line)'}
-                strokeWidth={selected ? 2 : 1}
-                transform={node.type === 'building' ? `rotate(-0.5 ${sx + w / 2} ${sy + h / 2})` : undefined}
-              />
+              {selected && node.type === 'road' && (
+                <rect x={sx + 1} y={sy + 1} width={w - 2} height={h - 2} rx={6} fill="none" stroke="var(--ink)" strokeWidth={2} />
+              )}
               {isStart || isEnd ? (
                 <MapMarker
                   kind={node.type as 'start' | 'end'}
@@ -419,7 +422,22 @@ export default function Canvas() {
                   size={Math.min(w, h) * 0.84}
                   selected={selected}
                 />
+              ) : node.type === 'road' ? (
+                <Footprint cx={sx + w / 2} cy={sy + h / 2} size={Math.min(w, h) * 0.72} color={nodeColor} />
               ) : (
+                <rect
+                  x={sx + 1}
+                  y={sy + 1}
+                  width={w - 2}
+                  height={h - 2}
+                  rx={6}
+                  fill={withAlpha(nodeColor, 0.3)}
+                  stroke={selected ? 'var(--ink)' : nodeColor}
+                  strokeWidth={selected ? 2 : 1.5}
+                  transform={node.type === 'building' ? `rotate(-0.5 ${sx + w / 2} ${sy + h / 2})` : undefined}
+                />
+              )}
+              {!isStart && !isEnd && node.type !== 'road' && def && (
                 <text
                   x={sx + w / 2}
                   y={sy + h / 2 + Math.min(18, camera.zoom * 0.4) / 2}
@@ -429,7 +447,7 @@ export default function Canvas() {
                   {def?.icon ?? '❓'}
                 </text>
               )}
-              {camera.zoom >= 34 && !isStart && !isEnd && def && (
+              {camera.zoom >= 34 && !isStart && !isEnd && node.type !== 'road' && def && (
                 <text x={sx + w / 2} y={sy + h - 4} fontSize={9} textAnchor="middle" fill="var(--ink-faint)">
                   {def.name}
                 </text>
@@ -438,15 +456,20 @@ export default function Canvas() {
                 <rect x={sx + 1} y={sy + 1} width={w - 2} height={h - 2} fill="none" stroke="var(--red)" strokeWidth={2} strokeDasharray="3 2" />
               )}
               {selected && node.type === 'building' && (
-                <rect
-                  x={sx + w - 8}
-                  y={sy + h - 8}
-                  width={8}
-                  height={8}
-                  fill="var(--paper-card)"
-                  stroke="var(--ink)"
-                  strokeWidth={1.4}
-                />
+                <g>
+                  {[
+                    [sx, sy],
+                    [sx + w / 2 - 3.5, sy],
+                    [sx + w - 7, sy],
+                    [sx, sy + h / 2 - 3.5],
+                    [sx + w - 7, sy + h / 2 - 3.5],
+                    [sx, sy + h - 7],
+                    [sx + w / 2 - 3.5, sy + h - 7],
+                    [sx + w - 7, sy + h - 7],
+                  ].map(([hx, hy], i) => (
+                    <rect key={i} x={hx} y={hy} width={7} height={7} fill="var(--paper-card)" stroke="var(--ink)" strokeWidth={1.4} />
+                  ))}
+                </g>
               )}
             </g>
           )
@@ -492,10 +515,22 @@ export default function Canvas() {
   )
 }
 
-/** 只有多格建筑才有缩放柄，且要抓在右下角那一格的右下角区域 */
-function isResizeHandle(node: MapNode, cell: [number, number], fx: number, fy: number): boolean {
+type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
+
+/** 建筑（含 1×1）都可缩放：抓在边界格的对应半边，支持四角与四边 */
+function getResizeDir(node: MapNode, cell: [number, number], fx: number, fy: number): ResizeDir | null {
   const w = Math.max(1, node.w ?? 1)
   const h = Math.max(1, node.h ?? 1)
-  if (w === 1 && h === 1) return false
-  return cell[0] === node.x + w - 1 && cell[1] === node.y + h - 1 && fx > 0.55 && fy > 0.55
+  const onLeft = cell[0] === node.x
+  const onRight = cell[0] === node.x + w - 1
+  const onTop = cell[1] === node.y
+  const onBottom = cell[1] === node.y + h - 1
+  if (!onLeft && !onRight && !onTop && !onBottom) return null
+  let dir = ''
+  if (onLeft && fx < 0.5) dir += 'w'
+  if (onRight && fx > 0.5) dir += 'e'
+  if (onTop && fy < 0.5) dir += 'n'
+  if (onBottom && fy > 0.5) dir += 's'
+  if (!dir) return null
+  return dir as ResizeDir
 }

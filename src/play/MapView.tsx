@@ -9,6 +9,8 @@ import type { Session } from '../types/session'
 import { currentMap, neighbors } from './kit'
 import { canStep } from './flow'
 import { MapMarker } from '../ui/Marker'
+import { Footprint } from '../ui/Footprint'
+import { fallbackColor, withAlpha } from '../lib/color'
 
 const CELL = 48
 
@@ -104,7 +106,9 @@ function NodeShape({ node, session }: { node: MapNode; session: Session }) {
 
   const isBuilding = node.type === 'building'
   const isMarker = node.type === 'start' || node.type === 'end'
+  const isRoad = node.type === 'road'
   const markSize = Math.min(w, h) * 0.86
+  const nodeColor = def?.color ?? fallbackColor(def?.id ?? node.type)
 
   return (
     <g>
@@ -114,11 +118,12 @@ function NodeShape({ node, session }: { node: MapNode; session: Session }) {
         width={w - 6}
         height={h - 6}
         rx={isBuilding ? 6 : 3}
-        fill={node.type === 'start' ? 'rgba(150,190,150,.22)' : node.type === 'end' ? 'rgba(200,140,130,.22)' : isBuilding ? '#fbf3dd' : 'rgba(255,255,255,.4)'}
-        stroke={isBuilding ? 'var(--line)' : 'transparent'}
-        strokeWidth={isBuilding ? 1.2 : 0}
+        fill={isRoad ? 'transparent' : withAlpha(nodeColor, 0.3)}
+        stroke={isRoad ? 'transparent' : nodeColor}
+        strokeWidth={isRoad ? 0 : 1.5}
         transform={isBuilding ? `rotate(-0.6 ${x + w / 2} ${y + h / 2})` : undefined}
       />
+      {isRoad && <Footprint cx={x + w / 2} cy={y + h / 2} size={Math.min(w, h) * 0.72} color={nodeColor} />}
       {isMarker ? (
         <MapMarker
           kind={node.type as 'start' | 'end'}
@@ -126,7 +131,7 @@ function NodeShape({ node, session }: { node: MapNode; session: Session }) {
           y={y + (h - markSize) / 2}
           size={markSize}
         />
-      ) : (
+      ) : isRoad ? null : (
         <text x={x + w / 2} y={y + h / 2 + 7} fontSize={Math.min(24, CELL * 0.5)} textAnchor="middle">
           {def?.icon ?? '·'}
         </text>

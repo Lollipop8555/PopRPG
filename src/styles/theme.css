@@ -320,6 +320,30 @@ textarea {
   font-size: 10px;
   cursor: help;
   flex: 0 0 auto;
+  position: relative;
+}
+.helpdot:hover::after,
+.helpdot:focus::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 240px;
+  padding: 6px 8px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  font-family: var(--font-cn);
+  white-space: normal;
+  text-align: left;
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  z-index: 80;
+  pointer-events: none;
 }
 
 .tagchip {

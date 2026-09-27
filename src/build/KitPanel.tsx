@@ -18,6 +18,7 @@ import { useProjectStore } from '../store/project'
 import { commit } from '../store/commit'
 import { useUiStore } from '../store/ui'
 import { Badge, TextBox } from '../ui/primitives'
+import { fallbackColor, withAlpha } from '../lib/color'
 import RowMenu from '../ui/RowMenu'
 
 export default function KitPanel() {
@@ -159,6 +160,7 @@ function KitRow({
   onToggleEnabled: () => void
 }) {
   const kind = section.kind
+  const rowColor = def.color ?? fallbackColor(def.id)
   const mapPiece = isMapPiece(kind)
 
   const menu: { label: string; onClick: () => void; tone?: 'danger'; disabled?: boolean; title?: string }[] = [
@@ -210,7 +212,22 @@ function KitRow({
       }}
       title={mapPiece ? '地图件：铺到地图格才算内容' : '非地图件：显式启用才算内容'}
     >
-      <span style={{ fontSize: 14 }}>{def.icon}</span>
+      <span
+        style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, flex: '0 0 auto' }}
+      >
+        {rowColor && (
+          <span
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: 6,
+              border: `1.5px solid ${rowColor}`,
+              background: withAlpha(rowColor, 0.3),
+            }}
+          />
+        )}
+        <span style={{ position: 'relative', fontSize: 14 }}>{def.icon}</span>
+      </span>
       <span className="hand" style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {def.name}
       </span>

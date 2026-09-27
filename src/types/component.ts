@@ -22,6 +22,8 @@ export interface ComponentBase {
   icon: string
   desc?: string
   tags?: string[]
+  /** 组件颜色（#rrggbb），渲染时描边 100% alpha + 填充 30% alpha（§视觉基调·色彩系统） */
+  color?: string
 }
 
 /* ------------------------------------------------------------------ */

@@ -10,6 +10,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { KIND_TO_LIBRARY_KEY, emptyLibrary, type AnyComponent, type ComponentKind, type Library } from '../types'
 import { isPresetId, presetDef, presetKind, presetLibrary } from '../presets'
+import { fallbackColor } from '../lib/color'
 import { pickStorage } from './storage'
 
 export interface LibraryStore extends Library {
@@ -79,6 +80,22 @@ export const useLibraryStore = create<LibraryStore>()(
         backgrounds: s.backgrounds,
         seeded: s.seeded,
       }),
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<LibraryStore>
+        const fix = (arr?: AnyComponent[]) =>
+          (arr ?? []).map((c) => (c.color ? c : { ...c, color: fallbackColor(c.id) }))
+        return {
+          ...current,
+          ...p,
+          roads: fix(p.roads),
+          buildings: fix(p.buildings),
+          items: fix(p.items),
+          monsters: fix(p.monsters),
+          classes: fix(p.classes),
+          skills: fix(p.skills),
+          backgrounds: fix(p.backgrounds),
+        } as LibraryStore
+      },
     },
   ),
 )

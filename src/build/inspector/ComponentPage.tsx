@@ -12,6 +12,7 @@ import { useProjectStore } from '../../store/project'
 import { commit } from '../../store/commit'
 import { useUiStore } from '../../store/ui'
 import { Badge, Field, TextBox, Toggle } from '../../ui/primitives'
+import { randomComponentColor } from '../../lib/color'
 import { isPresetId } from '../../presets'
 import TagsInput from './controls/TagsInput'
 import RoadEditor from './editors/RoadEditor'
@@ -86,6 +87,25 @@ export default function ComponentPage() {
 
       <Field label="描述">
         <TextBox value={def.desc ?? ''} rows={2} onChange={(v) => patch({ desc: v })} placeholder="组件说明" />
+      </Field>
+
+      <Field label="颜色">
+        <div className="row" style={{ gap: 6 }}>
+          <input
+            type="color"
+            value={def.color ?? '#cccccc'}
+            onChange={(e) => patch({ color: e.target.value })}
+            style={{ width: 42, height: 26, padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}
+          />
+          <button className="btn small" onClick={() => patch({ color: randomComponentColor() })} title="随机换一个颜色">
+            随机
+          </button>
+          {def.color && (
+            <button className="btn small" onClick={() => patch({ color: undefined })} title="清除，改为按 id 取兜底色">
+              清除
+            </button>
+          )}
+        </div>
       </Field>
 
       <TagsInput
