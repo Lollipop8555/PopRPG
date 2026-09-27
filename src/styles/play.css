@@ -774,6 +774,60 @@
   margin-top: 2px;
 }
 
+/* 首页底部：版本号（点开看更新记录） */
+.cover-version {
+  margin-top: auto;
+  padding: 12px 8px 2px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+.cover-version:hover {
+  color: var(--ink-soft);
+  text-decoration: underline;
+}
+
+/* 更新记录弹窗 */
+.changelog-list {
+  margin-top: 6px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.changelog-item {
+  border-left: 2.5px solid var(--line-soft);
+  padding: 2px 0 2px 10px;
+}
+
+.changelog-ver {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-cn);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.changelog-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.changelog-info {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
 /* 仅首页（LoadScreen）：放大封面上的次级开始方式按钮，不动全局 .btn */
 .cover-more .btn {
   min-height: 42px;

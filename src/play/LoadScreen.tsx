@@ -14,10 +14,13 @@ import { usePlayStore } from '../store/play'
 import { pickTextFile } from '../io/download'
 import { downloadLibrary, pickLibraryFile, pickSaveFile } from '../io/psave'
 import { navigate } from '../app/router'
+import { APP_VERSION, changelog } from '../lib/version'
+import Overlay from '../ui/Overlay'
 
 export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario) => void }) {
   const [warnings, setWarnings] = useState<string[]>([])
   const [moreOpen, setMoreOpen] = useState(false)
+  const [versionOpen, setVersionOpen] = useState(false)
   const startSaved = usePlayStore((s) => s.setSession)
 
   const fromBuild = () => {
@@ -145,7 +148,43 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
             ))}
           </div>
         )}
+
+        {/* 底部：版本号（点开看更新记录） */}
+        <button className="cover-version" onClick={() => setVersionOpen(true)} title="查看更新记录">
+          v{APP_VERSION}
+        </button>
       </div>
+
+      {versionOpen && (
+        <Overlay onClose={() => setVersionOpen(false)}>
+          <div className="modal changelog">
+            <div className="panel-head" style={{ justifyContent: 'space-between' }}>
+              <span className="hand" style={{ fontSize: 16 }}>
+                更新记录
+              </span>
+              <button className="btn small" onClick={() => setVersionOpen(false)}>
+                关闭
+              </button>
+            </div>
+
+            <div className="changelog-list">
+              {changelog.versions.map((v) => (
+                <div key={v.version} className="changelog-item">
+                  <div className="changelog-ver">
+                    <span className="changelog-num">v{v.version}</span>
+                    {v.version === changelog.last && <span className="badge on">当前</span>}
+                  </div>
+                  <ul className="changelog-info">
+                    {v.info.map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Overlay>
+      )}
     </div>
   )
 }

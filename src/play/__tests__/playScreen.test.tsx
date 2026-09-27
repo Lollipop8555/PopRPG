@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import GameScreen from '../GameScreen'
 import StartScreen from '../StartScreen'
+import LoadScreen from '../LoadScreen'
+import { changelog } from '../../lib/version'
 import { usePlayStore } from '../../store/play'
 import { scenarioFromProject } from '../load'
 import { nextRound, startSession } from '../flow'
@@ -63,5 +65,15 @@ describe('游玩主界面', () => {
     // 两张卡片都在（供玩家挑选）
     expect(screen.getByText('骑士')).toBeTruthy()
     expect(screen.getByText('法师')).toBeTruthy()
+  })
+
+  it('首页底部显示版本号，点开是更新记录弹窗', () => {
+    render(<LoadScreen onLoaded={() => {}} />)
+    const ver = screen.getByText(`v${changelog.last}`)
+    expect(ver).toBeTruthy()
+    fireEvent.click(ver)
+    expect(screen.getByText('更新记录')).toBeTruthy()
+    // 最新一版带「当前」标记
+    expect(screen.getByText('当前')).toBeTruthy()
   })
 })
