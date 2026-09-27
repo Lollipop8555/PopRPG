@@ -1,0 +1,101 @@
+/** 预设道具（§6.1 / §6.1.1 数值基线）：装备 / 消耗品 / 能力件 / 货币 / 技能书 */
+
+import type { ItemDef } from '../types'
+
+export const PRESET_ITEMS: ItemDef[] = [
+  /* ---- 装备（持续性）---- */
+  {
+    id: 'iron_sword',
+    name: '铁剑',
+    icon: '🗡️',
+    kind: 'equipment',
+    slots: ['weapon'],
+    modifiers: { hp: 0, mp: 0, patk: 5, matk: 0, pdef: 0, mdef: 0 },
+    desc: '普通的铁剑，物攻 +5。',
+  },
+  {
+    id: 'fire_boots',
+    name: '火抗鞋',
+    icon: '🥾',
+    kind: 'equipment',
+    slots: ['feet'],
+    modifiers: { pdef: 1, mdef: 1 },
+    tags: ['火抗'],
+    desc: '穿上它，火焰山就成了普通路（§4.5.2）。',
+  },
+  {
+    id: 'rowboat',
+    name: '小船',
+    icon: '🛶',
+    kind: 'equipment',
+    slots: ['hands'],
+    modifiers: { patk: -1 },
+    tags: ['渡河'],
+    desc: '占着两只手，带着它就别想同时挥剑。',
+  },
+  {
+    id: 'lockpick',
+    name: '撬锁工具',
+    icon: '🗝️',
+    kind: 'equipment',
+    slots: ['hands'],
+    tags: ['撬锁'],
+    desc: '没有它，上锁的石门你连试都试不了。',
+  },
+
+  /* ---- 消耗品（一次性）---- */
+  {
+    id: 'red_potion',
+    name: '红瓶',
+    icon: '🧪',
+    kind: 'consumable',
+    usable: ['battle', 'move'],
+    effects: [{ op: 'add_stat', target: 'self', stat: 'hp', delta: 5 }],
+    desc: '回 5 点生命，约 1/6 的初始点数预算。',
+  },
+  {
+    id: 'blue_potion',
+    name: '蓝瓶',
+    icon: '🔵',
+    kind: 'consumable',
+    usable: ['battle', 'move'],
+    effects: [{ op: 'add_stat', target: 'self', stat: 'mp', delta: 5 }],
+    desc: 'mp 默认是 0，所以蓝瓶往往比红瓶更救急。',
+  },
+  {
+    id: 'fire_ward',
+    name: '御火符',
+    icon: '🧧',
+    kind: 'consumable',
+    usable: ['move'],
+    effects: [{ op: 'add_tag', tag: '火抗', duration: 3 }],
+    desc: '临时的火抗：3 回合内能过火焰山（§4.8.10）。',
+  },
+  {
+    id: 'antidote',
+    name: '解毒剂',
+    icon: '💊',
+    kind: 'consumable',
+    usable: ['battle', 'move'],
+    effects: [{ op: 'remove_tag', tag: '中毒' }],
+    desc: '解药：把「中毒」这个状态标签摘掉。',
+  },
+  {
+    id: 'gold',
+    name: '金币',
+    icon: '🪙',
+    kind: 'consumable',
+    usable: [],
+    tags: ['货币'],
+    desc: '「货币」只是给编辑器筛选用，引擎不认识这个词（§4.8.11）。',
+  },
+  {
+    id: 'scroll_of_fireball',
+    name: '火球术残卷',
+    icon: '📜',
+    kind: 'consumable',
+    usable: ['move'],
+    effects: [{ op: 'learn_skill', skill: 'fireball' }],
+    desc: '技能书的全部秘密就这一行：读完，火球术就跟着你了（永久）。',
+  },
+]

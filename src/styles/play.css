@@ -1,0 +1,203 @@
+/* 游玩页样式：同一套纸张 + 手绘基调（00b-style），去掉网格线、留坐标参照（§7.1） */
+
+.play-shell {
+  height: 100%;
+  padding: var(--gap);
+  display: grid;
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr);
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.play-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.play-main {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.play-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+  overflow: auto;
+}
+
+/* 地图：去网格线，只留每 10 格细参照线 */
+.mapview {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.map-cell {
+  cursor: default;
+}
+
+.map-cell.reachable {
+  cursor: pointer;
+}
+
+/* 血条 / 蓝条 */
+.bar {
+  position: relative;
+  height: 14px;
+  border: 1.4px solid var(--line);
+  border-radius: 9px 7px 10px 6px / 7px 10px 6px 9px;
+  background: rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+}
+
+.bar > .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(193, 90, 74, 0.55);
+}
+
+.bar.mp > .fill {
+  background: rgba(74, 122, 140, 0.55);
+}
+
+.bar > .label {
+  position: relative;
+  font-size: 10.5px;
+  line-height: 14px;
+  text-align: center;
+  color: var(--ink);
+}
+
+/* 属性行 */
+.statline {
+  display: grid;
+  grid-template-columns: 46px 1fr auto auto;
+  gap: 4px;
+  align-items: center;
+  font-size: 12.5px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1.2px dashed var(--line);
+  border-radius: 9px 7px 10px 6px / 7px 10px 6px 9px;
+  padding: 1px 6px;
+  font-size: 11.5px;
+  background: #fffdf4;
+}
+
+.chip.state {
+  border-style: solid;
+  border-color: #c9a9a0;
+  color: #96372a;
+}
+
+.chip.good {
+  border-color: #a9c4a0;
+  color: #3f6a38;
+}
+
+/* 技能按钮 */
+.skill-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  border: 1.4px solid var(--line);
+  background: var(--paper-card);
+  border-radius: 12px 9px 13px 8px / 9px 13px 8px 12px;
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.skill-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.skill-btn.selected {
+  background: #f2e6c8;
+  border-color: var(--ink);
+}
+
+/* 日志 */
+.logline {
+  font-size: 12px;
+  line-height: 1.6;
+  border-left: 3px solid var(--line-soft);
+  padding-left: 6px;
+}
+
+.logline.good {
+  border-left-color: var(--green);
+  color: #3f6a38;
+}
+
+.logline.bad {
+  border-left-color: var(--red);
+  color: #96372a;
+}
+
+.logline.dice {
+  border-left-color: var(--blue);
+  color: #3b5f6d;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+}
+
+/* 骰子（手绘感：不规则圆角 + 轻微旋转） */
+.die {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.6px solid var(--line);
+  background: #fffdf4;
+  border-radius: 10px 8px 11px 7px / 8px 11px 7px 10px;
+  font-family: var(--font-hand);
+  font-size: 17px;
+  transform: rotate(-3deg);
+  box-shadow: var(--shadow);
+}
+
+.die.rolled {
+  animation: die-drop 220ms ease-out;
+}
+
+@keyframes die-drop {
+  0% {
+    transform: rotate(-14deg) translateY(-6px);
+  }
+  100% {
+    transform: rotate(-3deg) translateY(0);
+  }
+}
+
+.dice-tray {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 880px) {
+  .play-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .play-side {
+    max-height: 42vh;
+  }
+}

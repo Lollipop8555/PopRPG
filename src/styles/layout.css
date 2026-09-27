@@ -1,0 +1,233 @@
+/*
+ * 布局：单一栅格 + 唯一间距 token（§5.1）
+ * - 全页只有**一层**内边距：.app-shell { padding: var(--gap) }
+ * - 面板**不许自带 margin**（.panel 里已经没有 margin）
+ * - 顶栏不换行（nowrap），行高恒定
+ * - 左右栏 flex column + min-height:0，滚动只发生在内部
+ */
+
+.app-shell {
+  height: 100%;
+  padding: var(--gap);
+  display: grid;
+  grid-template-rows: var(--topbar-h) 1fr;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 320px;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+  min-width: 0;
+}
+
+.center {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* 顶栏：项目名 · 撤销/重做 · 导入/导出，溢出收 ⋯，绝不换行 */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  height: var(--topbar-h);
+  overflow: hidden;
+  padding: 0 4px;
+}
+
+.topbar .title {
+  font-family: var(--font-cn);
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 60px;
+  flex: 1 1 auto;
+}
+
+.topbar .grow {
+  flex: 0 0 auto;
+}
+
+/*panel list inside column */
+.layer-panel {
+  flex: 0 0 auto;
+  max-height: 42%;
+  display: flex;
+  flex-direction: column;
+}
+
+.kit-panel {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.inspector {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 中栏：画布填满整个面板 */
+.canvas-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--radius-rough);
+  background: var(--paper-card);
+}
+
+.modebar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(253, 250, 242, 0.92);
+  border: 1.5px solid var(--line);
+  border-radius: 14px 10px 16px 9px / 10px 16px 9px 14px;
+  padding: 5px 8px;
+  box-shadow: var(--shadow);
+  z-index: 3;
+  max-width: calc(100% - 16px);
+  flex-wrap: wrap;
+}
+
+.modebar .mode-btn {
+  border: 1.3px solid var(--line-soft);
+  background: transparent;
+  border-radius: 12px 8px 13px 7px / 8px 13px 7px 12px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font-cn);
+}
+
+.modebar .mode-btn.active {
+  background: #f2e6c8;
+  border-color: var(--line);
+  font-weight: 700;
+}
+
+.modebar .tip {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  max-width: 260px;
+}
+
+.zoombar {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 4px;
+  z-index: 3;
+}
+
+.mapchip {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 3;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  background: rgba(253, 250, 242, 0.86);
+  border: 1.2px dashed var(--line-soft);
+  border-radius: 10px 7px 11px 6px / 7px 11px 6px 10px;
+  padding: 2px 8px;
+}
+
+.selection-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 46px;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  background: rgba(253, 250, 242, 0.96);
+  border: 1.5px solid var(--line);
+  border-radius: 14px 10px 16px 9px / 10px 16px 9px 14px;
+  padding: 5px 10px;
+  box-shadow: var(--shadow);
+  font-size: 12.5px;
+}
+
+/* ---------------- 抽屉式响应式（≤880px） ---------------- */
+
+.drawer-toggle {
+  display: none;
+}
+
+@media (max-width: 880px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .column {
+    position: absolute;
+    top: var(--gap);
+    bottom: var(--gap);
+    width: min(320px, 86vw);
+    z-index: 30;
+    transition: transform 0.18s ease;
+  }
+
+  .column.left {
+    left: var(--gap);
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+
+  .column.right {
+    right: var(--gap);
+    transform: translateX(calc(100% + var(--gap)));
+  }
+
+  .column.left.open,
+  .column.right.open {
+    transform: translateX(0);
+    box-shadow: 0 8px 24px rgba(80, 60, 40, 0.22);
+  }
+
+  .drawer-toggle {
+    display: inline-flex;
+  }
+
+  /* 模式条移到画布底部横排（拇指可达，§5.1） */
+  .modebar {
+    top: auto;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    max-width: none;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .modebar .tip {
+    display: none;
+  }
+
+  .zoombar {
+    top: 8px;
+    bottom: auto;
+  }
+}

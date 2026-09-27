@@ -28,8 +28,8 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿，见�
 
 | 文件 | 里程碑 | 范围 | 状态 |
 |------|--------|------|------|
-| [task/00-foundation.md](task/00-foundation.md) | Phase 0 基座 | 脚手架 / 路由 / 类型框架 / store / 预设库 / `.pmod` 解析 | 大部分已完成(M0)，剩路由+类型框架 |
-| [task/01-build.md](task/01-build.md) | Phase A BUILD（构建页） | 信息架构/数据模型/布局/图层/组件库/模式/画布/属性编辑/引擎纯函数/校验/预设/导入导出 | 待做（先做完整） |
+| [task/00-foundation.md](task/00-foundation.md) | Phase 0 基座 | 脚手架 / 路由 / 类型框架 / store / 预设库 / `.pmod` 解析 | **已完成**（2026-09-27 随 Phase A 一并重写） |
+| [task/01-build.md](task/01-build.md) | Phase A BUILD（构建页） | 信息架构/数据模型/布局/图层/组件库/模式/画布/属性编辑/引擎纯函数/校验/预设/导入导出 | **已完成首轮实现**（build + 78 项单测全绿） |
 | [task/02-play.md](task/02-play.md) | Phase B PLAY（游玩页） | 框架加载/开局/移动回合/战斗UI/骰子公示/技能交互/状态/遭遇/商店/装备背包/存档 | 待做（A 后） |
 | [task/03-polish.md](task/03-polish.md) | Phase C 收尾 | 视觉打磨 / GitHub Pages 部署 | 部分已完成 |
 
@@ -75,6 +75,13 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿，见�
 ---
 
 ## 进度同步
+
+**2026-09-27 · Phase 0 + Phase A 首轮实现（代码从零重写）**
+- 旧实现（HY3 产出、不符合文档）已删除，按 `docs/design/` 重新落地：类型全集 → 引擎纯函数 → store 分层 → .pmod → 构建页 UI。
+- 依赖与产物按 **GitHub Pages 纯静态**约束：Vite `base: './'`（不耦合仓库名）、**hash 路由**避免深链 404、官方 Actions 部署、无后端 / 无外部运行时接口。
+- 验证：`npm run build`（tsc 无错）+ `npx vitest run`（78 项：引擎边界 / .pmod round-trip / 构建页冒烟）。
+- 已知边界：玩法流程（加点界面、挪格子、交锋、存档）属 Phase B；`npm run dev` 人工手测待执行一次。
+- 详细清单与备注见 `task/00-foundation.md` / `task/01-build.md` 末尾的「进度同步」。
 
 **2026-09-26 · 任务清单拆分：根 task.md 索引化，里程碑分散到 task/**
 - 根 `task.md`：要点 + 里程碑索引 + 12 条最新核对决策 + 明确不做 + 约束

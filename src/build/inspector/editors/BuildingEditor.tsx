@@ -1,0 +1,334 @@
+/**
+ * 建筑（§4.4 / §5.6）—— **五种行为并列，面板只显示选中行为对应的那一块**（§6.2 11g）。
+ * 通用部分永远是「消耗 + 权限 + 给几点」；算法在规则页里定义一次，这里只给池。
+ */
+
+import type {
+  BuildingDef,
+  EncounterKind,
+  EventBlock,
+  EventOutcome,
+  GrantEntry,
+  StatKey,
+} from '../../../types'
+import { ENCOUNTER_KINDS, STAT_KEYS, STAT_LABEL } from '../../../types'
+import { useLibraryStore } from '../../../store/library'
+import { useProjectStore } from '../../../store/project'
+import { checkAnalysis } from '../../../engine/event'
+import { makePlayerUnit } from '../../../engine/units'
+import { eventText } from '../../../lib/human'
+import { Field, NumberBox, SelectBox, TextBox, Toggle } from '../../../ui/primitives'
+import { CostEditor, GateEditor } from '../controls/CostGateEditor'
+import EffectsEditor from '../controls/EffectsEditor'
+import PoolEditor from '../controls/PoolEditor'
+import PriceEditor from '../controls/PriceEditor'
+import DiceInput from '../controls/DiceInput'
+import { CopiesEditor, PickEditor } from '../controls/RewardAlgoEditor'
+
+const ENCOUNTER_LABEL: Record<EncounterKind, string> = {
+  empty: '空地（纯装饰 / 占位）',
+  treasure: '宝箱（开箱给东西）',
+  monster: '怪物房（抽一只开打）',
+  event: '事件（门槛 + 判定 + 后果）',
+  shop: '商店（用钱换东西）',
+}
+
+export default function BuildingEditor({
+  def,
+  onChange,
+}: {
+  def: BuildingDef
+  onChange: (patch: Partial<BuildingDef>) => void
+}) {
+  const poolSize = (def.reward_pool?.ids ?? []).length
+  const stockSize = (def.stock?.ids ?? []).length
+
+  const patchEvent = (part: Partial<EventBlock>) => {
+    onChange({ event: { ...(def.event ?? {}), ...part } })
+  }
+
+  return (
+    <div>
+      <Field label="踩到时发生什么（encounter）">
+        <SelectBox
+          value={def.encounter}
+          options={ENCOUNTER_KINDS.map((k) => ({ value: k, label: ENCOUNTER_LABEL[k] }))}
+          onChange={(v) => onChange({ encounter: v as EncounterKind })}
+        />
+      </Field>
+
+      {/* 通用：消耗 + 权限 + 给点数（§4.4 与道路同一套） */}
+      <CostEditor value={def.cost} onChange={(cost) => onChange({ cost })} />
+      <GateEditor value={def.gate} onChange={(gate) => onChange({ gate })} />
+      <Field label="结算时给予的自由属性点（point_reward）" hint="开箱与事件成功均可给予（§4.8.8）">
+        <NumberBox value={def.point_reward} min={0} onChange={(n) => onChange({ point_reward: n ?? 0 })} />
+      </Field>
+
+      <div className="sketch-line" style={{ margin: '10px 0' }} />
+
+      {def.encounter === 'empty' && (
+        <div className="hintbox">不触发任何效果，可用于装饰或占位。</div>
+      )}
+
+      {def.encounter === 'treasure' && (
+        <>
+          <PoolEditor value={def.reward_pool} onChange={(reward_pool) => onChange({ reward_pool })} kind="item" label="奖励池" />
+          <PickEditor value={def.pick} onChange={(pick) => onChange({ pick })} poolSize={poolSize} label="件数覆盖（可省）" />
+          <CopiesEditor value={def.copies} onChange={(copies) => onChange({ copies })} label="份数覆盖（可省）" />
+
+          <Field label="宝箱怪物（mimic）" hint="按概率触发伪装怪物：先进入战斗，胜利后按战利品算法结算">
+            <Toggle
+              label="开启"
+              checked={!!def.mimic}
+              onChange={(on) =>
+                onChange({
+                  mimic: on
+                    ? { chance: def.mimic?.chance ?? 0.2, monster: def.mimic?.monster ?? '', reward_pool: def.mimic?.reward_pool }
+                    : undefined,
+                })
+              }
+            />
+            {def.mimic && (
+              <div style={{ border: '1.2px dashed var(--line)', borderRadius: 10, padding: 6, marginTop: 4 }}>
+                <Field label="伪装概率（0~1）">
+                  <NumberBox value={def.mimic.chance} onChange={(n) => onChange({ mimic: { ...def.mimic!, chance: n ?? 0 } })} />
+                </Field>
+                <MonsterSelect
+                  value={def.mimic.monster}
+                  onChange={(monster) => onChange({ mimic: { ...def.mimic!, monster } })}
+                />
+                <PoolEditor
+                  value={def.mimic.reward_pool}
+                  onChange={(reward_pool) => onChange({ mimic: { ...def.mimic!, reward_pool } })}
+                  kind="item"
+                  label="打赢后的战利品池（可省）"
+                />
+              </div>
+            )}
+          </Field>
+        </>
+      )}
+
+      {def.encounter === 'monster' && (
+        <PoolEditor value={def.monster_pool} onChange={(monster_pool) => onChange({ monster_pool })} kind="monster" label="怪物池" />
+      )}
+
+      {def.encounter === 'event' && (
+        <EventEditor event={def.event} onChange={patchEvent} />
+      )}
+
+      {def.encounter === 'shop' && (
+        <>
+          <PoolEditor value={def.stock} onChange={(stock) => onChange({ stock })} kind="item" label="上架池" />
+          {def.stock && (
+            <PickEditor
+              value={def.stock.pick}
+              onChange={(pick) =>
+                onChange({
+                  stock: { source: def.stock!.source, ids: def.stock!.ids, filter: def.stock!.filter, pick },
+                })
+              }
+              poolSize={stockSize}
+              label="这次上架几件"
+              allowClear={false}
+            />
+          )}
+          <PriceEditor value={def.price} onChange={(price) => onChange({ price })} allowClear />
+          <div className="faint">
+            货币为普通道具（`tags: [货币]` 仅用于筛选）；获得货币与获得其他道具走同一套产出机制（§4.8.11）。
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* 事件块（§4.8.9）                                                     */
+/* ------------------------------------------------------------------ */
+
+function EventEditor({ event, onChange }: { event?: EventBlock; onChange: (part: Partial<EventBlock>) => void }) {
+  const library = useLibraryStore()
+  const project = useProjectStore()
+  const block: EventBlock = event ?? {}
+  const check = block.check
+
+  const probes = library.classes.filter((c) => project.enabledIds.includes(c.id) && project.rules.class_pool.includes(c.id))
+  const reference = probes[0] ?? library.classes[0]
+  const analysis = check && reference ? checkAnalysis(makePlayerUnit({ cls: reference }), check, project.rules) : undefined
+
+  return (
+    <div>
+      <Field label="文本">
+        <TextBox value={block.text ?? ''} rows={2} onChange={(text) => onChange({ text })} placeholder="触发时展示的文本" />
+      </Field>
+
+      <GateEditor value={block.gate} onChange={(gate) => onChange({ gate })} label="① 门槛（能不能碰）" />
+
+      <Field label="② 判定（是否成功）" hint={check ? undefined : '不写判定 = 过了门槛就必成（纯叙事 / 有钥匙就能开）'}>
+        <Toggle
+          label="进行判定"
+          checked={!!check}
+          onChange={(on) => onChange({ check: on ? { add: 'patk', target: 10 } : undefined })}
+        />
+        {check && (
+          <div style={{ border: '1.2px dashed var(--line)', borderRadius: 10, padding: 6, marginTop: 4 }}>
+            <DiceInput
+              value={check.dice}
+              onChange={(dice) => onChange({ check: { ...check, dice } })}
+              hint="留空就用规则页的 event.dice"
+            />
+            <div className="grid2">
+              <Field label="计入的属性维度">
+                <SelectBox
+                  value={check.add}
+                  options={[{ value: 'none', label: '不靠属性' }, ...STAT_KEYS.map((k) => ({ value: k, label: STAT_LABEL[k] }))]}
+                  onChange={(v) => onChange({ check: { ...check, add: v as StatKey | 'none' } })}
+                />
+              </Field>
+              <Field label="难度（固定值）">
+                <NumberBox value={check.target} onChange={(n) => onChange({ check: { ...check, target: n ?? 0 } })} />
+              </Field>
+            </div>
+
+            {analysis && (
+              <div className={`hintbox ${analysis.verdict === 'always' ? 'ok' : analysis.verdict === 'never' ? 'warn' : ''}`}>
+                <div>
+                  以「{reference?.name}」为参照：手艺 {analysis.min} ~ {analysis.max}，命中率约{' '}
+                  <b>{Math.round(analysis.rate * 100)}%</b>
+                  {analysis.needPips !== null ? `（至少要掷出 ${analysis.needPips}）` : '（掷到顶也不够）'}
+                </div>
+                {analysis.verdict === 'always' && <div>判定结果<b>必定成功</b>：对当前配置而言该判定不具备挑战性。</div>}
+                {analysis.verdict === 'never' && (
+                  <div>判定结果<b>必定失败</b>。建议提升相关属性、更换装备，或下调难度值。</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </Field>
+
+      <OutcomeEditor label="成功会发生什么" value={block.on_success} onChange={(on_success) => onChange({ on_success })} />
+      <OutcomeEditor label="失败会发生什么" value={block.on_fail} onChange={(on_fail) => onChange({ on_fail })} />
+
+      <Toggle label="once：成功后本格降级为空地" checked={!!block.once} onChange={(once) => onChange({ once })} />
+
+      <div className="hintbox">{eventText(block)}</div>
+    </div>
+  )
+}
+
+function OutcomeEditor({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value?: EventOutcome
+  onChange: (value: EventOutcome | undefined) => void
+}) {
+  const library = useLibraryStore()
+  const project = useProjectStore()
+  const maxDuration = project.rules.state.max_duration
+  const outcome = value
+  const items = library.items.filter((i) => project.enabledIds.includes(i.id))
+  const grants = outcome?.grant ?? []
+
+  return (
+    <Field label={label}>
+      <Toggle
+        label="有后果"
+        checked={!!outcome}
+        onChange={(on) => onChange(on ? { text: '' } : undefined)}
+      />
+      {outcome && (
+        <div style={{ border: '1.2px dashed var(--line)', borderRadius: 10, padding: 6, marginTop: 4 }}>
+          <Field label="文本">
+            <TextBox value={outcome.text ?? ''} onChange={(text) => onChange({ ...outcome, text })} />
+          </Field>
+          <CostEditor value={outcome.cost} onChange={(cost) => onChange({ ...outcome, cost })} step={false} label="扣资源" />
+          <Field label="给自由点">
+            <NumberBox value={outcome.point_reward} min={0} onChange={(n) => onChange({ ...outcome, point_reward: n ?? 0 })} />
+          </Field>
+
+          <Field label="给道具（grant）">
+            {grants.map((grant, index) => (
+              <GrantRow
+                key={index}
+                grant={grant}
+                items={items}
+                onChange={(next) => {
+                  const list = [...grants]
+                  list[index] = next
+                  onChange({ ...outcome, grant: list })
+                }}
+                onRemove={() => onChange({ ...outcome, grant: grants.filter((_, i) => i !== index) })}
+              />
+            ))}
+            <SelectBox
+              value=""
+              options={[
+                { value: '', label: '＋ 给一件' },
+                ...items.map((i) => ({ value: i.id, label: `${i.icon} ${i.name}` })),
+              ]}
+              onChange={(v) => v && onChange({ ...outcome, grant: [...grants, { id: v, count: 1 }] })}
+            />
+          </Field>
+
+          <EffectsEditor
+            effects={outcome.effects}
+            onChange={(effects) => onChange({ ...outcome, effects })}
+            maxDuration={maxDuration}
+            label="挂 / 解状态"
+          />
+        </div>
+      )}
+    </Field>
+  )
+}
+
+function GrantRow({
+  grant,
+  items,
+  onChange,
+  onRemove,
+}: {
+  grant: GrantEntry
+  items: { id: string; name: string; icon: string }[]
+  onChange: (grant: GrantEntry) => void
+  onRemove: () => void
+}) {
+  return (
+    <div className="row" style={{ gap: 4, marginBottom: 3 }}>
+      <SelectBox
+        value={grant.id}
+        options={items.map((i) => ({ value: i.id, label: `${i.icon} ${i.name}` }))}
+        onChange={(id) => onChange({ ...grant, id })}
+      />
+      <div style={{ width: 60 }}>
+        <NumberBox value={grant.count} min={1} onChange={(n) => onChange({ ...grant, count: n ?? 1 })} />
+      </div>
+      <button className="btn small" onClick={onRemove}>
+        ×
+      </button>
+    </div>
+  )
+}
+
+function MonsterSelect({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const library = useLibraryStore()
+  const enabledIds = useProjectStore((s) => s.enabledIds)
+  const monsters = library.monsters.filter((m) => enabledIds.includes(m.id))
+  return (
+    <Field label="伪装成哪只怪（单只，不用池）">
+      <SelectBox
+        value={value}
+        options={[
+          { value: '', label: '（选一只）' },
+          ...monsters.map((m) => ({ value: m.id, label: `${m.icon} ${m.name}` })),
+        ]}
+        onChange={onChange}
+      />
+    </Field>
+  )
+}

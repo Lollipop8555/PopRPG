@@ -1,0 +1,443 @@
+/*
+ * 视觉全局基调：纸张 + 手绘 + 涂鸦（design/00b-style.md）
+ * - 暖色纸纹：内联 SVG feTurbulence 噪声（data URI），不需要外部图片 —— GitHub Pages 上也能离线看
+ * - 手绘线条：不规则 border-radius + 轻微旋转，不用 rough.js
+ * - 字体：系统手写体优先（不引外部字体，避免部署时取不到）
+ */
+
+:root {
+  /* 唯一间距 token（§5.1） */
+  --gap: 10px;
+  --topbar-h: 52px;
+
+  --paper: #f6efe0;
+  --paper-deep: #efe4cc;
+  --paper-card: #fdfaf2;
+  --ink: #3b3227;
+  --ink-soft: #6b5f4e;
+  --ink-faint: #9b8e79;
+  --line: #c9b795;
+  --line-soft: #ded1b4;
+
+  --red: #c1503f;
+  --amber: #c98a2b;
+  --green: #5d8a53;
+  --blue: #4a7a8c;
+
+  --radius: 10px;
+  --radius-rough: 18px 12px 20px 10px / 12px 20px 10px 18px;
+  --shadow: 0 2px 0 rgba(120, 100, 70, 0.18);
+
+  --font-hand: 'Caveat', 'Patrick Hand', 'Comic Sans MS', 'Segoe Print', system-ui, sans-serif;
+  --font-cn: 'Xingkai SC', 'STXingkai', 'Kaiti SC', 'STKaiti', KaiTi, 'LXGW WenKai', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-ui);
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.55), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(224, 205, 170, 0.5), transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.22'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  overflow: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+.hand {
+  font-family: var(--font-cn);
+  letter-spacing: 0.02em;
+}
+
+/* ---------------- 纸张卡片 / 面板 ---------------- */
+
+.panel {
+  background: var(--paper-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-rough);
+  box-shadow: var(--shadow);
+  padding: var(--gap);
+  min-height: 0;
+  position: relative;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-cn);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: default;
+  user-select: none;
+}
+
+.panel-title {
+  font-family: var(--font-cn);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.muted {
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.faint {
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.hintbox {
+  border-left: 3px solid var(--line);
+  background: rgba(233, 220, 190, 0.45);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+.hintbox.warn {
+  border-left-color: var(--amber);
+  background: rgba(233, 196, 120, 0.28);
+  color: #8a6320;
+}
+
+.hintbox.error {
+  border-left-color: var(--red);
+  background: rgba(206, 132, 118, 0.24);
+  color: #96372a;
+}
+
+.hintbox.ok {
+  border-left-color: var(--green);
+  background: rgba(150, 190, 140, 0.24);
+  color: #3f6a38;
+}
+
+/* ---------------- 按钮 ---------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1.5px solid var(--line);
+  background: var(--paper-card);
+  color: var(--ink);
+  border-radius: 14px 10px 16px 9px / 10px 16px 9px 14px;
+  padding: 5px 10px;
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.06s ease;
+}
+
+.btn:hover {
+  background: #fffdf6;
+}
+
+.btn:active {
+  transform: translateY(1px) rotate(-0.4deg);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  background: #f2e6c8;
+  border-color: #bfae86;
+  font-family: var(--font-cn);
+  font-weight: 700;
+}
+
+.btn.danger {
+  color: var(--red);
+  border-color: #d9b3a8;
+}
+
+.btn.ghost {
+  border-style: dashed;
+  background: transparent;
+}
+
+.btn.small {
+  padding: 2px 7px;
+  font-size: 11.5px;
+  border-radius: 12px 9px 13px 8px / 9px 13px 8px 12px;
+}
+
+/* ---------------- 表单 ---------------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.field > label {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.input,
+.select,
+.textarea {
+  border: 1.5px solid var(--line);
+  border-radius: 10px 7px 12px 6px / 7px 12px 6px 10px;
+  background: #fffdf5;
+  padding: 5px 7px;
+  font-size: 13px;
+  width: 100%;
+  min-width: 0;
+}
+
+.input.invalid,
+.select.invalid,
+.textarea.invalid {
+  border-color: var(--red);
+  background: #fdf1ee;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: 2px solid rgba(120, 160, 180, 0.35);
+  outline-offset: 1px;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 62px;
+  line-height: 1.6;
+  font-family: var(--font-cn);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+/* ---------------- 徽章 ---------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 10px 7px 11px 6px / 7px 11px 6px 10px;
+  border: 1.2px solid var(--line-soft);
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+}
+
+.badge.preset {
+  border-color: #c6b7d6;
+  color: #6b5b8a;
+}
+
+.badge.custom {
+  border-color: #b6cfc6;
+  color: #3f6a5c;
+}
+
+.badge.on {
+  border-color: #a9c4a0;
+  color: #3f6a38;
+  background: rgba(160, 200, 150, 0.2);
+}
+
+.badge.off {
+  opacity: 0.75;
+}
+
+.badge.warn {
+  border-color: #dcbf85;
+  color: #8a6320;
+  background: rgba(233, 196, 120, 0.2);
+}
+
+.badge.err {
+  border-color: #d9a99f;
+  color: #96372a;
+  background: rgba(206, 132, 118, 0.16);
+}
+
+/* 字段说明：收成「?」，悬停查看，不占版面 */
+.helpdot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.2px solid var(--line);
+  color: var(--ink-faint);
+  font-size: 10px;
+  cursor: help;
+  flex: 0 0 auto;
+}
+
+.tagchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1.2px dashed var(--line);
+  border-radius: 9px 7px 10px 6px / 7px 10px 6px 9px;
+  padding: 1px 6px;
+  font-size: 11.5px;
+  background: #fffdf4;
+}
+
+.tagchip button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ink-faint);
+  padding: 0;
+  font-size: 12px;
+}
+
+/* ---------------- 滚动条：内缩 2px，不撑破栅格 ---------------- */
+
+.scroll {
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  background: rgba(150, 130, 100, 0.35);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* ---------------- 手绘分隔线 ---------------- */
+
+.sketch-line {
+  height: 6px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='6' viewBox='0 0 120 6'%3E%3Cpath d='M0 3 Q15 1 30 3 T60 3 T90 3 T120 3' stroke='%23c9b795' stroke-width='1.4' fill='none'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  opacity: 0.85;
+}
+
+/* ---------------- 弹层 ---------------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(60, 48, 34, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gap);
+  z-index: 40;
+}
+
+.modal {
+  background: var(--paper-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-rough);
+  box-shadow: 0 8px 24px rgba(80, 60, 40, 0.25);
+  width: min(620px, 100%);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--gap);
+}
+
+.modal.wide {
+  width: min(880px, 100%);
+}
+
+/* 浮层（菜单 / 帮助）：portal 到 body，不受父容器剪裁 */
+.popover {
+  background: var(--paper-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-rough);
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 60vh;
+  box-shadow: 0 8px 20px rgba(80, 60, 40, 0.22);
+}
+
+.popover.wide {
+  width: min(340px, 92vw);
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%) rotate(-0.6deg);
+  background: var(--paper-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-rough);
+  padding: 8px 14px;
+  box-shadow: 0 6px 18px rgba(80, 60, 40, 0.22);
+  z-index: 60;
+  max-width: min(560px, 92vw);
+  font-size: 13px;
+  font-family: var(--font-cn);
+}
+
+.toast.warn {
+  border-color: var(--amber);
+  color: #8a6320;
+}
+
+.toast.error {
+  border-color: var(--red);
+  color: #96372a;
+}
