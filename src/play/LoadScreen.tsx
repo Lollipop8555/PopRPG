@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react'
-import { FileDown, FileUp, Hammer, LibraryBig, Sparkles } from 'lucide-react'
+import { FileDown, FileUp, Hammer, LibraryBig, Sword } from 'lucide-react'
 import type { Scenario } from '../types/session'
 import { scenarioFromProject, scenarioFromPmod } from './load'
 import { useLibraryStore } from '../store/library'
@@ -69,14 +69,7 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
   }
 
   return (
-    <div className="play-shell">
-      <div className="panel topbar">
-        <span className="title hand">PopRPG</span>
-        <button className="btn small" onClick={() => navigate('build')}>
-          <Hammer size={13} /> 构建页
-        </button>
-      </div>
-
+    <div className="play-shell no-topbar">
       <div className="load-cover">
         <div className="cover-tag">掷骰 · 探窟 · 求生</div>
         <h1 className="cover-title">PopRPG</h1>
@@ -106,9 +99,14 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
           <span className="die cover-die d3">5</span>
         </div>
 
-        <button className="btn primary cover-start" onClick={fromBuild}>
-          开始冒险
-        </button>
+        <div className="cover-actions">
+          <button className="btn primary cover-start" onClick={fromBuild}>
+            <Sword size={22} /> 开始冒险
+          </button>
+          <button className="btn cover-build" onClick={() => navigate('build')}>
+            <Hammer size={16} /> 构建世界
+          </button>
+        </div>
 
         <div className="cover-more">
           <button className="btn ghost" onClick={() => setMoreOpen((o) => !o)}>
@@ -117,9 +115,6 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
           {moreOpen && (
             <>
               <div className="cover-more-body">
-                <button className="btn" onClick={fromBuild}>
-                  <Sparkles size={14} /> 用构建页这一局
-                </button>
                 <button className="btn" onClick={fromFile}>
                   <FileDown size={14} /> 选一份 .pmod
                 </button>

@@ -67,6 +67,14 @@ describe('游玩主界面', () => {
     expect(screen.getByText('法师')).toBeTruthy()
   })
 
+  it('首页：无顶栏，「构建世界」与「开始冒险」并排', () => {
+    render(<LoadScreen onLoaded={() => {}} />)
+    expect(screen.getByText('开始冒险')).toBeTruthy()
+    expect(screen.getByText('构建世界')).toBeTruthy()
+    // 顶栏已移除（不再有「构建页」按钮）
+    expect(screen.queryByText('构建页')).toBeNull()
+  })
+
   it('首页底部显示版本号，点开是更新记录弹窗', () => {
     render(<LoadScreen onLoaded={() => {}} />)
     const ver = screen.getByText(`v${changelog.last}`)
