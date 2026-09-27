@@ -1,0 +1,12 @@
+{
+  "id": "basic_attack",
+  "name": "普通攻击",
+  "icon": "⚔️",
+  "dim": "patk",
+  "target": "opponent",
+  "vs": "auto",
+  "bonus": 0,
+  "apply": "hp",
+  "cost": {},
+  "desc": "以物攻属性对抗对手物防，造成物理伤害，无消耗（基础技能）。"
+}

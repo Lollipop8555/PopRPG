@@ -1,0 +1,20 @@
+{
+  "id": "chest_room",
+  "name": "宝箱屋",
+  "icon": "📦",
+  "encounter": "treasure",
+  "point_reward": 1,
+  "reward_pool": {
+    "source": "ids",
+    "ids": [
+      { "id": "red_potion", "weight": 5 },
+      { "id": "iron_sword", "weight": 1 }
+    ]
+  },
+  "mimic": {
+    "chance": 0.2,
+    "monster": "mimic_chest",
+    "reward_pool": { "source": "ids", "ids": ["red_potion"] }
+  },
+  "desc": "开启后随机掉落物品；有概率遭遇伪装宝箱并进入战斗。"
+}

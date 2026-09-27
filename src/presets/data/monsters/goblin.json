@@ -1,0 +1,10 @@
+{
+  "id": "goblin",
+  "name": "哥布林",
+  "icon": "👺",
+  "tags": ["洞穴"],
+  "stats": { "hp": [6, 12], "mp": [0, 2], "patk": [2, 4], "matk": [0, 2], "pdef": [1, 2], "mdef": [1, 2] },
+  "attack_weights": { "basic_attack": 3, "basic_magic": 1 },
+  "point_reward": 1,
+  "desc": "洞穴常见小怪，物攻与魔攻兼备，需兼顾两维防御。"
+}

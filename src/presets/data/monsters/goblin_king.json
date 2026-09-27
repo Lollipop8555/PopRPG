@@ -1,0 +1,17 @@
+{
+  "id": "goblin_king",
+  "name": "哥布林王",
+  "icon": "👑",
+  "tags": ["精英", "洞穴"],
+  "stats": { "hp": [24, 40], "mp": [4, 8], "patk": [6, 10], "matk": [4, 8], "pdef": [4, 6], "mdef": [4, 6] },
+  "attack_weights": { "basic_attack": 2, "basic_magic": 1 },
+  "reward_pool": {
+    "source": "ids",
+    "ids": [
+      { "id": "iron_sword", "weight": 1 },
+      { "id": "blue_potion", "weight": 2 }
+    ]
+  },
+  "point_reward": 5,
+  "desc": "洞穴精英首领，属性数值显著高于小怪，击败后掉落物品。"
+}

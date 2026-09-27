@@ -1,0 +1,8 @@
+{
+  "id": "river",
+  "name": "河流",
+  "icon": "🌊",
+  "cost": { "step": 1 },
+  "gate": { "tags": ["渡河"], "mode": "any", "missing": "block" },
+  "desc": "需具备「渡河」能力方可通行，否则无法通过。"
+}

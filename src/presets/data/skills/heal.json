@@ -1,0 +1,12 @@
+{
+  "id": "heal",
+  "name": "治疗术",
+  "icon": "💚",
+  "dim": "matk",
+  "target": "self",
+  "vs": "none",
+  "bonus": 2,
+  "apply": "hp",
+  "cost": { "mp": 3 },
+  "desc": "以魔攻属性为自己恢复生命，消耗 3 点法力。"
+}

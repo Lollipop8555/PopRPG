@@ -1,29 +1,68 @@
 /**
- * 内置预设总表（§6.1）—— 首次启动时**播种一次**进组件库，之后就是用户的资产。
+ * 内置预设总表（§6.1）。
  *
+ * 全部预设以 **JSON 文件** 形式放在 `./data/<类别>/<id>.json`：
+ *   data/roads/       道路
+ *   data/buildings/   建筑
+ *   data/items/       道具
+ *   data/monsters/    怪物
+ *   data/classes/     职业
+ *   data/skills/      技能
+ *   data/backgrounds/ 背景
+ *
+ * 通过 `import.meta.glob` 自动收录——**新增一个预设 = 加一个 JSON 文件，更新一个 = 改一个文件**，
+ * 本文件无需改动。每个 id 一个文件，便于单独维护、单独更新。
+ *
+ * 首次启动时由 `ensureSeeded`（store/library）播种进组件库，之后就是用户的资产。
  * 来源判定（§3.2）：id 命中这张表 = `预设`，否则 = `自建`。七大类一视同仁。
  */
 
-import type { AnyComponent, ComponentKind, Library } from '../types'
+import type {
+  AnyComponent,
+  BackgroundDef,
+  BuildingDef,
+  ClassDef,
+  ComponentKind,
+  ItemDef,
+  Library,
+  MonsterDef,
+  RoadDef,
+  SkillDef,
+} from '../types'
 import { LIBRARY_KEYS } from '../types'
 import { fallbackColor } from '../lib/color'
-import { PRESET_BACKGROUNDS } from './backgrounds'
-import { PRESET_BUILDINGS } from './buildings'
-import { PRESET_CLASSES } from './classes'
-import { PRESET_ITEMS } from './items'
-import { PRESET_MONSTERS } from './monsters'
-import { PRESET_ROADS } from './roads'
-import { PRESET_SKILLS } from './skills'
 
-export {
-  PRESET_BACKGROUNDS,
-  PRESET_BUILDINGS,
-  PRESET_CLASSES,
-  PRESET_ITEMS,
-  PRESET_MONSTERS,
-  PRESET_ROADS,
-  PRESET_SKILLS,
+type JsonModule = { default: AnyComponent }
+
+/** 自动收录 data/ 下所有预设 JSON：key = 目录名（与 LIBRARY_KEYS 对应），id = 文件名 */
+function loadPresets(): Record<string, AnyComponent[]> {
+  const modules = import.meta.glob('./data/**/*.json', { eager: true }) as Record<string, JsonModule>
+  const byKey: Record<string, AnyComponent[]> = {}
+  for (const key of LIBRARY_KEYS) byKey[key] = []
+  const seen = new Set<string>()
+  for (const [path, mod] of Object.entries(modules)) {
+    const seg = path.split('/')
+    const key = seg[seg.length - 2]
+    if (!(key in byKey)) continue
+    const def = mod.default
+    if (seen.has(def.id)) continue // 防御 glob 在部分环境下重复收录同一文件
+    seen.add(def.id)
+    byKey[key].push(def)
+  }
+  // 每类按 id 字典序，保证稳定顺序（部分测试依赖 PRESET_*[0] / [1]）
+  for (const key of LIBRARY_KEYS) byKey[key].sort((a, b) => a.id.localeCompare(b.id))
+  return byKey
 }
+
+const PRESETS = loadPresets()
+
+export const PRESET_ROADS = PRESETS.roads as unknown as RoadDef[]
+export const PRESET_BUILDINGS = PRESETS.buildings as unknown as BuildingDef[]
+export const PRESET_ITEMS = PRESETS.items as unknown as ItemDef[]
+export const PRESET_MONSTERS = PRESETS.monsters as unknown as MonsterDef[]
+export const PRESET_CLASSES = PRESETS.classes as unknown as ClassDef[]
+export const PRESET_SKILLS = PRESETS.skills as unknown as SkillDef[]
+export const PRESET_BACKGROUNDS = PRESETS.backgrounds as unknown as BackgroundDef[]
 
 /** 一份深拷贝的预设库，播种时用（避免把模块常量直接交给 store 去改） */
 export function presetLibrary(): Library {
@@ -44,18 +83,18 @@ export function presetLibrary(): Library {
   return lib
 }
 
+const ALL: AnyComponent[] = [
+  ...PRESET_ROADS,
+  ...PRESET_BUILDINGS,
+  ...PRESET_ITEMS,
+  ...PRESET_MONSTERS,
+  ...PRESET_CLASSES,
+  ...PRESET_SKILLS,
+  ...PRESET_BACKGROUNDS,
+]
+
 /** id → 原始预设定义 */
-export const PRESET_INDEX: ReadonlyMap<string, AnyComponent> = new Map<string, AnyComponent>(
-  [
-    ...PRESET_ROADS,
-    ...PRESET_BUILDINGS,
-    ...PRESET_ITEMS,
-    ...PRESET_MONSTERS,
-    ...PRESET_CLASSES,
-    ...PRESET_SKILLS,
-    ...PRESET_BACKGROUNDS,
-  ].map((c) => [c.id, c]),
-)
+export const PRESET_INDEX: ReadonlyMap<string, AnyComponent> = new Map(ALL.map((c) => [c.id, c]))
 
 export function isPresetId(id: string): boolean {
   return PRESET_INDEX.has(id)

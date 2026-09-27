@@ -1,0 +1,12 @@
+{
+  "id": "shield_bash",
+  "name": "盾击",
+  "icon": "🛡️",
+  "dim": "patk",
+  "target": "opponent",
+  "vs": "auto",
+  "bonus": 3,
+  "apply": "hp",
+  "cost": {},
+  "desc": "带加成的物理攻击（物攻 +3），无消耗。"
+}

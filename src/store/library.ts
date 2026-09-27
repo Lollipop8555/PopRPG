@@ -8,7 +8,7 @@
 
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { KIND_TO_LIBRARY_KEY, emptyLibrary, type AnyComponent, type ComponentKind, type Library } from '../types'
+import { KIND_TO_LIBRARY_KEY, LIBRARY_KEYS, emptyLibrary, type AnyComponent, type ComponentKind, type Library } from '../types'
 import { isPresetId, presetDef, presetKind, presetLibrary } from '../presets'
 import { fallbackColor } from '../lib/color'
 import { pickStorage } from './storage'
@@ -44,7 +44,17 @@ export const useLibraryStore = create<LibraryStore>()(
 
       ensureSeeded: () => {
         if (get().seeded) return
-        set({ ...presetLibrary(), seeded: true })
+        const seed = presetLibrary()
+        const cur = get()
+        // 合并式播种：只补入库里还不存在的预设，保留用户已有自建
+        const next: Partial<LibraryStore> = { seeded: true }
+        for (const key of LIBRARY_KEYS) {
+          const existing = (cur[key] as AnyComponent[]) ?? []
+          const seedArr = (seed[key] as AnyComponent[]) ?? []
+          const existingIds = new Set(existing.map((c) => c.id))
+          next[key] = [...existing, ...seedArr.filter((c) => !existingIds.has(c.id))] as never
+        }
+        set(next)
       },
 
       replaceAll: (data) => set({ ...data }),

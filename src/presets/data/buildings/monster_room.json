@@ -1,0 +1,14 @@
+{
+  "id": "monster_room",
+  "name": "怪物房",
+  "icon": "💀",
+  "encounter": "monster",
+  "monster_pool": {
+    "source": "ids",
+    "ids": [
+      { "id": "goblin", "weight": 3 },
+      { "id": "slime", "weight": 2 }
+    ]
+  },
+  "desc": "进入后随机遭遇一只怪物。"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "poison_goblin",
+  "name": "毒牙哥布林",
+  "icon": "🐍",
+  "tags": ["洞穴"],
+  "stats": { "hp": [8, 14], "mp": [0, 2], "patk": [2, 5], "matk": [0, 2], "pdef": [1, 3], "mdef": [1, 2] },
+  "attack_weights": { "poison_bite": 1 },
+  "point_reward": 2,
+  "desc": "攻击附带「中毒」状态，可用解毒剂解除。"
+}

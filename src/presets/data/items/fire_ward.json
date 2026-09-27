@@ -1,0 +1,9 @@
+{
+  "id": "fire_ward",
+  "name": "御火符",
+  "icon": "🧧",
+  "kind": "consumable",
+  "usable": ["move"],
+  "effects": [{ "op": "add_tag", "tag": "火抗", "duration": 3 }],
+  "desc": "消耗品，获得「火抗」标签，持续 3 回合（临时通行）。"
+}

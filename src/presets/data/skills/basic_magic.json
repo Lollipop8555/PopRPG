@@ -1,0 +1,12 @@
+{
+  "id": "basic_magic",
+  "name": "普通法术",
+  "icon": "✨",
+  "dim": "matk",
+  "target": "opponent",
+  "vs": "auto",
+  "bonus": 0,
+  "apply": "hp",
+  "cost": {},
+  "desc": "以魔攻属性对抗对手魔抗，造成法术伤害，无消耗（基础技能）。"
+}

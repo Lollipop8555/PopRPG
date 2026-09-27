@@ -1,0 +1,23 @@
+{
+  "id": "stone_door",
+  "name": "上锁的石门",
+  "icon": "🚪",
+  "encounter": "event",
+  "event": {
+    "text": "一扇刻着古文字的石门挡住了去路。",
+    "gate": { "tags": ["撬锁"], "mode": "all", "missing": "block" },
+    "check": { "dice": "2D6", "add": "patk", "target": 15 },
+    "on_success": {
+      "text": "锁芯「咔」地一声弹开了。",
+      "point_reward": 2,
+      "grant": [{ "id": "red_potion", "count": 1 }]
+    },
+    "on_fail": {
+      "text": "门缝里弹出一排铁针。",
+      "cost": { "hp": 3 },
+      "effects": [{ "op": "add_tag", "tag": "扎伤", "duration": 3, "per_turn": { "hp": -1 } }]
+    },
+    "once": false
+  },
+  "desc": "需「撬锁」能力开启；成功获得奖励，失败受伤害并进入「扎伤」状态。"
+}

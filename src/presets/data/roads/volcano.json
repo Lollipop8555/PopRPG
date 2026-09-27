@@ -1,0 +1,8 @@
+{
+  "id": "volcano",
+  "name": "火焰山",
+  "icon": "🌋",
+  "cost": { "step": 1 },
+  "gate": { "tags": ["火抗"], "mode": "any", "missing": "penalty", "penalty": { "hp": 5 } },
+  "desc": "需要「火抗」，否则每进入一格损失 5 点生命。"
+}

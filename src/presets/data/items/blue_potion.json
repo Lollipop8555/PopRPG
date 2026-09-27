@@ -1,0 +1,9 @@
+{
+  "id": "blue_potion",
+  "name": "蓝瓶",
+  "icon": "🔵",
+  "kind": "consumable",
+  "usable": ["battle", "move"],
+  "effects": [{ "op": "add_stat", "target": "self", "stat": "mp", "delta": 5 }],
+  "desc": "消耗品，立即恢复 5 点法力。"
+}
