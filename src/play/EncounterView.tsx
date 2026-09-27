@@ -40,7 +40,7 @@ export default function EncounterView({
         {/* 事件：把判定摆明白 */}
         {encounter.event && (
           <div className={`hintbox ${encounter.event.verdict === 'success' ? 'ok' : encounter.event.verdict === 'blocked' ? 'warn' : 'error'}`}>
-            {encounter.event.verdict === 'blocked' && <div>门槛没过 —— 连尝试的机会都没有（带上对应的东西再来）。</div>}
+            {encounter.event.verdict === 'blocked' && <div>门槛没过 —— 带上对应的东西再来。</div>}
             {encounter.event.verdict !== 'blocked' && (
               <div>
                 判定：{encounter.event.roll !== undefined ? `掷出 ${encounter.event.roll}` : '没有判定'} → 手艺{' '}
@@ -101,13 +101,6 @@ export default function EncounterView({
           </div>
         )}
 
-        <div className="faint" style={{ marginTop: 8 }}>
-          {encounter.kind === 'event' && encounter.onceKey
-            ? '成功一次后本格降级为空地。'
-            : encounter.kind === 'shop'
-              ? '货币为普通道具。'
-              : '物品进入背包；超出容量时将说明原因。'}
-        </div>
       </div>
     </Overlay>
   )

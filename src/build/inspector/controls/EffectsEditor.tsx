@@ -60,7 +60,7 @@ export default function EffectsEditor({
   }
 
   return (
-    <Field label={label} hint={`每条一行；仅命中时生效（未命中不附加效果，§4.8.3）`}>
+    <Field label={label} hint={`每条一行；仅命中时生效（未命中不附加效果）`}>
       {list.map((eff, index) => (
         <div
           key={index}

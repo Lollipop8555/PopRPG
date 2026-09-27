@@ -9,9 +9,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from 'react'
 import { Crosshair, ZoomIn, ZoomOut } from 'lucide-react'
-import type { GameMap, MapNode } from '../types'
+import type { MapNode } from '../types'
 import { isMapPiece } from '../types'
-import { boxCells, nodeAt, nodeCells, nodeKey, orthPath } from '../lib/map'
+import { boxCells, nodeAt, nodeCells, nodeKey, orthPath, centerCamera } from '../lib/map'
 import { findComponent } from '../lib/refs'
 import { useLibraryStore } from '../store/library'
 import { useProjectStore } from '../store/project'
@@ -23,29 +23,6 @@ import { fallbackColor, withAlpha } from '../lib/color'
 
 const MIN_ZOOM = 16
 const MAX_ZOOM = 96
-
-/**
- * 算出一个「把这张图摆在正中」的相机：
- * camera.x/y 是**视口左上角**对应的世界坐标，所以要减去半屏。
- */
-export function centerCamera(
-  map: GameMap,
-  viewW: number,
-  viewH: number,
-  zoom: number,
-): [number, number, number] {
-  const cells = map.nodes.flatMap((n) => nodeCells(n))
-  const xs = cells.map((c) => c[0])
-  const ys = cells.map((c) => c[1])
-  // 空图（或只有零星几格）时，以原点为中心留出一圈空地
-  const minX = xs.length ? Math.min(...xs) : -4
-  const maxX = xs.length ? Math.max(...xs) : 4
-  const minY = ys.length ? Math.min(...ys) : -3
-  const maxY = ys.length ? Math.max(...ys) : 3
-  const cx = (minX + maxX + 1) / 2
-  const cy = (minY + maxY + 1) / 2
-  return [cx - viewW / (2 * zoom), cy - viewH / (2 * zoom), zoom]
-}
 
 type DragKind = 'none' | 'pan' | 'paint' | 'erase' | 'move' | 'resize' | 'box' | 'link'
 

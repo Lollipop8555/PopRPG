@@ -1,9 +1,14 @@
 /**
  * 开局（B1 / §7.1）：选出身 → 出发。
  * 职业只给**先天的牌面**（属性起点 + 自由点 + 优劣百分比 + 背包 + 家当），**不给技能**（§4.2.3）。
+ *
+ * 出身由 `rules.class_pool` 决定（§7.1）：池长度 1 = 固定，>1 = 随机。
+ * 作者**没配置**职业池时才回退到「玩家手选任意启用职业」。
  */
 
+import { useState } from 'react'
 import type { Scenario } from '../types/session'
+import { rollClass } from './flow'
 
 export default function StartScreen({
   scenario,
@@ -14,10 +19,18 @@ export default function StartScreen({
   onStart: (classId: string) => void
   onCancel: () => void
 }) {
-  const pool = scenario.rules.class_pool.filter(
+  const [rolledId] = useState(() => rollClass(scenario) ?? scenario.library.classes[0]?.id)
+  const poolConfigured =
+    scenario.rules.class_pool.length > 0 &&
+    scenario.rules.class_pool.some(
+      (id) => scenario.enabledIds.includes(id) && scenario.library.classes.some((c) => c.id === id),
+    )
+  const autoClass = poolConfigured ? scenario.library.classes.find((c) => c.id === rolledId) : undefined
+
+  const handPick = scenario.rules.class_pool.filter(
     (id) => scenario.enabledIds.includes(id) && scenario.library.classes.some((c) => c.id === id),
   )
-  const classes = pool.length > 0 ? pool.map((id) => scenario.library.classes.find((c) => c.id === id)!) : scenario.library.classes
+  const classes = handPick.length > 0 ? handPick.map((id) => scenario.library.classes.find((c) => c.id === id)!) : scenario.library.classes
 
   return (
     <div className="play-shell">
@@ -49,41 +62,75 @@ export default function StartScreen({
 
           <div className="sketch-line" style={{ margin: '10px 0' }} />
 
-          <div className="panel-title hand" style={{ fontSize: 14, marginBottom: 6 }}>
-            选择职业（{pool.length > 1 ? '职业池含多个候选，可任选' : '固定职业'}）
-          </div>
-
-          {classes.length === 0 && <div className="hintbox warn">本场景未启用职业，属性将从零开始。</div>}
-
-          {classes.map((cls) => (
-            <div key={cls.id} className="panel" style={{ marginBottom: 8, padding: 10, background: '#fffdf5' }}>
-              <div className="panel-head" style={{ justifyContent: 'space-between' }}>
-                <span>
-                  {cls.icon} {cls.name}
-                </span>
-                <button className="btn small primary" onClick={() => onStart(cls.id)}>
-                  就这个出发
-                </button>
+          {autoClass ? (
+            <>
+              <div className="panel-title hand" style={{ fontSize: 14, marginBottom: 6 }}>
+                这一局的出身由命运决定
               </div>
-              {cls.desc && <div className="muted">{cls.desc}</div>}
-              <div className="row" style={{ gap: 4, marginTop: 4 }}>
-                <span className="badge">开局 {cls.free_points} 点</span>
-                <span className="badge">背包 {cls.inventory_size === 0 ? '∞' : (cls.inventory_size ?? 50)}</span>
-                {Object.entries(cls.buffs ?? {}).map(([key, value]) => (
-                  <span key={key} className={`badge ${(value ?? 100) >= 100 ? 'on' : 'warn'}`}>
-                    {key} ×{Math.round((value ?? 100))}%
+              <div className="panel" style={{ marginBottom: 8, padding: 10, background: '#fffdf5' }}>
+                <div className="panel-head" style={{ justifyContent: 'space-between' }}>
+                  <span>
+                    {autoClass.icon} {autoClass.name}
                   </span>
-                ))}
-              </div>
-              {!!cls.starting_items?.length && (
-                <div className="faint" style={{ marginTop: 4 }}>
-                  家当：
-                  {cls.starting_items.map((id) => scenario.library.items.find((i) => i.id === id)?.name ?? id).join('、')}
-                  （均为道具；技能书同样可丢弃或出售）
+                  <button className="btn small primary" onClick={() => onStart(autoClass.id)}>
+                    出发
+                  </button>
                 </div>
-              )}
-            </div>
-          ))}
+                {autoClass.desc && <div className="muted">{autoClass.desc}</div>}
+                <div className="row" style={{ gap: 4, marginTop: 4 }}>
+                  <span className="badge">开局 {autoClass.free_points} 点</span>
+                  <span className="badge">背包 {autoClass.inventory_size === 0 ? '∞' : (autoClass.inventory_size ?? 50)}</span>
+                  {Object.entries(autoClass.buffs ?? {}).map(([key, value]) => (
+                    <span key={key} className={`badge ${(value ?? 100) >= 100 ? 'on' : 'warn'}`}>
+                      {key} ×{Math.round((value ?? 100))}%
+                    </span>
+                  ))}
+                </div>
+                {!!autoClass.starting_items?.length && (
+                  <div className="faint" style={{ marginTop: 4 }}>
+                    家当：
+                    {autoClass.starting_items.map((id) => scenario.library.items.find((i) => i.id === id)?.name ?? id).join('、')}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="panel-title hand" style={{ fontSize: 14, marginBottom: 6 }}>
+                选择职业
+              </div>
+              {classes.length === 0 && <div className="hintbox warn">这一局还没有可选职业。</div>}
+              {classes.map((cls) => (
+                <div key={cls.id} className="panel" style={{ marginBottom: 8, padding: 10, background: '#fffdf5' }}>
+                  <div className="panel-head" style={{ justifyContent: 'space-between' }}>
+                    <span>
+                      {cls.icon} {cls.name}
+                    </span>
+                    <button className="btn small primary" onClick={() => onStart(cls.id)}>
+                      就这个出发
+                    </button>
+                  </div>
+                  {cls.desc && <div className="muted">{cls.desc}</div>}
+                  <div className="row" style={{ gap: 4, marginTop: 4 }}>
+                    <span className="badge">开局 {cls.free_points} 点</span>
+                    <span className="badge">背包 {cls.inventory_size === 0 ? '∞' : (cls.inventory_size ?? 50)}</span>
+                    {Object.entries(cls.buffs ?? {}).map(([key, value]) => (
+                      <span key={key} className={`badge ${(value ?? 100) >= 100 ? 'on' : 'warn'}`}>
+                        {key} ×{Math.round((value ?? 100))}%
+                      </span>
+                    ))}
+                  </div>
+                  {!!cls.starting_items?.length && (
+                    <div className="faint" style={{ marginTop: 4 }}>
+                      家当：
+                      {cls.starting_items.map((id) => scenario.library.items.find((i) => i.id === id)?.name ?? id).join('、')}
+                      （均为道具；技能书同样可丢弃或出售）
+                    </div>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
         </div>
       </div>
     </div>

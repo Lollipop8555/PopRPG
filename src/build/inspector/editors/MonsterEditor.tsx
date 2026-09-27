@@ -29,7 +29,7 @@ export default function MonsterEditor({
       <StatsIntervalEditor value={def.stats} onChange={(stats) => onChange({ stats })} />
 
       <div className="hintbox">
-        档位参考：小怪 hp 6~12、物攻 2~4；精英 hp 24~40、物攻 6~10，并以 <code>tags: [精英]</code> 标注（通过区间区分档位，不新增字段，§4.1）。
+        档位参考：小怪 hp 6~12、物攻 2~4；精英 hp 24~40、物攻 6~10，并以 <code>tags: [精英]</code> 标注（通过区间区分档位，不新增字段）。
       </div>
 
       <DiceInput
@@ -54,7 +54,7 @@ export default function MonsterEditor({
         <RollSetEditor value={def.def_roll} onChange={(def_roll) => onChange({ def_roll })} label="防骰覆盖（可省）" />
       </div>
 
-      <Field label="胜利后给予的自由属性点（point_reward）" hint="固定数值，不掷骰；结算后计入剩余自由点（§4.8.8）">
+      <Field label="胜利后给予的自由属性点（point_reward）" hint="固定数值，不掷骰；结算后计入剩余自由点">
         <NumberBox value={def.point_reward} min={0} onChange={(n) => onChange({ point_reward: n ?? 0 })} />
       </Field>
 

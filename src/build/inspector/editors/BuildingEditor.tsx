@@ -60,7 +60,7 @@ export default function BuildingEditor({
       {/* 通用：消耗 + 权限 + 给点数（§4.4 与道路同一套） */}
       <CostEditor value={def.cost} onChange={(cost) => onChange({ cost })} />
       <GateEditor value={def.gate} onChange={(gate) => onChange({ gate })} />
-      <Field label="结算时给予的自由属性点（point_reward）" hint="开箱与事件成功均可给予（§4.8.8）">
+      <Field label="结算时给予的自由属性点（point_reward）" hint="开箱与事件成功均可给予">
         <NumberBox value={def.point_reward} min={0} onChange={(n) => onChange({ point_reward: n ?? 0 })} />
       </Field>
 
@@ -135,7 +135,7 @@ export default function BuildingEditor({
           )}
           <PriceEditor value={def.price} onChange={(price) => onChange({ price })} allowClear />
           <div className="faint">
-            货币为普通道具（`tags: [货币]` 仅用于筛选）；获得货币与获得其他道具走同一套产出机制（§4.8.11）。
+            货币为普通道具（`tags: [货币]` 仅用于筛选）；获得货币与获得其他道具走同一套产出机制。
           </div>
         </>
       )}

@@ -17,7 +17,7 @@ export default function RoadEditor({
       <div className="hintbox">
         <div>对照：`step: 1` 正常；`step: 2` 难行（沼泽）；`step: 0` 不耗步（传送带）。</div>
         <div className="faint" style={{ marginTop: 3 }}>
-          铺到地图上请用画布左上的「放置 / 连线」模式 —— 这里不放按钮（入口唯一，§5.4 G3）。
+          铺到地图上请用画布左上的「放置 / 连线」模式 —— 这里不放按钮（入口唯一）。
         </div>
       </div>
     </div>

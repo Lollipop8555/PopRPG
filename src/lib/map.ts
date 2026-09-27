@@ -93,3 +93,27 @@ export function boxCells(a: [number, number], b: [number, number]): [number, num
   for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) cells.push([x, y])
   return cells
 }
+
+/**
+ * 算出「把这张图摆在正中」的相机（§5.5）：
+ * camera.x/y 是**视口左上角**对应的世界坐标，所以要减去半屏。
+ * 构建页与游玩页共用此函数，保证两侧地图取景与节点绝对坐标逐像素一致。
+ */
+export function centerCamera(
+  map: GameMap,
+  viewW: number,
+  viewH: number,
+  zoom: number,
+): [number, number, number] {
+  const cells = map.nodes.flatMap((n) => nodeCells(n))
+  const xs = cells.map((c) => c[0])
+  const ys = cells.map((c) => c[1])
+  // 空图（或只有零星几格）时，以原点为中心留出一圈空地
+  const minX = xs.length ? Math.min(...xs) : -4
+  const maxX = xs.length ? Math.max(...xs) : 4
+  const minY = ys.length ? Math.min(...ys) : -3
+  const maxY = ys.length ? Math.max(...ys) : 3
+  const cx = (minX + maxX + 1) / 2
+  const cy = (minY + maxY + 1) / 2
+  return [cx - viewW / (2 * zoom), cy - viewH / (2 * zoom), zoom]
+}

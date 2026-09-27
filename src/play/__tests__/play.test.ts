@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Rng } from '../../engine/dice'
 import { presetLibrary } from '../../presets'
-import { sampleProject } from '../../lib/sample'
+import { fixtureProject } from '../../test/fixtures'
 import { scenarioFromProject } from '../load'
 import { allocatePoint, freePoints, nextRound, startSession, stepTo } from '../flow'
 import { playerAttack, resolveDefense, startCombat } from '../combat'
@@ -20,11 +20,11 @@ import type { Session } from '../../types/session'
 const fixed = (value: number): Rng => () => value
 
 function scenario() {
-  return scenarioFromProject(presetLibrary(), sampleProject())
+  return scenarioFromProject(presetLibrary(), fixtureProject())
 }
 
 function knight(rngValue = 0.99): Session {
-  return startSession(scenario(), 'knight', fixed(rngValue))
+  return nextRound(startSession(scenario(), 'knight'), fixed(rngValue))
 }
 
 function findBuilding(s: Session, id: string) {

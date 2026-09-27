@@ -130,7 +130,7 @@ export default function RulesPage() {
       <div className="sketch-line" style={{ margin: '10px 0' }} />
 
       {/* ⑤ 状态上限 */}
-      <Field label="state.max_duration" hint="所有状态的持续回合数均不会超过此上限，不存在永久状态（§4.8.10）">
+      <Field label="state.max_duration" hint="所有状态的持续回合数均不会超过此上限，不存在永久状态">
         <NumberBox value={rules.state.max_duration} min={1} onChange={(n) => patch({ state: { max_duration: n ?? 10 } })} />
       </Field>
 
@@ -146,7 +146,7 @@ export default function RulesPage() {
         onChange={(dice) => patch({ event: { dice: dice ?? '2D6' } })}
         label="事件默认判定骰"
         allowEmpty={false}
-        hint="难度与后果配置在事件组件上，此处仅提供默认判定骰（§4.8.9）"
+        hint="难度与后果配置在事件组件上，此处仅提供默认判定骰"
       />
       <Simulate label="掷一次" run={() => rollSum(rules.event.dice)} />
 

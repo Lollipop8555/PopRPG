@@ -31,7 +31,7 @@ function startingSkills(s: Session): string[] {
   return DEFAULT_SKILL_IDS.filter((id) => enabled.has(id) && index.has(id))
 }
 
-export function startSession(scenario: Session['scenario'], classId: string, rng?: Rng): Session {
+export function startSession(scenario: Session['scenario'], classId: string): Session {
   const cls = scenario.library.classes.find((c) => c.id === classId) ?? scenario.library.classes[0]
   const base: Session = {
     version: 1,
@@ -67,11 +67,8 @@ export function startSession(scenario: Session['scenario'], classId: string, rng
     log: [{ text: `开场：${scenario.name}`, tone: 'info' }],
   }
   session = log(session, `${cls?.icon ?? '🙂'} ${cls?.name ?? '无职业'} 出发，开局 ${cls?.free_points ?? 0} 点自由点`)
-  if (skills.length === 0) {
-    session = log(session, '这个世界里没有启用任何技能 —— 连保底对都没有，只能靠走路', 'bad')
-  }
-  // 第一回合：同样走「先判存活、再 tick、再掷步数」这条轴
-  return nextRound(session, rng)
+  // 第一回合交给玩家：进游戏后点骰子投掷，才掷出本回合步数（§7.2「点击投掷」）
+  return { ...session, awaitingRound: true }
 }
 
 /** 开局职业池：长度 1 = 固定；>1 = 随机（§4.2.3 / §7.1） */
@@ -139,7 +136,11 @@ export function nextRound(s: Session, rng?: Rng): Session {
   }
 
   const { session, pips } = roll(next, '移动步数', next.scenario.rules.move.dice, rng)
-  return log({ ...session, stepsLeft: pips, phase: 'explore' }, `掷 ${next.scenario.rules.move.dice} = ${pips} → 本回合能走 ${pips} 步`, 'dice')
+  return log(
+    { ...session, stepsLeft: pips, phase: 'explore', awaitingRound: false },
+    `掷 ${next.scenario.rules.move.dice} = ${pips} → 本回合能走 ${pips} 步`,
+    'dice',
+  )
 }
 
 /* ------------------------------------------------------------------ */
@@ -166,14 +167,24 @@ export interface StepResult {
  * 步数用尽不等于回合结束，要等玩家点「下一回合」才掷新骰（步数全部用尽算一个回合）。
  */
 export function stepTo(s: Session, cell: [number, number], rng?: Rng): StepResult {
-  if (s.phase !== 'explore') return { session: s, moved: false, reason: '现在不是探索阶段' }
-  if (s.stepsLeft <= 0) return { session: s, moved: false, reason: '本回合步数已用尽，请进入下一回合' }
+  if (s.phase !== 'explore') {
+    const reason = '现在不是探索阶段'
+    return { session: log(s, reason, 'bad'), moved: false, reason }
+  }
+  if (s.stepsLeft <= 0) {
+    const reason = '本回合步数已用尽 —— 点「下一回合」掷新骰'
+    return { session: log(s, reason, 'bad'), moved: false, reason }
+  }
   if (!neighbors(s.pos).some(([x, y]) => x === cell[0] && y === cell[1])) {
-    return { session: s, moved: false, reason: '仅可沿上下左右移动' }
+    const reason = '只能上下左右走一格'
+    return { session: log(s, reason, 'bad'), moved: false, reason }
   }
 
   const node = nodeAtCell(s, cell)
-  if (!node) return { session: s, moved: false, reason: '目标格未放置组件，无法通行' }
+  if (!node) {
+    const reason = '那一格没铺东西，过不去'
+    return { session: log(s, reason, 'bad'), moved: false, reason }
+  }
 
   const found = defOf(s, node.ref)
   const def = found?.def
@@ -183,7 +194,7 @@ export function stepTo(s: Session, cell: [number, number], rng?: Rng): StepResul
   // ① 权限
   const pass = canPass(gate, capabilities(s.player))
   if (!pass.pass) {
-    const reason = `缺少标签 ${gate?.tags.join('、')}，无法通行`
+    const reason = `过不去 —— 需要 ${gate?.tags.join('、')}`
     return { session: log(s, reason, 'bad'), moved: false, reason }
   }
 

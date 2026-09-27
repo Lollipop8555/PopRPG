@@ -9,9 +9,9 @@ import BuildApp from '../BuildApp'
 import { useLibraryStore } from '../../store/library'
 import { useProjectStore } from '../../store/project'
 import { useUiStore } from '../../store/ui'
-import { sampleProject } from '../../lib/sample'
+import { fixtureProject } from '../../test/fixtures'
 import { newProject } from '../../store/project'
-import { centerCamera } from '../Canvas'
+import { centerCamera } from '../../lib/map'
 import { nodeCells } from '../../lib/map'
 import { validateProject } from '../../check/validate'
 
@@ -20,7 +20,7 @@ afterEach(() => cleanup())
 describe('构建页骨架', () => {
   it('三栏 + 模式条都在；预设已播种', () => {
     useLibraryStore.getState().ensureSeeded()
-    useProjectStore.getState().replaceAll(sampleProject())
+    useProjectStore.getState().replaceAll(fixtureProject())
 
     render(<BuildApp />)
 
@@ -38,7 +38,7 @@ describe('构建页骨架', () => {
     }
   })
 
-  it('示例局的预设组件都能在库里看到（预设 / 自建 徽章由 id 派生）', () => {
+  it('夹具的预设组件都能在库里看到（预设 / 自建 徽章由 id 派生）', () => {
     const library = useLibraryStore.getState()
     expect(library.monsters.some((m) => m.id === 'goblin')).toBe(true)
     expect(library.items.some((i) => i.id === 'scroll_of_fireball')).toBe(true)
@@ -48,14 +48,14 @@ describe('构建页骨架', () => {
 })
 
 describe('清单（§5.7 决策 11）', () => {
-  it('一键汇总：示例局没有起终点缺失，但能跑出校验结果', () => {
-    useProjectStore.getState().replaceAll(sampleProject())
+  it('一键汇总：夹具没有起终点缺失，但能跑出校验结果', () => {
+    useProjectStore.getState().replaceAll(fixtureProject())
     const library = useLibraryStore.getState()
     const project = useProjectStore.getState()
     const issues = validateProject(library, project)
 
     const keys = issues.map((i) => i.key)
-    // 示例局起终点齐全
+    // 夹具起终点齐全
     expect(keys).not.toContain('K1')
     expect(keys).not.toContain('K2')
     // 火抗 / 渡河 / 撬锁 都有对应的装备，不该报死路
@@ -63,7 +63,7 @@ describe('清单（§5.7 决策 11）', () => {
   })
 
   it('「清单」按钮能打开汇总弹层', () => {
-    useProjectStore.getState().replaceAll(sampleProject())
+    useProjectStore.getState().replaceAll(fixtureProject())
     render(<BuildApp />)
     fireEvent.click(screen.getByTitle('汇总所有校验结果'))
     // 弹层里的结论说明
@@ -74,7 +74,7 @@ describe('清单（§5.7 决策 11）', () => {
 
 describe('右栏三页（§5.6）', () => {
   it('右栏只有「组件 / 实例」两个页签，规则不在右栏', () => {
-    useProjectStore.getState().replaceAll(sampleProject())
+    useProjectStore.getState().replaceAll(fixtureProject())
     useUiStore.getState().setInspectorTab('component')
     render(<BuildApp />)
     expect(screen.getByTitle('在左栏选中的那一条（改的是库里的定义）')).toBeTruthy()
@@ -83,7 +83,7 @@ describe('右栏三页（§5.6）', () => {
   })
 
   it('顶栏「规则」打开的是整局规则面板（13 项 + 模拟 10 次）', () => {
-    useProjectStore.getState().replaceAll(sampleProject())
+    useProjectStore.getState().replaceAll(fixtureProject())
     render(<BuildApp />)
     fireEvent.click(screen.getByTitle(/整局共用的规则/))
     expect(screen.getByText('这一局的规则')).toBeTruthy()
@@ -97,7 +97,7 @@ describe('右栏三页（§5.6）', () => {
   })
 
   it('选中一条技能 → 组件页显示人话预览与「谁能学到它」', () => {
-    useProjectStore.getState().replaceAll(sampleProject())
+    useProjectStore.getState().replaceAll(fixtureProject())
     useUiStore.getState().setSelectedKit('poison_bite')
     useUiStore.getState().setInspectorTab('component')
     render(<BuildApp />)
@@ -108,7 +108,7 @@ describe('右栏三页（§5.6）', () => {
 
 describe('初始视口（起点常在 [0,0]，不能把它顶在左上角）', () => {
   it('居中的相机：内容中心落在视口中心，而不是左上角', () => {
-    const map = sampleProject().maps[0]
+    const map = fixtureProject().maps[0]
     const zoom = 40
     const [cx, cy, z] = centerCamera(map, 800, 600, zoom)
     // 视口中心对应的世界坐标
@@ -130,7 +130,7 @@ describe('浮层与弹层（不被顶栏 / 滚动容器裁切）', () => {
     render(<BuildApp />)
     const buttons = screen.getAllByTitle('更多操作')
     fireEvent.click(buttons[0])
-    expect(screen.getByText('载入示例场景')).toBeTruthy()
+    expect(screen.getByText('新建空白场景')).toBeTruthy()
     const pop = document.querySelector('.popover')
     expect(pop).toBeTruthy()
     expect(pop?.parentElement).toBe(document.body)
@@ -163,7 +163,7 @@ describe('起点 / 终点（§5.0.1：不占组件库名额，但入口要一步
   })
 
   it('不缺起终点的地图不会冒出这些按钮（按需出现）', () => {
-    useProjectStore.getState().replaceAll(sampleProject())
+    useProjectStore.getState().replaceAll(fixtureProject())
     render(<BuildApp />)
     expect(screen.queryByTitle('在这张图上放置起点')).toBeNull()
     expect(screen.queryByTitle('在这张图上放置终点')).toBeNull()

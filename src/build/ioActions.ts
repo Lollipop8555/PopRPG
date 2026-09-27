@@ -1,5 +1,5 @@
 /**
- * 导入 / 导出 / 示例局（A11 · §0.6 · §5.7）
+ * 导入 / 导出（A11 · §0.6 · §5.7）
  *
  * 导入的规矩：**定义并入本地组件库**（同名但内容不同 → 另生成新 id 并提示，原来的引用一起搬家），
  * 再把「启用 + 铺设」还原到项目。
@@ -14,7 +14,6 @@ import { newProject, projectSnapshot, useProjectStore } from '../store/project'
 import { commit } from '../store/commit'
 import { useUiStore } from '../store/ui'
 import { newComponentId, newMapId } from '../lib/ids'
-import { sampleProject } from '../lib/sample'
 
 const notify = (text: string, tone: 'info' | 'warn' | 'error' = 'info') => useUiStore.getState().notify(text, tone)
 
@@ -191,15 +190,8 @@ export async function importPmodFile(): Promise<void> {
 }
 
 /* ------------------------------------------------------------------ */
-/* 示例局 / 清空                                                       */
+/* 清空                                                               */
 /* ------------------------------------------------------------------ */
-
-export function loadSampleGame(): void {
-  const project = sampleProject()
-  commit(() => useProjectStore.getState().replaceAll(project))
-  useUiStore.getState().setCurrentMap(project.maps[0]?.id)
-  notify('示例场景已载入：包含五种建筑行为与四种地形，可通过「清单」查看校验结果')
-}
 
 export function resetProject(): void {
   commit(() => useProjectStore.getState().replaceAll(newProject()))

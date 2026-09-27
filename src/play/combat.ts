@@ -57,7 +57,7 @@ export function startCombat(s: Session, monster: MonsterUnit, rng?: Rng): Sessio
 export function playerAttack(s: Session, skillId: string, rng?: Rng): Session {
   if (s.phase !== 'combat' || s.combatStage !== 'player' || !s.monster) return s
   const skill = s.player.skills.find((sk) => sk.id === skillId)
-  if (!skill) return log(s, `技能栏中不存在技能 ${skillId}`, 'bad')
+  if (!skill) return log(s, '没有这个技能', 'bad')
   if (!canUseSkill(s.player, skill)) {
     return log(s, `资源不足，无法施放「${skill.name}」（需要 ${costText(skill.cost)}）`, 'bad')
   }
@@ -71,14 +71,21 @@ export function playerAttack(s: Session, skillId: string, rng?: Rng): Session {
   if (!result.ok) return logs(s, result.logs, 'bad')
 
   let session = logs(s, result.logs, result.hit ? 'good' : 'info')
-  session = log(session, powerDetail(result.power, '本力值'), 'dice')
-  session = recordPower(session, result.power, '本力值')
-  if (result.defense) {
-    session = log(session, powerDetail(result.defense, `${s.monster.name}的防值`), 'dice')
-    session = recordPower(session, result.defense, '对方防值')
-  }
-  if (result.effectsSkipped > 0) {
-    session = log(session, `落空：${result.effectsSkipped} 条附带效果不执行（§4.8.3）`, 'info')
+  if (skill.target === 'self') {
+    // §7.2：self 技能走专属那条线（不对抗、只回自己）
+    const resName = result.appliedTo === 'mp' ? '法力' : '生命'
+    const restore = result.amount > 0 ? `恢复自身 ${result.amount} 点${resName}` : '（已为满值，未变化）'
+    session = log(session, `${skill.name}：本力值 ${result.power.value}（不对抗）→ ${restore}`, 'dice')
+  } else {
+    session = log(session, powerDetail(result.power, '本力值'), 'dice')
+    session = recordPower(session, result.power, '本力值')
+    if (result.defense) {
+      session = log(session, powerDetail(result.defense, `${s.monster.name}的防值`), 'dice')
+      session = recordPower(session, result.defense, '对方防值')
+    }
+    if (result.effectsSkipped > 0) {
+      session = log(session, `落空：${result.effectsSkipped} 条附带效果不执行`, 'info')
+    }
   }
 
   const dead = s.monster
@@ -160,8 +167,8 @@ export function resolveDefense(s: Session, willDefend: boolean, rng?: Rng): Sess
 
   // 玩家 hp≤0 **不当场死**：回合开始才判（给一回合缓冲吃药，决策 5 / 验收 5）
   if (player.resources.hp <= 0) {
-    session = log(session, '生命值归零：将于下一回合开始时判定失败，当前回合仍可使用道具', 'bad')
+    session = log(session, '生命值归零 —— 撑过这一回合才有救', 'bad')
   }
 
-  return log({ ...session, combatStage: undefined, awaitingRound: true }, '交锋结束（本次交锋计为一个回合）', 'info')
+  return log({ ...session, combatStage: undefined, awaitingRound: true }, '交锋结束', 'info')
 }

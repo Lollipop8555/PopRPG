@@ -18,11 +18,14 @@ export function exportSave(session: Session): string {
 
 export function parseSave(text: string): Session | null {
   try {
-    const parsed = JSON.parse(text) as { kind?: string; session?: Session }
+    const parsed = JSON.parse(text) as { kind?: string; version?: number; session?: Session }
     if (!parsed || parsed.kind !== 'poprpg.psave' || !parsed.session) return null
     const session = parsed.session
     if (!session.scenario || !session.player) return null
-    return { ...session, version: PSAVE_VERSION }
+    // §7.3：进度版本钩子（目前仅 v1；更高版本尚无迁移脚本，视为不兼容拒绝加载）
+    if (typeof parsed.version === 'number' && parsed.version > PSAVE_VERSION) return null
+    if (typeof session.version === 'number' && session.version > PSAVE_VERSION) return null
+    return session
   } catch {
     return null
   }

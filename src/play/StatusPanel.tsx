@@ -3,17 +3,21 @@
  * 加点是**随时可加、不可洗点、余点保留** —— 所以这里**没有重置按钮**（这是有意的）。
  */
 
+import { X } from 'lucide-react'
 import type { StatKey } from '../types'
-import { STAT_KEYS, STAT_LABEL } from '../types'
+import { ABILITY_KEYS, STAT_KEYS, STAT_LABEL } from '../types'
 import type { Session } from '../types/session'
 import { freePoints } from './flow'
+import RadarChart from './RadarChart'
 
 export default function StatusPanel({
   session,
   onAllocate,
+  onClose,
 }: {
   session: Session
   onAllocate: (key: StatKey) => void
+  onClose?: () => void
 }) {
   const { player } = session
   const free = freePoints(session)
@@ -25,30 +29,47 @@ export default function StatusPanel({
         <span>
           {player.cls?.icon} {player.cls?.name ?? '无职业'}
         </span>
-        <span className="badge">第 {session.round} 回合</span>
+        <span className="row" style={{ gap: 6, alignItems: 'center' }}>
+          <span className="badge">第 {session.round} 回合</span>
+          {onClose && (
+            <button className="btn small" title="关闭" onClick={onClose} style={{ padding: '0 6px' }}>
+              <X size={14} />
+            </button>
+          )}
+        </span>
       </div>
 
       <Bar label="hp" value={player.resources.hp} max={player.stats.hp} tone="hp" />
       <Bar label="mp" value={player.resources.mp} max={player.stats.mp} tone="mp" />
+
+      {/* 四维能力雷达（物攻 / 魔攻 / 物防 / 魔防） */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 6 }}>
+        <RadarChart
+          values={ABILITY_KEYS.map((k) => player.stats[k])}
+          labels={ABILITY_KEYS.map((k) => STAT_LABEL[k])}
+          size={132}
+        />
+      </div>
 
       <div className="row" style={{ justifyContent: 'space-between', marginTop: 6 }}>
         <span className="faint">剩余自由点</span>
         <span className="badge on">{free}</span>
       </div>
 
-      <div style={{ marginTop: 4 }}>
+      <div className="stat-grid">
         {STAT_KEYS.map((key) => (
           <div key={key} className="statline">
             <span className="faint">{STAT_LABEL[key]}</span>
             <span>{player.stats[key]}</span>
-            {player.buffs[key] !== undefined && player.buffs[key] !== 100 && (
-              <span className="faint">×{Math.round((player.buffs[key] ?? 100))}%</span>
-            )}
+            <span className="faint">
+              {player.buffs[key] !== undefined && player.buffs[key] !== 100
+                ? `×${Math.round(player.buffs[key] ?? 100)}%`
+                : ''}
+            </span>
             <button
               className="btn small"
               disabled={free <= 0}
               onClick={() => onAllocate(key)}
-              title="每点等价于属性 +1，分配后不可撤销"
             >
               +
             </button>
@@ -82,7 +103,7 @@ export default function StatusPanel({
   )
 }
 
-function Bar({ label, value, max, tone }: { label: string; value: number; max: number; tone: 'hp' | 'mp' }) {
+export function Bar({ label, value, max, tone }: { label: string; value: number; max: number; tone: 'hp' | 'mp' }) {
   const pct = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0
   return (
     <div className={`bar ${tone}`} style={{ marginBottom: 4 }}>

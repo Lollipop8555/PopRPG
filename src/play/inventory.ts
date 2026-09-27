@@ -27,7 +27,7 @@ export function equipItem(s: Session, itemId: string): Session {
   const kept = s.player.equipped.filter((eq) => !(eq.slots ?? []).some((slot) => slots.includes(slot)))
   const removed = s.player.equipped.filter((eq) => !kept.includes(eq))
   let session = s
-  for (const eq of removed) session = log(session, `卸下 ${eq.name}（槽位冲突）`)
+  for (const eq of removed) session = log(session, `卸下 ${eq.name}`)
   session = log(session, `穿戴 ${item.name}${slots.length ? `（${slots.join('/')}）` : ''}`, 'good')
   return { ...session, player: { ...session.player, equipped: [...kept, item] } }
 }
@@ -54,7 +54,7 @@ export function useItem(s: Session, itemId: string, opts: UseOptions = {}): Sess
 
   const scene = opts.scene ?? (s.phase === 'combat' ? 'battle' : 'move')
   if (item.usable && item.usable.length > 0 && !item.usable.includes(scene)) {
-    return log(s, `${item.name} 当前阶段不可用（可用阶段：${item.usable.join('、')}）`, 'bad')
+    return log(s, `${item.name} 现在用不上`, 'bad')
   }
 
   const applied = applyEffects(s.player, s.player, item.effects ?? [], {
@@ -63,13 +63,13 @@ export function useItem(s: Session, itemId: string, opts: UseOptions = {}): Sess
     skills: skillIndex(s),
   })
 
-  let session = logs(s, applied.logs, 'good')
-  session = log(session, `使用 ${item.icon}${item.name}（不消耗回合）`, 'good')
+  let session = logs(s, applied.logs, 'item')
+  session = log(session, `使用 ${item.icon}${item.name}`, 'item')
 
   // 已经掌握的技能：书**不消耗**，避免浪费（§4.3）
   if (applied.alreadyLearned.length > 0) {
     session = { ...session, player: applied.target as Session['player'] }
-    return log(session, '已掌握该技能，道具未被消耗', 'info')
+    return log(session, '已经会了 —— 这本书留着', 'info')
   }
 
   const player = applied.target as Session['player']

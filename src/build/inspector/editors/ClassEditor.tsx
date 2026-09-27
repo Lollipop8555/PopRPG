@@ -28,12 +28,12 @@ export default function ClassEditor({
         label="初始属性（先天）"
         value={def.base_stats}
         onChange={(base_stats) => onChange({ base_stats: { ...def.base_stats, ...base_stats } })}
-        hint="玩家属性 = 这个起点 + 玩家自己分配的自由点（全程不摇，§4.0.2）"
+        hint="玩家属性 = 这个起点 + 玩家自己分配的自由点（全程不摇）"
       />
 
       <Field
         label="开局自由点"
-        hint="该数值由职业设定决定（§4.2.1）；「1 点 = +1、不可撤销、余点保留」为固定规则"
+        hint="该数值由职业设定决定；「1 点 = +1、不可撤销、余点保留」为固定规则"
       >
         <NumberBox value={def.free_points} min={0} onChange={(n) => onChange({ free_points: n ?? 0 })} />
       </Field>
@@ -47,7 +47,7 @@ export default function ClassEditor({
         hint="职业百分比为固有加成，始终生效"
       />
 
-      <Field label="背包格数（§4.2.4）" hint="按条目数计算，同一道具叠加仅占 1 格；0 表示无限">
+      <Field label="背包格数" hint="按条目数计算，同一道具叠加仅占 1 格；0 表示无限">
         <div className="row" style={{ gap: 6 }}>
           <div style={{ width: 90 }}>
             <NumberBox value={def.inventory_size ?? 50} min={0} disabled={infinite} onChange={(n) => onChange({ inventory_size: n ?? 50 })} />
@@ -81,9 +81,9 @@ export default function ClassEditor({
       </Field>
 
       <div className="hintbox">
-        <div>① 这个职业开局给 <b>{def.free_points}</b> 点自由点（想给 300 也行）。</div>
-        <div>② 百分比加成决定属性分配的效率，加成低于 100% 的属性将按折扣计算。</div>
-        <div>③ 职业只给先天的牌面，<b>不给技能</b>；他这辈子会什么，是这一局里的事（§4.8.3）。</div>
+        <div>① 开局自由点：<b>{def.free_points}</b>。</div>
+        <div>② 百分比加成决定属性分配效率，低于 100% 的按折扣计算。</div>
+        <div>③ 职业只给初始牌面，<b>不给技能</b>。</div>
       </div>
     </div>
   )

@@ -10,10 +10,12 @@ export default function Overlay({
   onClose,
   children,
   zIndex = 60,
+  align = 'center',
 }: {
   onClose?: () => void
   children?: React.ReactNode
   zIndex?: number
+  align?: 'center' | 'bottom'
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -26,7 +28,7 @@ export default function Overlay({
   return createPortal(
     <div
       className="overlay"
-      style={{ zIndex }}
+      style={{ zIndex, alignItems: align === 'bottom' ? 'flex-end' : 'center' }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose?.()
       }}

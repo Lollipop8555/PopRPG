@@ -62,16 +62,13 @@ export default function CombatPanel({
             <button className="btn primary" onClick={() => onDefend(true)}>
               防御（掷防骰）
             </button>
-            <button className="btn danger" onClick={() => onDefend(false)} title="防御力取固有数值，不包含骰子浮动">
+            <button className="btn danger" onClick={() => onDefend(false)}>
               不防御
             </button>
           </div>
         </>
       )}
 
-      <div className="faint" style={{ marginTop: 6 }} title="敌方技能选择与掷骰结果均在下方日志中展示（§7.2）">
-        敌方掷骰结果见下方日志
-      </div>
     </div>
   )
 }

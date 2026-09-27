@@ -18,12 +18,12 @@ export function enterBuilding(s: Session, building: BuildingDef, cell: [number, 
 
   // `once` 成功过的事件会降级成普通空地（§4.8.9）
   if (building.encounter === 'event' && s.onceDone.includes(key)) {
-    return log(s, `${building.name}：这里已经了结过了（once 生效，降级为空地）`)
+    return log(s, `${building.name}：这里已经了结过了`)
   }
 
   switch (building.encounter) {
     case 'empty':
-      return log(s, `${building.name}：未触发任何效果`)
+      return log(s, `${building.name}：什么也没有发生`)
 
     case 'treasure': {
       // 宝箱怪物：先按 chance 判定伪装（命中 → 先打架，打赢走战利品算法）
@@ -45,7 +45,7 @@ export function enterBuilding(s: Session, building: BuildingDef, cell: [number, 
       const resolved = building.monster_pool
         ? resolveMonster(library, enabledIds, building.monster_pool, rules, { rng, skills: skillIndex(s) })
         : null
-      if (!resolved) return log(s, `${building.name}：该建筑没有可触发的怪物（怪物池内无已启用条目）`)
+      if (!resolved) return log(s, `${building.name}：这里没有可触发的怪物`)
       let session = logs(s, resolved.logs, 'dice')
       const def = resolved.monster.def
       if (def) {

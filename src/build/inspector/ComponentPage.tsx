@@ -111,7 +111,7 @@ export default function ComponentPage() {
       <TagsInput
         value={def.tags}
         onChange={(tags) => patch({ tags: tags.length ? tags : undefined })}
-        hint="用途：① 池的筛选条件 ② 通行能力（§4.5.2）③ 分组与搜索"
+        hint="用途：① 池的筛选条件 ② 通行能力 ③ 分组与搜索"
       />
 
       <div className="sketch-line" style={{ margin: '10px 0' }} />
@@ -137,7 +137,7 @@ const KIND_NOTE: Record<ComponentKind, string> = {
   building: '建筑为地图件：进入时触发遭遇；抽取算法在规则面板中统一定义，此处仅配置奖励池。',
   monster: '怪物为非地图件：需启用，并由怪物房或伪装宝箱抽取后才会出现。',
   item: '道具为非地图件：启用后才会进入奖励池、背包或商店。',
-  class: '职业仅提供初始属性、百分比加成、背包容量与初始物品，**不提供技能**（§4.2.3）。',
+  class: '职业仅提供初始属性、百分比加成、背包容量与初始物品，**不提供技能**。',
   skill: '技能由维度、目标与附加效果构成；角色已掌握的技能属于存档数据，不在此配置。',
   background: '背景全局生效。',
 }

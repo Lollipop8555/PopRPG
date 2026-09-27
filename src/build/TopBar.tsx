@@ -4,11 +4,11 @@
  */
 
 import { useRef, useState } from 'react'
-import { ClipboardList, Download, MoreHorizontal, Redo2, SlidersHorizontal, Undo2, Upload, Wand2 } from 'lucide-react'
+import { ClipboardList, Download, MoreHorizontal, Redo2, SlidersHorizontal, Undo2, Upload } from 'lucide-react'
 import { useProjectStore } from '../store/project'
 import { useHistoryStore } from '../store/history'
 import { redo, undo } from '../store/commit'
-import { exportCurrentPmod, importPmodFile, loadSampleGame, resetProject } from './ioActions'
+import { exportCurrentPmod, importPmodFile, resetProject } from './ioActions'
 import { useUiStore } from '../store/ui'
 import { navigate } from '../app/router'
 import Popover from '../ui/Popover'
@@ -75,15 +75,6 @@ export default function TopBar() {
 
       {menuOpen && menuRef.current && (
         <Popover anchor={menuRef.current} onClose={() => setMenuOpen(false)} width={168}>
-          <button
-            className="btn small"
-            onClick={() => {
-              loadSampleGame()
-              setMenuOpen(false)
-            }}
-          >
-            <Wand2 size={13} /> 载入示例场景
-          </button>
           <button
             className="btn small"
             onClick={() => {

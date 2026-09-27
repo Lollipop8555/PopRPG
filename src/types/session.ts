@@ -60,7 +60,7 @@ export interface EncounterState {
 
 export interface LogLine {
   text: string
-  tone?: 'info' | 'good' | 'bad' | 'dice'
+  tone?: 'info' | 'good' | 'bad' | 'dice' | 'item'
 }
 
 export interface Session {

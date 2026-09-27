@@ -62,7 +62,7 @@ export default function ItemEditor({
             label="属性加值（力值链 ②）"
             value={def.modifiers}
             onChange={(modifiers) => onChange({ modifiers })}
-            hint="普通装备 +1~2，强力装备 +4~6（§6.1.1）；装备加值计入加法环节"
+            hint="普通装备 +1~2，强力装备 +4~6；装备加值计入加法环节"
           />
         </>
       ) : (
@@ -94,7 +94,7 @@ export default function ItemEditor({
       )}
 
       <div className="faint">
-        技能书为消耗品：添加 `learn_skill` 效果即可；奖励池、事件、商店、战利品等所有产出途径均可给予技能，无需额外机制（§4.8.3）。
+        技能书为消耗品：添加 `learn_skill` 效果即可；奖励池、事件、商店、战利品等所有产出途径均可给予技能，无需额外机制。
       </div>
     </div>
   )

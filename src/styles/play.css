@@ -9,26 +9,164 @@
   min-height: 0;
 }
 
+/* 游戏 HUD（LoL / 暗黑那种贴边布局）：地图铺满，底栏放资源 + 技能格 + 骰子区 */
 .play-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: var(--gap);
+  position: relative;
   min-height: 0;
 }
 
-.play-main {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: var(--gap);
-  min-height: 0;
-}
-
-.play-side {
+.play-body .play-stage {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
-  min-height: 0;
+  padding: 4px;
+}
+
+/* 底部弹出面板（bottom sheet）：从底栏上方升起，宽度适中、居中
+   （用 left/right + margin:auto 居中，避免与入场动画的 transform 冲突） */
+.hud-drawer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  bottom: 104px;
+  width: min(440px, calc(100vw - 20px));
+  max-height: min(56%, 460px);
   overflow: auto;
+  z-index: 4;
+  animation: sheet-up 180ms ease-out;
+}
+
+.hud-drawer .panel {
+  width: 100%;
+}
+
+
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 底部 HUD 栏：左资源 / 中技能格 / 右骰子区 */
+.play-body .hud-bar {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  z-index: 3;
+}
+
+.hud-vitals {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 150px;
+}
+
+.hud-face {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.hud-radar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.hud-menu .btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+}
+
+.hud-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.hud-combat {
+  position: absolute;
+  right: 10px;
+  bottom: 104px;
+  width: 300px;
+  z-index: 3;
+}
+
+.skill-slots {
+  display: flex;
+  gap: 6px;
+}
+
+.skill-slot {
+  width: 54px;
+  height: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border: 1.5px solid var(--line);
+  background: #fffdf4;
+  border-radius: 10px 8px 11px 7px / 8px 11px 7px 10px;
+  cursor: pointer;
+}
+
+.skill-slot.selected {
+  background: #f2e6c8;
+  border-color: var(--ink);
+}
+
+.skill-slot:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.skill-ico {
+  font-size: 19px;
+  line-height: 1;
+}
+
+.skill-name {
+  font-size: 9px;
+  color: var(--ink-soft);
+}
+
+/* 骰子区（底栏最右，常驻） */
+.hud-dice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-dice-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 /* 地图：去网格线，只留每 10 格细参照线 */
@@ -36,6 +174,24 @@
   width: 100%;
   height: 100%;
   display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+.mapview:active {
+  cursor: grabbing;
+}
+
+.map-hint {
+  padding: 5px 8px 3px;
+  text-align: center;
+  font-family: var(--font-cn);
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+
+.map-cell.blocked {
+  cursor: not-allowed;
 }
 
 .map-cell {
@@ -74,13 +230,32 @@
   color: var(--ink);
 }
 
-/* 属性行 */
+/* 属性区：两列紧凑网格 */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 14px;
+  margin-top: 6px;
+}
+
+/* 属性行：标签 / 数值 / 加成 / 加号 固定列宽（加号逐行对齐、紧贴数值） */
 .statline {
   display: grid;
-  grid-template-columns: 46px 1fr auto auto;
-  gap: 4px;
+  grid-template-columns: 34px 30px 42px 24px 1fr;
+  gap: 5px;
   align-items: center;
   font-size: 12.5px;
+  padding: 1px 0;
+}
+
+/* 加点按钮：贴紧数值、加号居中 */
+.statline .btn {
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  justify-content: center;
+  align-items: center;
+  line-height: 1;
 }
 
 .chip {
@@ -155,6 +330,11 @@
   font-size: 11.5px;
 }
 
+.logline.item {
+  border-left-color: #c79a3a;
+  color: #8a6312;
+}
+
 /* 骰子（手绘感：不规则圆角 + 轻微旋转） */
 .die {
   width: 34px;
@@ -175,6 +355,19 @@
   animation: die-drop 220ms ease-out;
 }
 
+.die.spinning {
+  animation: die-spin 0.45s linear infinite;
+}
+
+@keyframes die-spin {
+  from {
+    transform: rotate(-3deg) scale(0.94);
+  }
+  to {
+    transform: rotate(357deg) scale(0.94);
+  }
+}
+
 @keyframes die-drop {
   0% {
     transform: rotate(-14deg) translateY(-6px);
@@ -192,12 +385,211 @@
 }
 
 @media (max-width: 880px) {
-  .play-body {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
+  /* 窄屏：面板占满可用宽度，不再被固定值挤成一团 */
+  .hud-drawer {
+    width: calc(100vw - 20px);
   }
 
-  .play-side {
-    max-height: 42vh;
+  .hud-vitals {
+    min-width: 120px;
   }
+
+  /* 雷达收进「状态」抽屉，底栏不再为它占宽 */
+  .hud-radar {
+    display: none;
+  }
+}
+
+/* 窄屏 / 手机：底栏换行，不再把一排东西硬挤在一行 */
+@media (max-width: 720px) {
+  .play-body .hud-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  /* 第一行：血 / 蓝独占整宽，不和骰子挤 */
+  .hud-vitals {
+    flex: 1 1 100%;
+  }
+
+  /* 第二行：技能格独占（可横滚） */
+  .hud-center {
+    flex: 1 1 100%;
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  /* 第三行：骰子区 + 菜单同一行（菜单不孤立） */
+  .hud-dice {
+    flex: 1 1 auto;
+  }
+
+  .hud-menu {
+    flex: 0 0 auto;
+  }
+
+  .map-hint {
+    font-size: 11.5px;
+  }
+}
+
+/* 游玩主页：游戏封面（替代工具式表单入口，§7.0） */
+.load-cover {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+  padding: 18px;
+  overflow: auto;
+}
+
+.cover-tag {
+  font-family: var(--font-cn);
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  color: var(--ink-soft);
+}
+
+.cover-title {
+  font-family: var(--font-hand);
+  font-size: 78px;
+  line-height: 0.92;
+  color: var(--ink);
+  margin: 0;
+  transform: rotate(-2deg);
+  text-shadow: 2px 3px 0 rgba(201, 183, 149, 0.45);
+}
+
+.cover-sub {
+  max-width: 460px;
+  margin: 0;
+  font-family: var(--font-cn);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+.cover-hero {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  height: 156px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cover-cave {
+  width: 196px;
+  height: auto;
+  opacity: 0.92;
+}
+
+.cover-die {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  font-size: 22px;
+  box-shadow: 0 3px 0 rgba(120, 100, 70, 0.22);
+}
+
+.cover-die.d1 {
+  left: 40px;
+  top: 14px;
+  transform: rotate(-13deg);
+}
+
+.cover-die.d2 {
+  right: 38px;
+  top: 4px;
+  transform: rotate(10deg);
+}
+
+.cover-die.d3 {
+  right: 64px;
+  bottom: 4px;
+  transform: rotate(-6deg);
+}
+
+.cover-start {
+  font-family: var(--font-cn);
+  font-size: 19px;
+  font-weight: 700;
+  padding: 10px 34px;
+  margin-top: 2px;
+}
+
+.cover-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.cover-more-body {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.cover-lib {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+/* 背包：手绘格子（图标 + 数量角标 + 操作），不堆成列表 */
+.bag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 6px;
+}
+
+.bag-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 4px 5px;
+  border: 1.4px solid var(--line);
+  border-radius: 10px 8px 11px 7px / 8px 11px 7px 10px;
+  background: #fffdf4;
+}
+
+.bag-ico {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.bag-name {
+  font-size: 10.5px;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.bag-count {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  font-size: 10px;
+  padding: 0 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper-deep);
+  color: var(--ink);
+}
+
+.bag-act {
+  font-size: 10px;
+  padding: 1px 6px;
+  margin-top: 1px;
 }

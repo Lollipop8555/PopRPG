@@ -423,6 +423,37 @@ textarea {
   width: min(880px, 100%);
 }
 
+/* 从底部升起的对话框：放在底部区域、不贴边、块状（带边距）、按钮放大 */
+.modal.sheet {
+  width: min(440px, 94vw);
+  animation: modal-up 0.22s ease-out;
+}
+
+/* 只放大菜单项按钮（标题栏的「关闭」保持小按钮） */
+.sheet-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sheet-actions .btn {
+  height: 52px;
+  font-size: 15px;
+  justify-content: center;
+}
+
+@keyframes modal-up {
+  from {
+    transform: translateY(26px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 /* 浮层（菜单 / 帮助）：portal 到 body，不受父容器剪裁 */
 .popover {
   background: var(--paper-card);

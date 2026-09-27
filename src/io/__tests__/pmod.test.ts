@@ -2,12 +2,12 @@
 
 import { describe, expect, it } from 'vitest'
 import { presetLibrary } from '../../presets'
-import { sampleProject } from '../../lib/sample'
+import { fixtureProject } from '../../test/fixtures'
 import { collectUsedComponents, exportPmod, parsePmod, placedIds } from '../pmod'
 import type { Project } from '../../types'
 
 const library = presetLibrary()
-const project = sampleProject()
+const project = fixtureProject()
 
 describe('collectUsedComponents', () => {
   it('只装本局用到的：启用 ∪ 铺设 ∪ 传递引用', () => {
@@ -42,7 +42,7 @@ describe('round-trip', () => {
     const parsed = parsePmod(text)
 
     expect(parsed.name).toBe(project.name)
-    expect(parsed.background).toContain('误入地穴')
+    expect(parsed.background).toBe(project.background)
     expect(parsed.maps.length).toBe(project.maps.length)
     expect(parsed.maps[0].nodes.length).toBe(project.maps[0].nodes.length)
     expect(parsed.maps[0].start).toEqual(project.maps[0].start)

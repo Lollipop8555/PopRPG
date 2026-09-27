@@ -89,7 +89,7 @@ export function GateEditor({
         label={label}
         value={tags}
         onChange={(next) => patch({ tags: next })}
-        hint="标签为自由文本，引擎不解析其语义，仅按标签进行匹配（§4.5.3）"
+        hint="标签为自由文本，引擎不解析其语义，仅按标签进行匹配"
       />
 
       {tags.length > 0 && (
