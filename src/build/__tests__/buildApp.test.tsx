@@ -96,12 +96,12 @@ describe('右栏三页（§5.6）', () => {
     useUiStore.getState().setRulesOpen(false)
   })
 
-  it('选中一条技能 → 组件页显示人话预览与「谁能学到它」', () => {
+  it('选中一条技能 → 组件页显示说明预览与「谁能学到它」', () => {
     useProjectStore.getState().replaceAll(fixtureProject())
     useUiStore.getState().setSelectedKit('poison_bite')
     useUiStore.getState().setInspectorTab('component')
     render(<BuildApp />)
-    expect(screen.getByText('人话预览')).toBeTruthy()
+    expect(screen.getByText('说明预览')).toBeTruthy()
     expect(screen.getByText('本局中可获得该技能的途径')).toBeTruthy()
   })
 })

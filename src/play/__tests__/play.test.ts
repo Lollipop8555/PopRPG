@@ -162,7 +162,7 @@ describe('B3 交锋（决策 3 / 4 / 5 / 12）', () => {
     expect(after.phase).not.toBe('combat')
   })
 
-  it('落空也进反击（决策 4）：防值堆到够高就打不动', () => {
+  it('落空也进反击（决策 4）：防值提升到足够高就难以被命中', () => {
     const s = inCombat(99)
     const tough = { ...s, monster: { ...s.monster!, stats: { ...s.monster!.stats, pdef: 999 } } }
     const after = playerAttack(tough, 'basic_attack', fixed(0))
@@ -235,7 +235,7 @@ describe('B9 背包 / 穿戴 / 技能书', () => {
 
   it('状态 tag 进能力集合：吃了御火符过火焰山就不掉血（§4.8.10 临时通行）', () => {
     const base = { ...knight(0.5), pos: [2, 0] as [number, number], stepsLeft: 3 }
-    // 火焰山是软权限：没有火抗也能硬闯，但每格掉 5 血
+    // 火焰山是软权限：没有火抗也能强行通过，但每格掉 5 血
     const bare = stepTo(base, [3, 0]).session
     expect(bare.player.resources.hp).toBe(base.player.resources.hp - 5)
 

@@ -3,7 +3,7 @@
  * move×1 · combat×4 · treasure×2 · loot×2 · state×1 · shop×1 · event×1 · class_pool×1
  *
  * 它是**整局共用**的一套算法，不跟任何单个组件走 —— 所以入口在顶栏，打开是一整页；
- * 每个字段旁一句人话，并给「模拟 10 次」按钮直接看产出分布。
+ * 每个字段旁一句说明，并给「模拟 10 次」按钮直接看产出分布。
  */
 
 import { useState } from 'react'

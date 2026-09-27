@@ -181,7 +181,7 @@
     gate:                        # ① 门槛：没带 `撬锁` 就不给"尝试"选项
       tags: [撬锁]
       mode: all
-      on_missing: blocked        # blocked = 不给选项 | penalty = 允许硬来但吃惩罚
+      on_missing: blocked        # blocked = 不给选项 | penalty = 允许强行尝试但吃惩罚
     check:                       # ② 手艺：掷 2D6 + 物攻 ≥ 15（复用力值链，§4.8.9）
       dice: 2D6
       add: patk
@@ -235,7 +235,7 @@
   name: 火焰山
   icon: 🌋
   cost: { step: 1 }
-  gate: { tags: [火抗], missing: penalty, penalty: { hp: 5 } }   # 硬闯也行，每格掉 5 血
+  gate: { tags: [火抗], missing: penalty, penalty: { hp: 5 } }   # 强行通过也行，每格掉 5 血
 ```
 
 ### 职业
@@ -249,7 +249,7 @@
   buffs: { hp: 110, patk: 120, pdef: 110, matk: 80 }                  # 百分比放大
   inventory_size: 50                                                  # 背包格数（省略 = 50；0 = 无限，§4.2.4）
   starting_items: [red_potion]                                        # 出生时的家当（可选）
-  desc: 近战坚韧，物理见长，法术稀烂。
+  desc: 近战坚韧，物理见长，法术薄弱。
   # 没有 skills —— 职业不限定你能学什么（§4.8.3）
 - id: mage
   name: 法师
@@ -258,22 +258,22 @@
   free_points: 25
   buffs: { hp: 90, matk: 130, mdef: 120, patk: 80 }
   inventory_size: 30                                                  # 书多的人背得少
-  starting_items: [blue_potion, scroll_of_fireball]                   # 出生带一本《火球术》——但它只是道具，能丢能卖
+  starting_items: [blue_potion, scroll_of_fireball]                   # 出生带一本《火球术》——但它只是道具，可丢弃可出售
   desc: 脆皮高魔，物攻 -20%、魔攻 +30%。
-  # 那个 -20% 就是他一辈子背着的先天缺陷：可以练成战士，但代价是真的
+  # 那个 -20% 就是他终生承受的先天缺陷：可以练成战士，但代价是真的
 ```
 
 ### 技能
 ```yaml
-# 技能 = 取哪一维属性 + 打谁 + 附带什么（§4.8.3）
-# 前两个是"保底对"：人人开局都有，cost 都是空的（免费），保证任何情况下都打得了
+# 技能 = 取哪一维属性 + 攻击目标 + 附带什么（§4.8.3）
+# 前两个是"保底对"：人人开局都有，cost 都是空的（免费），保证任何情况下都能施放
 - id: basic_attack
   name: 普通攻击
   icon: ⚔️
   dim: patk              # 基准维度：取物攻
-  target: opponent       # 打对方
+  target: opponent       # 攻击对手
   vs: auto               # auto → 按 dim 配对：patk 对 pdef
-  bonus: 0               # 0 加成：纯靠属性，技能自身不加东西
+  bonus: 0               # 0 加成：纯粹依靠属性，技能自身不提供加值
   apply: hp              # 力值作用到对方 hp
   cost: {}               # 免费
 - id: basic_magic
@@ -284,12 +284,12 @@
   vs: auto               # matk 对 mdef
   bonus: 0
   apply: hp
-  cost: {}               # ← 也免费：没有 mp 也能放，不会等死
+  cost: {}               # ← 也免费：没有 mp 也能放，不会因此陷入死局
 - id: heal
   name: 治疗术
   icon: 💚
   dim: matk
-  target: self           # ← 只改这一项：从"打人"变成"救人"
+  target: self           # ← 只改这一项：从"攻击对手"变为"治疗自身"
   vs: none               # 不对抗、不落空
   bonus: 2
   apply: hp              # 回自己 hp，量 = 力值
@@ -340,7 +340,7 @@
 ## 规则配置
 ```yaml
 move:                               # 移动（§4.8.4）：配置只有这一个字段
-  dice: 1D6                         # 每回合掷这颗骰，点数 = 可走的格数
+  dice: 1D6                         # 每回合掷这枚骰，点数 = 可走的格数
 combat:                             # 战斗（§4.8.3）
   # 注意：没有 attacks——"攻击方式"已升级为技能组件（技能表在 `## 设定` 里）
   stat_dice: 1D6                    # 属性结算骰：怪物登场时把区间摇成具体值（一次摇定）

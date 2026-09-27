@@ -122,7 +122,7 @@ export function exportPmod(library: Library, project: Project): { text: string; 
 
   const parts: string[] = [`# ${project.name}\n\n`]
 
-  // 版本写在 HTML 注释里：不污染 yaml，也不影响人读（§7.3 迁移钩子）
+  // 版本写在 HTML 注释里：不混入 yaml，也不影响人读（§7.3 迁移钩子）
   parts.push(`<!-- poprpg-version: ${PMOD_VERSION} -->\n\n`)
 
   parts.push('## 背景\n\n')

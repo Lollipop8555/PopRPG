@@ -545,7 +545,7 @@
   margin-top: 2px;
 }
 
-/* 背包：手绘格子（图标 + 数量角标 + 操作），不堆成列表 */
+/* 背包：手绘格子（图标 + 数量角标 + 操作），不罗列成列表 */
 .bag-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));

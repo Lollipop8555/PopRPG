@@ -1,5 +1,5 @@
 /**
- * 技能（§4.8.3）—— **取哪一维 + 打谁 + 附带什么**，全是下拉与数字框，不改一行代码就能造出
+ * 技能（§4.8.3）—— **取哪一维 + 攻击目标 + 附带什么**，全是下拉与数字框，不改一行代码就能造出
  * 普通攻击 / 治疗术 / 力量祝福 / 虚弱诅咒 / 毒牙。
  * 编辑器不认识「火球术」「治疗术」这些词；面板底部反查「本局中可获得该技能的途径」（存在 ≠ 谁会）。
  */
@@ -35,7 +35,7 @@ export default function SkillEditor({
           />
         </Field>
 
-        <Field label="② 打谁（target）" hint="opponent：进行比较，可能未命中；self：不进行比较，必定生效">
+        <Field label="② 攻击目标（target）" hint="opponent：进行比较，可能未命中；self：不进行比较，必定生效">
           <SelectBox
             value={def.target}
             options={[
@@ -95,7 +95,7 @@ export default function SkillEditor({
       />
 
       <div className="hintbox ok" style={{ marginTop: 6 }}>
-        <b>人话预览</b>：{skillText(def)}
+        <b>说明预览</b>：{skillText(def)}
       </div>
 
       <Field label="本局中可获得该技能的途径" hint="「存在」与「已掌握」是两个概念；已掌握的技能属于存档数据，不在此配置">

@@ -214,7 +214,7 @@ export function stepTo(s: Session, cell: [number, number], rng?: Rng): StepResul
     stepsLeft: s.stepsLeft - stepCost,
     visited: [...s.visited.slice(-199), `${s.mapIndex}:${cell[0]},${cell[1]}`],
   }
-  const costText = [cost?.hp ? `-${cost.hp} 生命` : '', cost?.mp ? `-${cost.mp} 法力` : '', pass.penalty ? '（硬闯加罚）' : '']
+  const costText = [cost?.hp ? `-${cost.hp} 生命` : '', cost?.mp ? `-${cost.mp} 法力` : '', pass.penalty ? '（强行通过加罚）' : '']
     .filter(Boolean)
     .join(' ')
   next = log(next, `走到 (${cell[0]}, ${cell[1]})，花了 ${stepCost} 步${costText ? ` ${costText}` : ''}`)

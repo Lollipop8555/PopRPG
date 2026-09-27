@@ -70,7 +70,7 @@ describe('buildPower 五环', () => {
     expect(p.value).toBe(Math.floor(18 * 1.2))
   })
 
-  it('法师 patk 永远打八折（先天的牌面改不了）', () => {
+  it('法师 patk 永远按 ×0.8 计算（先天属性配置不可更改）', () => {
     const unit = makePlayerUnit({ cls: mage, alloc: { patk: 30 } })
     const p = buildPower(unit, 'patk', undefined, 0, { noRoll: true })
     expect(p.prof).toBe(0.8)

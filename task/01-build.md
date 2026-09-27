@@ -25,7 +25,7 @@
   - `Monster` 加 `attack_weights?` / `atk_roll?` / `def_roll?` / `stat_dice?` / `point_reward?` / `reward_pool?` / `pick?` / `copies?` / `effects?`（命中玩家时施加）
   - `Building` 加 `cost?` / `gate?` / `point_reward?` / `reward_pool?` / `monster_pool?:PoolRef` / `event?:EventBlock` / `stock?:PoolRef` / `price?:PriceDef`；`mimic` 由 `reward` 改成同一 `reward_pool` 结构
   - `Road` 加 `cost?:MapCost` / `gate?:Gate`
-  - `ClassDef`：`{ base_stats:StatValues, free_points:number, buffs, tags, inventory_size?, starting_items? }`（**去掉 `stats` 区间**；无 `skills`——职业只给先天牌面）
+  - `ClassDef`：`{ base_stats:StatValues, free_points:number, buffs, tags, inventory_size?, starting_items? }`（**去掉 `stats` 区间**；无 `skills`——职业只给先天属性配置）
   - `EffectOp`（五 op）：`add_stat` / `add_tag`(duration, per_turn?, modifiers?) / `remove_tag` / `learn_skill` / `forget_skill`
   - `CheckDef { dice?, add:StatKey|'none', target:number }`；`EventBlock { text, gate?, check?, on_success, on_fail, once? }`；`PriceDef { currency:string, algo:'fixed'|'value', n?, dice?, range? }`
   - **删掉** `Monster.dice` / `Building.dice` / `Building.monster_ref` / `Road.step_cost` / `diceConfig`
@@ -73,9 +73,9 @@
   - `event`：`gate` + `check`(骰子/加值属性/目标值) + `on_success`/`on_fail`(可增删项) + `once`；**实时显示必成/必败**
   - `shop`：上架池 `stock` + 定价 `price`(货币下拉+fixed/value/掷骰)
 - [x] **怪物**：6 属性区间 + `attack_weights`(已启用技能多选+权重，旁注"按 普通攻击3:毒牙1 挑") + 可选 `effects`(命中施状态) + 可选 `atk_roll`/`def_roll`/`stat_dice` 覆盖 + `point_reward` + 可选战利品池；档位对照小怪/精英
-- [x] **技能**（§4.8.3，5 个控件）：`dim`/`target`/`vs`/`bonus`/`apply`/`cost`/`effects`；**人话预览**；底部「这一局里谁能学到它」反查，0 来源标黄
-- [x] **职业**（§4.2.3）：`base_stats`(6 初始) + `free_points` + `buffs`% + `tags` + `inventory_size`(数字+无限勾选) + `starting_items`(多选已启用道具)；**无 `skills`**；三句人话提示
-- [x] **道具**（§4.3）：kind 切换 → 装备(`slots`+`modifiers` 6 属性)/消耗品(`usable`+`effects` 五 op 混合列表)；`add_tag` 必填 `duration`(超 `state.max_duration` 夹上限)、可 `per_turn`/`modifiers`；`learn_skill` 行选已启用技能+实时人话预览（技能书）；`tags` 框旁注"给编辑器筛选用"
+- [x] **技能**（§4.8.3，5 个控件）：`dim`/`target`/`vs`/`bonus`/`apply`/`cost`/`effects`；**说明预览**；底部「这一局里谁能学到它」反查，0 来源标黄
+- [x] **职业**（§4.2.3）：`base_stats`(6 初始) + `free_points` + `buffs`% + `tags` + `inventory_size`(数字+无限勾选) + `starting_items`(多选已启用道具)；**无 `skills`**；三句说明提示
+- [x] **道具**（§4.3）：kind 切换 → 装备(`slots`+`modifiers` 6 属性)/消耗品(`usable`+`effects` 五 op 混合列表)；`add_tag` 必填 `duration`(超 `state.max_duration` 夹上限)、可 `per_turn`/`modifiers`；`learn_skill` 行选已启用技能+实时说明预览（技能书）；`tags` 框旁注"给编辑器筛选用"
 - [x] 技能/道具/怪物/事件四处 `effects` 共用同一控件；一行一效果 + 「＋加一条」
 
 ## A7 属性编辑 · 实例页 & 规则面板（§5.6 / §4.8.6）
@@ -86,7 +86,7 @@
 - [x] **实例页**：坐标/类型/引用组件名 + `[编辑该组件定义]` 跳转 + 建筑宽高 + 复制/删除节点；悬空引用标红 + 快捷修复
 - [x] **规则面板**（13 项，一个不多，无 `combat.attacks`；顶栏入口，不进右栏）：
   - `move.dice`；`combat` 的 `stat_dice`/`pick_dice`/`atk_roll`/`def_roll`；`treasure`/`loot` 的 `pick`+`copies`；`state.max_duration`；`shop.price`；`event.dice`；`class_pool`
-  - **每字段人话预览 + 「模拟10次」按钮**
+  - **每字段说明预览 + 「模拟10次」按钮**
 - [x] 规则面板 `rules` 导出/导入；旧文件缺 `rules`/残留 `diceConfig` 用 `DEFAULT_RULES` 兜底并提示
 - [x] 骰子输入校验：只接受 `nDf`，非法报错不静默默认
 
@@ -129,7 +129,7 @@
 - [x] 预设技能全套：`普通攻击`/`普通法术`(cost空)/`治疗术`(self)/`力量祝福`(self+apply:none+modifiers)/`虚弱诅咒`(opponent+apply:none+减益)/`盾击`/`毒牙`(伤害+挂中毒)
 - [x] 五种行为闭环：上锁石门(event)/流浪商人(shop)/御火符/解毒剂/金币(`tags:[货币]`)/毒牙哥布林
 - [x] 数值基线：小怪 `hp[6,12]`+`point_reward:1`；精英 `hp[24,40]`+`tags:[精英]`+`point_reward:5`；红蓝瓶 `delta:5`；铁剑 `patk+5`
-- [x] 职业只给先天牌面：骑士/法师 `base_stats`+`free_points:25`+`buffs`+`inventory_size`+`starting_items`（无 `skills`）；法师 `starting_items:[blue_potion, scroll_of_fireball]`
+- [x] 职业只给先天属性配置：骑士/法师 `base_stats`+`free_points:25`+`buffs`+`inventory_size`+`starting_items`（无 `skills`）；法师 `starting_items:[blue_potion, scroll_of_fireball]`
 - [x] 预设技能书 `scroll_of_fireball`(`learn_skill: fireball`)，可进奖励池/商店/事件后果
 
 ## A11 导入 / 导出 .pmod
@@ -162,12 +162,12 @@
 - [x] 7g. 技能两侧不对称（怪掷骰随机、玩家自选）
 - [x] 7h. 点数归职业(`free_points:300` 直接生效)；"1点=+1/不可洗点/余点保留"改不了
 - [x] 7i. 战斗能加点：`point_reward` 跨场景保留
-- [x] 7j. `mp` 五处贯通（分配/cost/蓝瓶/地形cost/怪物stats），无半套
+- [x] 7j. `mp` 五处贯通（分配/cost/蓝瓶/地形cost/怪物stats），无不完整的 mp 体系
 - [x] 8. 消耗与权限可配；双向反查
 - [x] 8b. 标签驱动不写死（造 `gate.tags:[飞行]`+装备 `[飞行]` 不改代码走通）
 - [x] 8c. 权限死路可见标黄
 - [x] 9. 自建与预设同库同权；改库对用到它的局立即生效
-- [x] 9b. 规则面板=§4.8.6 13 项，无 `combat.attacks`；每字段人话（无硬规则只读段）
+- [x] 9b. 规则面板=§4.8.6 13 项，无 `combat.attacks`；每字段说明（无硬规则只读段）
 - [x] 10. `.pmod` 导出→导入全一致
 - [x] 11. 刷新不丢数据
 - [x] 11b. 事件跑通（gate+check+on_success/fail+once）；必成/必败实时提示

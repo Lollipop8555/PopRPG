@@ -110,7 +110,7 @@ export function GateEditor({
                 value={gate?.missing ?? 'block'}
                 options={[
                   { value: 'block', label: '走不进去' },
-                  ...(withPenalty ? [{ value: 'penalty', label: '能硬闯但加罚' }] : []),
+                  ...(withPenalty ? [{ value: 'penalty', label: '能强行通过但加罚' }] : []),
                 ]}
                 onChange={(v) => patch({ missing: v as 'block' | 'penalty' })}
               />

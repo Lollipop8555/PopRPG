@@ -1,7 +1,7 @@
 /**
  * 抽取算法覆盖（§4.8.5② / §4.8.7）：
  * `pick`（件数：`tiers` 档位表 / `count` 区间）+ `copies`（份数：`fixed` / `value` / `multiplier`）。
- * **没有 `all`** —— 件数恒被 `|池|` 夹住，这里也实时把夹完之后的人话写出来。
+ * **没有 `all`** —— 件数恒被 `|池|` 夹住，这里也实时把夹完之后的说明写出来。
  */
 
 import type { CopiesAlgo, PickAlgo } from '../../../types'
