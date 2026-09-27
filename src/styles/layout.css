@@ -77,6 +77,24 @@
   min-height: 0;
 }
 
+/* 组件库条目：手绘风不规则圆角（与 .panel/按钮一致），始终可见淡边框，选中高亮 */
+.kit-row {
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-rough);
+  background: transparent;
+  transform: rotate(-0.5deg);
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+}
+.kit-row:hover {
+  background: rgba(0, 0, 0, 0.045);
+  transform: rotate(-0.2deg);
+}
+.kit-row.selected {
+  border-color: var(--accent, var(--line));
+  background: rgba(242, 230, 200, 0.7);
+  transform: rotate(0deg);
+}
+
 .inspector {
   flex: 1 1 auto;
   display: flex;
@@ -229,5 +247,7 @@
   .zoombar {
     top: 8px;
     bottom: auto;
+    left: 8px;
+    right: auto;
   }
 }

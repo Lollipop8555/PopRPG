@@ -3,8 +3,16 @@
   "name": "火抗鞋",
   "icon": "🥾",
   "kind": "equipment",
-  "slots": ["feet"],
-  "modifiers": { "pdef": 1, "mdef": 1 },
-  "tags": ["火抗"],
-  "desc": "装备于脚部槽，提供「火抗」标签。"
+  "slots": [
+    "feet"
+  ],
+  "modifiers": {
+    "pdef": 1,
+    "mdef": 1
+  },
+  "tags": [
+    "火抗"
+  ],
+  "desc": "装备于脚部槽，提供「火抗」标签。",
+  "color": "#e08a3c"
 }

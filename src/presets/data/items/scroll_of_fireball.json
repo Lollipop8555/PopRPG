@@ -3,7 +3,15 @@
   "name": "火球术残卷",
   "icon": "📜",
   "kind": "consumable",
-  "usable": ["move"],
-  "effects": [{ "op": "learn_skill", "skill": "fireball" }],
-  "desc": "消耗品，使用后永久习得技能「火球术」。"
+  "usable": [
+    "move"
+  ],
+  "effects": [
+    {
+      "op": "learn_skill",
+      "skill": "fireball"
+    }
+  ],
+  "desc": "消耗品，使用后永久习得技能「火球术」。",
+  "color": "#b15fb0"
 }

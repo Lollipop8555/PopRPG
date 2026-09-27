@@ -3,8 +3,15 @@
   "name": "小船",
   "icon": "🛶",
   "kind": "equipment",
-  "slots": ["hands"],
-  "modifiers": { "patk": -1 },
-  "tags": ["渡河"],
-  "desc": "装备于手部槽，提供「渡河」标签；占用双手，物攻 -1。"
+  "slots": [
+    "hands"
+  ],
+  "modifiers": {
+    "patk": -1
+  },
+  "tags": [
+    "渡河"
+  ],
+  "desc": "装备于手部槽，提供「渡河」标签；占用双手，物攻 -1。",
+  "color": "#4a90c2"
 }

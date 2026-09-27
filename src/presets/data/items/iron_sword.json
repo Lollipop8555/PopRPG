@@ -3,7 +3,17 @@
   "name": "铁剑",
   "icon": "🗡️",
   "kind": "equipment",
-  "slots": ["weapon"],
-  "modifiers": { "hp": 0, "mp": 0, "patk": 5, "matk": 0, "pdef": 0, "mdef": 0 },
-  "desc": "装备于武器槽，物攻 +5。"
+  "slots": [
+    "weapon"
+  ],
+  "modifiers": {
+    "hp": 0,
+    "mp": 0,
+    "patk": 5,
+    "matk": 0,
+    "pdef": 0,
+    "mdef": 0
+  },
+  "desc": "装备于武器槽，物攻 +5。",
+  "color": "#8d8378"
 }

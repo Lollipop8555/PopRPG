@@ -43,18 +43,35 @@ export const useLibraryStore = create<LibraryStore>()(
       seeded: false,
 
       ensureSeeded: () => {
-        if (get().seeded) return
-        const seed = presetLibrary()
         const cur = get()
-        // 合并式播种：只补入库里还不存在的预设，保留用户已有自建
+        const seed = presetLibrary()
         const next: Partial<LibraryStore> = { seeded: true }
+        let changed = false
         for (const key of LIBRARY_KEYS) {
           const existing = (cur[key] as AnyComponent[]) ?? []
           const seedArr = (seed[key] as AnyComponent[]) ?? []
+          const seedById = new Map(seedArr.map((c) => [c.id, c as AnyComponent]))
           const existingIds = new Set(existing.map((c) => c.id))
-          next[key] = [...existing, ...seedArr.filter((c) => !existingIds.has(c.id))] as never
+          let arr = existing
+          // 首次/未播种：补入缺失的预设项（保留用户自建与主动删除的项）
+          if (!cur.seeded) {
+            const missing = seedArr.filter((c) => !existingIds.has(c.id))
+            if (missing.length) {
+              arr = [...existing, ...missing]
+              changed = true
+            }
+          }
+          // 无论是否播种过：给预设项回填语义色。自身无 color、或仍用 id 兜底色（非用户自定义）时一律覆盖
+          const backfilled = arr.map((c) => {
+            if (seedById.has(c.id) && (!c.color || c.color === fallbackColor(c.id))) {
+              changed = true
+              return { ...c, color: (seedById.get(c.id) as AnyComponent).color }
+            }
+            return c
+          })
+          next[key] = backfilled as never
         }
-        set(next)
+        set(changed ? next : { seeded: true } as Partial<LibraryStore>)
       },
 
       replaceAll: (data) => set({ ...data }),

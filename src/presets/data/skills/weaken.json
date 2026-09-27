@@ -7,7 +7,20 @@
   "vs": "auto",
   "bonus": 0,
   "apply": "none",
-  "cost": { "mp": 3 },
-  "effects": [{ "op": "add_tag", "tag": "虚弱", "duration": 3, "modifiers": { "patk": -2, "pdef": -1 } }],
-  "desc": "命中对手后施加减益：3 回合内物攻 -2、物防 -1，消耗 3 点法力。"
+  "cost": {
+    "mp": 3
+  },
+  "effects": [
+    {
+      "op": "add_tag",
+      "tag": "虚弱",
+      "duration": 3,
+      "modifiers": {
+        "patk": -2,
+        "pdef": -1
+      }
+    }
+  ],
+  "desc": "命中对手后施加减益：3 回合内物攻 -2、物防 -1，消耗 3 点法力。",
+  "color": "#8e6f9b"
 }

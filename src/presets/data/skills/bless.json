@@ -7,7 +7,19 @@
   "vs": "none",
   "bonus": 0,
   "apply": "none",
-  "cost": { "mp": 2 },
-  "effects": [{ "op": "add_tag", "tag": "力量祝福", "duration": 3, "modifiers": { "patk": 2 } }],
-  "desc": "为自己施加增益：3 回合内物攻 +2，消耗 2 点法力。"
+  "cost": {
+    "mp": 2
+  },
+  "effects": [
+    {
+      "op": "add_tag",
+      "tag": "力量祝福",
+      "duration": 3,
+      "modifiers": {
+        "patk": 2
+      }
+    }
+  ],
+  "desc": "为自己施加增益：3 回合内物攻 +2，消耗 2 点法力。",
+  "color": "#4a90c2"
 }

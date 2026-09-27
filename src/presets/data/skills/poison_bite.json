@@ -7,6 +7,16 @@
   "vs": "auto",
   "bonus": 1,
   "apply": "hp",
-  "effects": [{ "op": "add_tag", "tag": "中毒", "duration": 3, "per_turn": { "hp": -1 } }],
-  "desc": "物理攻击附带「中毒」状态（每回合损失生命），持续 3 回合。"
+  "effects": [
+    {
+      "op": "add_tag",
+      "tag": "中毒",
+      "duration": 3,
+      "per_turn": {
+        "hp": -1
+      }
+    }
+  ],
+  "desc": "物理攻击附带「中毒」状态（每回合损失生命），持续 3 回合。",
+  "color": "#6fae3f"
 }

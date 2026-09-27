@@ -115,7 +115,7 @@ export default function KitPanel() {
               </div>
 
               {!collapsed && (
-                <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {visible.length === 0 && <div className="faint" style={{ padding: '3px 4px' }}>（空）</div>}
                   {visible.map((def) => (
                     <KitRow
@@ -163,102 +163,97 @@ function KitRow({
   const rowColor = def.color ?? fallbackColor(def.id)
   const mapPiece = isMapPiece(kind)
 
+  const duplicate = () => {
+    const copy = duplicateOf(kind, def)
+    commit(() => useLibraryStore.getState().upsert(kind, copy))
+    useUiStore.getState().setSelectedKit(copy.id)
+    useUiStore.getState().setInspectorTab('component')
+  }
+
+  // 编辑 / 复制 / 启用已提为第三行独立按钮；菜单只保留删除与恢复默认
   const menu: { label: string; onClick: () => void; tone?: 'danger'; disabled?: boolean; title?: string }[] = [
-    { label: '编辑定义', onClick: onSelect },
     {
-      label: '复制成新组件',
+      label: '删除',
+      tone: 'danger' as const,
       onClick: () => {
-        const copy = duplicateOf(kind, def)
-        commit(() => useLibraryStore.getState().upsert(kind, copy))
-        useUiStore.getState().setSelectedKit(copy.id)
-        useUiStore.getState().setInspectorTab('component')
+        const uses = placedCount + (enabled ? 1 : 0) + referencedCount
+        const ok = uses > 0
+          ? window.confirm(`「${def.name}」被 ${uses} 处用到（铺设 ${placedCount} · 被引用 ${referencedCount}）。确认删除？留下的引用会变成悬空。`)
+          : window.confirm(`确认删除「${def.name}」？`)
+        if (!ok) return
+        commit(() => useLibraryStore.getState().remove(kind, def.id))
       },
     },
-  ]
-  if (!mapPiece) {
-    menu.push({ label: enabled ? '停用（不算内容）' : '启用（算内容）', onClick: onToggleEnabled })
-  }
-  menu.push({
-    label: '删除',
-    tone: 'danger' as const,
-    onClick: () => {
-      const uses = placedCount + (enabled ? 1 : 0) + referencedCount
-      const ok = uses > 0
-        ? window.confirm(`「${def.name}」被 ${uses} 处用到（铺设 ${placedCount} · 被引用 ${referencedCount}）。确认删除？留下的引用会变成悬空。`)
-        : window.confirm(`确认删除「${def.name}」？`)
-      if (!ok) return
-      commit(() => useLibraryStore.getState().remove(kind, def.id))
+    {
+      label: '恢复默认',
+      disabled: !isPresetId(def.id),
+      title: '拿 id 去内置预设表取原始定义覆盖回来（仅预设条目）',
+      onClick: () => commit(() => useLibraryStore.getState().resetToPreset(def.id)),
     },
-  })
-  menu.push({
-    label: '恢复默认',
-    disabled: !isPresetId(def.id),
-    title: '拿 id 去内置预设表取原始定义覆盖回来（仅预设条目）',
-    onClick: () => commit(() => useLibraryStore.getState().resetToPreset(def.id)),
-  })
+  ]
 
   return (
     <div
       onClick={onSelect}
-      className="row"
+      className={'kit-row' + (selected ? ' selected' : '')}
       style={{
-        gap: 4,
-        padding: '3px 4px',
+        gap: 0,
+        padding: '4px 6px',
         cursor: 'pointer',
-        borderRadius: 8,
-        background: selected ? 'rgba(242,230,200,.7)' : 'transparent',
-        border: selected ? '1.2px solid var(--line)' : '1.2px solid transparent',
         opacity: mapPiece || enabled ? 1 : 0.62,
       }}
       title={mapPiece ? '地图件：铺到地图格才算内容' : '非地图件：显式启用才算内容'}
     >
-      <span
-        style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, flex: '0 0 auto' }}
-      >
-        {rowColor && (
-          <span
-            style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: 6,
-              border: `1.5px solid ${rowColor}`,
-              background: withAlpha(rowColor, 0.3),
-            }}
-          />
-        )}
-        <span style={{ position: 'relative', fontSize: 14 }}>{def.icon}</span>
-      </span>
-      <span className="hand" style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {def.name}
-      </span>
-
-      {isPresetId(def.id) ? (
-        <Badge tone="preset" title="id 命中内置预设表">预设</Badge>
-      ) : (
-        <Badge tone="custom" title="用户自建">自建</Badge>
-      )}
-
-      {mapPiece ? (
-        placedCount > 0 ? (
-          <Badge tone="on" title="已铺到地图上">已铺设 ×{placedCount}</Badge>
-        ) : (
-          <Badge tone="off" title="还没铺到格子上">未铺设</Badge>
-        )
-      ) : (
+      {/* 第一行：图标 + 名称 */}
+      <div className="row" style={{ gap: 6, alignItems: 'center' }}>
         <span
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleEnabled()
-          }}
-          title="本局是否启用"
+          style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, flex: '0 0 auto' }}
         >
-          <Badge tone={enabled ? 'on' : 'off'}>{enabled ? '☑ 已启用' : '☐ 未启用'}</Badge>
+          {rowColor && (
+            <span
+              style={{ position: 'absolute', inset: 0, borderRadius: 6, border: `1.5px solid ${rowColor}`, background: withAlpha(rowColor, 0.3) }}
+            />
+          )}
+          <span style={{ position: 'relative', fontSize: 14 }}>{def.icon}</span>
         </span>
-      )}
+        <span className="hand" style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {def.name}
+        </span>
+      </div>
 
-      {referencedCount > 0 && <Badge title="被几处引用">被引用 ×{referencedCount}</Badge>}
+      {/* 第二行：状态 */}
+      <div className="row" style={{ gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+        {isPresetId(def.id) ? (
+          <Badge tone="preset" title="id 命中内置预设表">预设</Badge>
+        ) : (
+          <Badge tone="custom" title="用户自建">自建</Badge>
+        )}
+        {mapPiece ? (
+          placedCount > 0 ? (
+            <Badge tone="on" title="已铺到地图上">已铺设 ×{placedCount}</Badge>
+          ) : (
+            <Badge tone="off" title="还没铺到格子上">未铺设</Badge>
+          )
+        ) : null}
+        {referencedCount > 0 && <Badge title="被几处引用">被引用 ×{referencedCount}</Badge>}
+      </div>
 
-      <RowMenu items={menu} />
+      {/* 第三行：操作 */}
+      <div className="row" style={{ gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+        {!mapPiece && (
+          <button
+            className="btn small"
+            style={{ fontSize: 11, padding: '2px 7px' }}
+            onClick={(e) => { e.stopPropagation(); onToggleEnabled() }}
+            title="本局是否启用（算不算内容）"
+          >
+            {enabled ? '已启用' : '未启用'}
+          </button>
+        )}
+        <button className="btn small" style={{ fontSize: 11, padding: '2px 7px' }} onClick={(e) => { e.stopPropagation(); onSelect() }} title="编辑定义">编辑</button>
+        <button className="btn small" style={{ fontSize: 11, padding: '2px 7px' }} onClick={(e) => { e.stopPropagation(); duplicate() }} title="复制成新组件">复制</button>
+        <RowMenu items={menu} />
+      </div>
     </div>
   )
 }

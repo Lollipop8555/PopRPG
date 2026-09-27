@@ -2,11 +2,26 @@
   "id": "knight",
   "name": "骑士",
   "icon": "🛡️",
-  "base_stats": { "hp": 5, "mp": 0, "patk": 3, "matk": 0, "pdef": 2, "mdef": 0 },
+  "base_stats": {
+    "hp": 5,
+    "mp": 0,
+    "patk": 3,
+    "matk": 0,
+    "pdef": 2,
+    "mdef": 0
+  },
   "free_points": 25,
-  "buffs": { "hp": 110, "patk": 120, "pdef": 110, "matk": 80 },
+  "buffs": {
+    "hp": 110,
+    "patk": 120,
+    "pdef": 110,
+    "matk": 80
+  },
   "tags": [],
   "inventory_size": 50,
-  "starting_items": ["red_potion"],
-  "desc": "物理见长、坚韧，法术能力薄弱；初始属性偏向生命与物攻 / 物防。"
+  "starting_items": [
+    "red_potion"
+  ],
+  "desc": "物理见长、坚韧，法术能力薄弱；初始属性偏向生命与物攻 / 物防。",
+  "color": "#4a6fa5"
 }

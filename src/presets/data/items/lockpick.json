@@ -3,7 +3,12 @@
   "name": "撬锁工具",
   "icon": "🗝️",
   "kind": "equipment",
-  "slots": ["hands"],
-  "tags": ["撬锁"],
-  "desc": "装备于手部槽，提供「撬锁」标签。"
+  "slots": [
+    "hands"
+  ],
+  "tags": [
+    "撬锁"
+  ],
+  "desc": "装备于手部槽，提供「撬锁」标签。",
+  "color": "#8d6e4a"
 }

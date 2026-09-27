@@ -2,17 +2,55 @@
   "id": "mimic_chest",
   "name": "伪装宝箱",
   "icon": "🦞",
-  "tags": ["精英"],
-  "stats": { "hp": [18, 28], "mp": [0, 0], "patk": [5, 8], "matk": [0, 0], "pdef": [3, 5], "mdef": [3, 5] },
-  "attack_weights": { "basic_attack": 1 },
-  "atk_roll": { "add_dice": "1D6" },
+  "tags": [
+    "精英"
+  ],
+  "stats": {
+    "hp": [
+      18,
+      28
+    ],
+    "mp": [
+      0,
+      0
+    ],
+    "patk": [
+      5,
+      8
+    ],
+    "matk": [
+      0,
+      0
+    ],
+    "pdef": [
+      3,
+      5
+    ],
+    "mdef": [
+      3,
+      5
+    ]
+  },
+  "attack_weights": {
+    "basic_attack": 1
+  },
+  "atk_roll": {
+    "add_dice": "1D6"
+  },
   "reward_pool": {
     "source": "ids",
     "ids": [
-      { "id": "red_potion", "weight": 3 },
-      { "id": "iron_sword", "weight": 1 }
+      {
+        "id": "red_potion",
+        "weight": 3
+      },
+      {
+        "id": "iron_sword",
+        "weight": 1
+      }
     ]
   },
   "point_reward": 3,
-  "desc": "伪装成宝箱的精英怪物，开启宝箱屋时按概率出现。"
+  "desc": "伪装成宝箱的精英怪物，开启宝箱屋时按概率出现。",
+  "color": "#b15fb0"
 }

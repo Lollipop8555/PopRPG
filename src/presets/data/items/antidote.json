@@ -3,7 +3,16 @@
   "name": "解毒剂",
   "icon": "💊",
   "kind": "consumable",
-  "usable": ["battle", "move"],
-  "effects": [{ "op": "remove_tag", "tag": "中毒" }],
-  "desc": "消耗品，移除「中毒」状态。"
+  "usable": [
+    "battle",
+    "move"
+  ],
+  "effects": [
+    {
+      "op": "remove_tag",
+      "tag": "中毒"
+    }
+  ],
+  "desc": "消耗品，移除「中毒」状态。",
+  "color": "#6fae3f"
 }

@@ -2,6 +2,9 @@
   "id": "belt",
   "name": "传送带",
   "icon": "➡️",
-  "cost": { "step": 0 },
-  "desc": "移动一格消耗 0 步。"
+  "cost": {
+    "step": 0
+  },
+  "desc": "移动一格消耗 0 步。",
+  "color": "#d08a3e"
 }

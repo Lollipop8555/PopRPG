@@ -5,10 +5,33 @@
   "encounter": "shop",
   "stock": {
     "source": "ids",
-    "ids": ["red_potion", "blue_potion", "iron_sword", "scroll_of_fireball", "antidote", "fire_ward"],
-    "pick": { "algo": "count", "dice": "1D6", "range": [2, 3] }
+    "ids": [
+      "red_potion",
+      "blue_potion",
+      "iron_sword",
+      "scroll_of_fireball",
+      "antidote",
+      "fire_ward"
+    ],
+    "pick": {
+      "algo": "count",
+      "dice": "1D6",
+      "range": [
+        2,
+        3
+      ]
+    }
   },
-  "price": { "currency": "gold", "algo": "value", "dice": "1D6", "range": [5, 15] },
+  "price": {
+    "currency": "gold",
+    "algo": "value",
+    "dice": "1D6",
+    "range": [
+      5,
+      15
+    ]
+  },
   "restock": "on_enter",
-  "desc": "按标签上架物品，使用金币交易。"
+  "desc": "按标签上架物品，使用金币交易。",
+  "color": "#5b8c5a"
 }

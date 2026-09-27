@@ -2,11 +2,27 @@
   "id": "mage",
   "name": "法师",
   "icon": "🧙",
-  "base_stats": { "hp": 3, "mp": 4, "patk": 0, "matk": 3, "pdef": 0, "mdef": 2 },
+  "base_stats": {
+    "hp": 3,
+    "mp": 4,
+    "patk": 0,
+    "matk": 3,
+    "pdef": 0,
+    "mdef": 2
+  },
   "free_points": 25,
-  "buffs": { "hp": 90, "matk": 130, "mdef": 120, "patk": 80 },
+  "buffs": {
+    "hp": 90,
+    "matk": 130,
+    "mdef": 120,
+    "patk": 80
+  },
   "tags": [],
   "inventory_size": 30,
-  "starting_items": ["blue_potion", "scroll_of_fireball"],
-  "desc": "法术见长、脆弱，物理能力薄弱；初始属性偏向法力与魔攻 / 魔抗。"
+  "starting_items": [
+    "blue_potion",
+    "scroll_of_fireball"
+  ],
+  "desc": "法术见长、脆弱，物理能力薄弱；初始属性偏向法力与魔攻 / 魔抗。",
+  "color": "#9b59b6"
 }

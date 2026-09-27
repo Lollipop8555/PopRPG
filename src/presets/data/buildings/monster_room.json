@@ -6,9 +6,16 @@
   "monster_pool": {
     "source": "ids",
     "ids": [
-      { "id": "goblin", "weight": 3 },
-      { "id": "slime", "weight": 2 }
+      {
+        "id": "goblin",
+        "weight": 3
+      },
+      {
+        "id": "slime",
+        "weight": 2
+      }
     ]
   },
-  "desc": "进入后随机遭遇一只怪物。"
+  "desc": "进入后随机遭遇一只怪物。",
+  "color": "#8a5a44"
 }
