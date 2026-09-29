@@ -14,11 +14,11 @@
 import type { BuildingDef, DialogNode } from '../types'
 import type { Rng } from '../engine/dice'
 import { rollRangeAt, rollSum } from '../engine/dice'
-import { parseHit } from '../lib/dialog'
+import { hitLabel, parseHit } from '../lib/dialog'
 import { nodeAtPath } from '../lib/dialogTree'
 import type { Session, TalkRecord, TalkState } from '../types/session'
 import { buildingKey, log, nodeAtCell, recordRoll } from './kit'
-import { grant } from './reward'
+import { heroGain } from './gain'
 
 /* ------------------------------------------------------------------ */
 /* 基础查表                                                            */
@@ -151,12 +151,19 @@ function enterNode(
   const rec = s.talks?.[key]
   let session = s
 
-  // 已交付的终态记录：只回放它的 message（不展开 items、不再给道具，防刷）
+  // 已交付的终态记录：只回放它的 message（不展开 items、不再赠予道具，防刷）
   const replay = samePath(rec?.deliveredNode, path)
 
   if (!replay && node?.give && node.give.length > 0) {
-    const settled = grant(session, { pieces: countPieces(node.give) })
-    session = settled.session
+    // 赠予走**统一的主角接口**：背包在这里落袋，**提示也在这里排上**（`notices` 队列）。
+    // 对话里没有别的"揭晓处"，所以落点必须是浮条 —— 以前只往 `log` 写一行，
+    // 而那一行只在「流水」抽屉里看得到，玩家等于**完全不知道东西到手了**。
+    const npcName = s.scenario.library.npcs.find((n) => n.id === npc)
+    const { session: afterGain } = heroGain(session, {
+      source: `对话：${npcName?.icon ?? ''}${npcName?.name ?? npc}`,
+      pieces: countPieces(node.give),
+    })
+    session = afterGain
     const after: TalkRecord = { ...(session.talks?.[key] as TalkRecord), deliveredNode: path, talkDone: true }
     session = { ...session, talks: { ...(session.talks ?? {}), [key]: after } }
     session = log(session, '对话中交付了物品', 'good')
@@ -193,7 +200,7 @@ export function talkAdvance(s: Session): Session {
   if (talk.replay) return closeTalk(s)
 
   if (node.items && node.items.length > 0) {
-    return { ...s, talk: { ...talk, stage: 'choose', rolled: undefined, missed: undefined } }
+    return { ...s, talk: { ...talk, stage: 'choose', rolled: undefined, hit: undefined, missed: undefined } }
   }
   return completeNode(s, talk)
 }
@@ -226,8 +233,12 @@ export function talkChoose(s: Session, index: number): Session {
 }
 
 /**
- * 本层「掷骰」（记录带 `dice` 时）：按各条 `items` 的 `hit` 命中 —— **未命中就再给一次掷骰**（§4.9.2）。
+ * 本层「掷骰」（记录带 `dice` 时）：掷出点数 → 拿它去各条 `items` 的 `hit` 区间里找**唯一命中条**，
+ * **记下点数与命中的下标、停在原地**（§4.9.2）。**不替玩家把这一步跳过去** ——
+ * 玩家得先看见骰面停在几点、命中的是哪一条，再由 `talkHit` 进那一条。
+ *
  * 命中唯一性：同一层内**先出现的 `hit` 优先**。
+ * 未命中任何 `hit`：记下点数与 `missed`，**再给一次掷骰**（不会卡死）。
  */
 export function talkRoll(s: Session, rng?: Rng): Session {
   const talk = s.talk
@@ -250,10 +261,23 @@ export function talkRoll(s: Session, rng?: Rng): Session {
   let session = recordRoll(s, '对话选项命中', node.dice, pips)
   if (hitIndex < 0) {
     session = log(session, `对话掷出 ${pips}：没有选项命中，再掷一次`, 'dice')
-    return { ...session, talk: { ...talk, rolled: pips, missed: true } }
+    return { ...session, talk: { ...talk, rolled: pips, hit: undefined, missed: true } }
   }
   session = log(session, `对话掷出 ${pips} → 命中第 ${hitIndex + 1} 个选项`, 'dice')
-  return enterNode(session, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [...talk.path, hitIndex])
+  return { ...session, talk: { ...talk, rolled: pips, hit: hitIndex, missed: false } }
+}
+
+/**
+ * 掷骰层**看完命中项**之后进那一条（UI 在骰面停住、高亮那一拍之后调它）。
+ * `hit` 缺省（没掷 / 未命中）→ 原地不动，等再掷。
+ */
+export function talkHit(s: Session): Session {
+  const talk = s.talk
+  if (!talk || talk.stage !== 'choose' || talk.hit === undefined) return s
+  const nodes = dialogPlan(s, talk.npc, talk.dialog) ?? []
+  const node = nodeAtPath(nodes, talk.path)
+  if (!node?.items?.[talk.hit]) return s
+  return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [...talk.path, talk.hit])
 }
 
 /* ------------------------------------------------------------------ */
@@ -290,20 +314,81 @@ export function closeTalk(s: Session): Session {
 /* 给 UI 的只读视图                                                    */
 /* ------------------------------------------------------------------ */
 
+/** 聊天记录里的一条：`npc` ＝ NPC 说的（`message`），`me` ＝ 玩家的答复（选的那一条的 `result`） */
+export interface TalkLine {
+  who: 'npc' | 'me'
+  text: string
+}
+
 export interface TalkView {
   talk: TalkState
   /** 当前停留的记录（路径无效 → undefined） */
   node?: DialogNode
-  /** 已展示的台词（含当前这条） */
-  lines: string[]
+  /** 双方的**完整聊天记录**（含当前这句）—— **只往后追加**，选完一项不清空 */
+  log: TalkLine[]
   /** 本层是否要掷骰（记录带 `dice`） */
   needsRoll: boolean
-  /** 已展开的选项按钮文本（`items` 各条的 `result`；无 `result` 时给占位） */
-  options: { index: number; label: string; hit?: string }[]
+  /**
+   * 已展开的选项文本（`items` 各条的 `result`；无 `result` 时给占位）。
+   * `hitLabel` 是给玩家看的命中区间（`'1-2'` / `'—'`）—— 掷骰层**每条都标出来**，见 `hitLabel()`。
+   */
+  options: { index: number; label: string; hit?: string; hitLabel: string }[]
   /** 能否从「选择对话框」里选【路过】（走完过才有） */
   canPass: boolean
   /** 已交付（用于菜单文案） */
   delivered: boolean
+}
+
+/** 选项 / 玩家答复的展示文本（没写 `result` 就给个占位，与选项按钮上是同一句） */
+function optionText(item: DialogNode, index: number): string {
+  return item.result && item.result.trim() !== '' ? item.result : `（第 ${index + 1} 个选项）`
+}
+
+/**
+ * 双方的**完整聊天记录**（从根层第 1 条到当前这句）—— **只往后追加、绝不回头清空**。
+ *
+ * 对话是**聊天记录**，不是 GalGame 那种一屏一屏换的幻灯：既然上屏形式是"记录"，
+ * 那就得**双方的对话和选择都留着** —— 选完一项之后，NPC 之前说的、以及自己挑的那一句，
+ * 都必须还留在上面（否则玩家只看到最新一句、不知道这句话是接哪句话来的；
+ * 选完那一瞬间上文整片消失，读起来像"切了一屏"，而不是"接着说下去"）。
+ *
+ * 规则：
+ * - **祖先记录整条都算说过**（它们已经说完才轮到下一层），**当前这条只给到已展示的那一句**
+ * - 根层是"按顺序展示"的序列，所以当前根记录之前的那几条同样整条保留
+ * - 每往下一层，先补上**玩家自己挑的那一条**（`result` 原文，掷骰命中的同样是"自己挑的"）
+ *
+ * 记的是**走过的路径**（`talk.path`）而不是"已经渲染过什么" —— 于是**退出再【继续对话】回来，
+ * 记录照样在**（祖先链一条条都在路径上），不用另存一分聊天日志。
+ */
+function transcript(nodes: DialogNode[], path: number[], line: number): TalkLine[] {
+  const out: TalkLine[] = []
+  const say = (n: DialogNode, upto?: number) => {
+    for (const m of upto === undefined ? n.message : n.message.slice(0, upto)) out.push({ who: 'npc', text: m })
+  }
+
+  for (let i = 0; i < (path[0] ?? 0); i++) {
+    const n = nodes[i]
+    if (n) say(n)
+  }
+
+  // 顺 `items` 下到当前这条：链上最后一条是"正在说"的，其余都已说完
+  let list: DialogNode[] | undefined = nodes
+  const chain: DialogNode[] = []
+  for (const i of path) {
+    const n: DialogNode | undefined = list?.[i]
+    if (!n) break
+    chain.push(n)
+    list = n.items
+  }
+  chain.forEach((n, i) => {
+    if (i > 0) {
+      // 进这一条之前，玩家在上面那条的 `items` 里挑（或掷骰命中）了它 —— 答复原文留在记录里
+      const pick = chain[i - 1].items?.[path[i]]
+      if (pick) out.push({ who: 'me', text: optionText(pick, path[i]) })
+    }
+    say(n, i === chain.length - 1 ? line + 1 : undefined)
+  })
+  return out
 }
 
 /** 把当前对话状态整理成 UI 直接可渲染的视图（纯函数） */
@@ -313,20 +398,21 @@ export function talkView(s: Session): TalkView | undefined {
   const rec = s.talks?.[talk.key]
   const nodes = dialogPlan(s, talk.npc, talk.dialog) ?? []
   const node = nodeAtPath(nodes, talk.path)
-  const lines = node ? node.message.slice(0, talk.line + 1) : []
+  const log = node ? transcript(nodes, talk.path, talk.line) : []
   const needsRoll = talk.stage === 'choose' && !!node?.dice
   const options =
     talk.stage === 'choose' && !talk.replay
       ? (node?.items ?? []).map((item, index) => ({
           index,
-          label: item.result && item.result.trim() !== '' ? item.result : `（第 ${index + 1} 个选项）`,
+          label: optionText(item, index),
           hit: item.hit,
+          hitLabel: hitLabel(item.hit),
         }))
       : []
   return {
     talk,
     node,
-    lines,
+    log,
     needsRoll,
     options,
     canPass: !!rec?.talkDone,

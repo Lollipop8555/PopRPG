@@ -3,6 +3,8 @@
  *
  * - 预设 + 自建**同一份列表、同等地位**（能改 / 删 / 复制 / 恢复默认）
  * - 来源**不存字段**：拿 id 查内置预设表当场派生（§3.2）
+ * - **重名以本地优先**：内置预设固定不变，用户改过的版本存在本地；播种时本地已有同名条目
+ *   （无论那条是改过的预设还是自建）即**不再补入该预设**，既不覆盖也不并列插入
  * - **不存组件定义以外的东西**：项目只记「启用哪些 + 铺到哪」
  */
 
@@ -52,10 +54,13 @@ export const useLibraryStore = create<LibraryStore>()(
           const seedArr = (seed[key] as AnyComponent[]) ?? []
           const seedById = new Map(seedArr.map((c) => [c.id, c as AnyComponent]))
           const existingIds = new Set(existing.map((c) => c.id))
+          /** 本地已有名称：重名以本地优先（预设固定、改过的版本在本地，两者不得并存） */
+          const takenNames = new Set(existing.map((c) => c.name))
           let arr = existing
           // 首次/未播种：补入缺失的预设项（保留用户自建与主动删除的项）
+          // 同 id 已有 → 保留本地那一条；同名不同 id → 同样保留本地、该预设不补入
           if (!cur.seeded) {
-            const missing = seedArr.filter((c) => !existingIds.has(c.id))
+            const missing = seedArr.filter((c) => !existingIds.has(c.id) && !takenNames.has(c.name))
             if (missing.length) {
               arr = [...existing, ...missing]
               changed = true

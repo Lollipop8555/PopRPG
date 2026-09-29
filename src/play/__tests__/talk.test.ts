@@ -16,7 +16,8 @@ import { scenarioFromProject } from '../load'
 import { nextRound, startSession } from '../flow'
 import { afterTalk, beginBuilding, enterBuilding } from '../encounter'
 import { buildingKey, nodeAtCell } from '../kit'
-import { talkAdvance, talkChoose, talkMenu, talkRoll, talkView } from '../talk'
+import { talkAdvance, talkChoose, talkHit, talkMenu, talkRoll, talkView } from '../talk'
+import { gainLines } from '../gain'
 import { exportSave, parseSave } from '../../io/psave'
 
 const fixed = (value: number): Rng => () => value
@@ -195,6 +196,11 @@ describe('E4 走完与 give：交付一次、终态只回放', () => {
     expect(t.talks![key]!.talkDone).toBe(true)
     expect(t.talk!.stage).toBe('line')
 
+    // ⚠️ 这里曾经是个 bug：赠予只往 `log` 写一行（那一行只在「流水」抽屉里看得见），
+    // 玩家选完以为东西没到手。现在赠予走**统一的主角接口**，一定排一条要给玩家看的提示
+    expect(t.notices?.map((n) => n.source)).toEqual(['对话：🅰甲'])
+    expect(gainLines(t.notices![0])).toEqual([{ tone: 'ok', text: '获得 🧪红瓶 ×1' }])
+
     t = talkAdvance(t) // 走到结尾 → 弹层收起
     expect(t.talk).toBeUndefined()
     expect(t.talks![key]!.cursor).toEqual([0, 0])
@@ -266,10 +272,47 @@ describe('E4 走完与 give：交付一次、终态只回放', () => {
   })
 })
 
-describe('E4 掷骰选项：命中进入、未命中再掷（E4-11/12）', () => {
+describe('E4 聊天记录：双方的对话与选择都留着（只往后追加）', () => {
+  const enter = (s: Session) => beginBuilding(s, house(s, CHAT.id), [2, 0], fixed(0.5))
+
+  it('选完一项：NPC 的话 ＋ 自己挑的那一条 ＋ NPC 的接话，全都在（E4-8）', () => {
+    let t = talkAdvance(enter(sess())) // 台词播完 → 选项
+    expect(talkView(t)!.log).toEqual([{ who: 'npc', text: '甲的一句。' }])
+
+    t = talkChoose(t, 1) // B：不给。
+    expect(talkView(t)!.log).toEqual([
+      { who: 'npc', text: '甲的一句。' },
+      { who: 'me', text: 'B：不给。' }, // 玩家的选择也是记录的一部分
+      { who: 'npc', text: '好吧。' },
+    ])
+  })
+
+  it('退出再【继续对话】回来：记录由路径反推，一条不少（E4-8）', () => {
+    let t = talkChoose(talkAdvance(enter(sess())), 1)
+    const expected = talkView(t)!.log
+
+    const again = beginBuilding(leave(t), house(t, CHAT.id), [2, 0], fixed(0.5))
+    expect(again.talk!.stage).toBe('menu') // 重入先弹选择框
+    expect(talkView(talkMenu(again, 'continue'))!.log).toEqual(expected)
+  })
+
+  it('掷骰命中的那一条同样记成"自己挑的"（E4-11）', () => {
+    const s = sess()
+    let t = talkAdvance(beginBuilding(s, house(s, DICE.id), [4, 0], fixed(0.99))) // 「看运气。」播完 → 掷骰层
+    t = talkRoll(t, fixed(0.6)) // 1D6 → 4 点，命中 B：中。
+    t = talkHit(t)
+    expect(talkView(t)!.log).toEqual([
+      { who: 'npc', text: '看运气。' },
+      { who: 'me', text: 'B：中。' }, // 掷骰定下来的那条照样是"玩家这一手"
+      { who: 'npc', text: '中。' },
+    ])
+  })
+})
+
+describe('E4 掷骰选项：先亮命中，再进那一条；未命中再掷（E4-11/12）', () => {
   const enter = (s: Session) => beginBuilding(s, house(s, DICE.id), [4, 0], fixed(0.99))
 
-  it('未命中任何 hit → 停在原地并提示再掷一次；再掷命中 → 进入该选项', () => {
+  it('掷骰只「亮」不「跳」：骰面停住 → 高亮命中那条 → `talkHit` 才进去', () => {
     const s = sess()
     const before = potions(s)
     let t = enter(s)
@@ -277,20 +320,35 @@ describe('E4 掷骰选项：命中进入、未命中再掷（E4-11/12）', () =>
     expect(t.talk!.stage).toBe('choose')
     expect(talkView(t)!.needsRoll).toBe(true)
 
-    // 掷出 6（5-6 未覆盖）→ 未命中
+    // 掷出 6（5-6 未覆盖）→ 未命中：记下点数、**停在原地**等再掷
     const missed = talkRoll(t, fixed(0.99))
     const key = buildingKey(missed, [4, 0])
     expect(missed.talk!.missed).toBe(true)
+    expect(missed.talk!.hit).toBeUndefined()
     expect(missed.talk!.stage).toBe('choose')
     expect(missed.talk!.rolled).toBe(6)
     expect(missed.talks![key]!.cursor).toEqual([0])
     expect(potions(missed)).toBe(before)
 
-    // 再掷出 4 → 命中 B（give）
-    const hit = talkRoll(missed, fixed(0.6))
+    // 没人可进 → 空操作
+    expect(talkHit(missed).talk!.path).toEqual([0])
+
+    // 再掷出 4 → 命中 B：**只标出来**（`hit`），give 也还不交付
+    const revealed = talkRoll(missed, fixed(0.6))
+    expect(revealed.talk!.rolled).toBe(4)
+    expect(revealed.talk!.hit).toBe(1)
+    expect(revealed.talk!.path).toEqual([0]) // 还停在本层
+    expect(potions(revealed)).toBe(before)
+    // 每条答复的命中区间都给玩家看（UI 上就是每条前面那一格；单点归一成 `4`）
+    expect(talkView(revealed)!.options.map((o) => o.hitLabel)).toEqual(['1-3', '4'])
+
+    // 看完命中项 → 进那一条（give 此刻交付，高亮自然清掉）
+    const hit = talkHit(revealed)
     expect(hit.talks![key]!.deliveredNode).toEqual([0, 1])
     expect(potions(hit)).toBe(before + 1)
     expect(hit.talk!.path).toEqual([0, 1])
+    expect(hit.talk!.hit).toBeUndefined()
+    expect(hit.talk!.rolled).toBeUndefined()
   })
 })
 
@@ -321,7 +379,7 @@ describe('E4 与建筑事件正交（§4.8.12）', () => {
     expect(waiting.awaitingEncounter?.ref).toBe(EMPTY_CHEST.id)
     const rolled = enterBuilding({ ...waiting, awaitingEncounter: undefined }, house(waiting, EMPTY_CHEST.id), [6, 0], fixed(0.5))
     expect(rolled.encounter?.kind).toBe('treasure')
-    expect(rolled.encounter?.pieces).toEqual([])
+    expect(rolled.encounter?.gain).toBeUndefined() // 什么都没到手 → 不挂「获得」记录
   })
 
   it('`encounter: talk` 但实例没写 npcs → 既无对话也等同 empty（E4-14）', () => {
@@ -358,7 +416,7 @@ describe('E4 存档：抽定与进度随 .psave 一起走（E4-17/18）', () => 
 })
 
 describe('E4 交付受背包约束（验收 11）', () => {
-  it('背包已满时 `give` 给道具被拒绝并提示，对话仍正常结束', () => {
+  it('背包已满时 `give` 赠予道具被拒绝并提示，对话仍正常结束', () => {
     const base = sess()
     /** 背包容量 1 格，且已被另一件道具占住 → 交付 `red_potion` 属于新占一格，应被拒收 */
     const s: Session = {
@@ -384,7 +442,7 @@ describe('E4 交付受背包约束（验收 11）', () => {
 })
 
 describe('E4 对话不产生结局、不写旗标（验收 13）', () => {
-  it('走完一段带交付的对话，只动 `talks` / `log` / 背包三处，回合与位置不动', () => {
+  it('走完一段带交付的对话，只动 `talks` / `log` / 背包 / 提示四处，回合与位置不动', () => {
     const s = sess()
     let t = beginBuilding(s, house(s, CHAT.id), [2, 0], fixed(0.5))
     t = talkAdvance(t)
@@ -394,7 +452,8 @@ describe('E4 对话不产生结局、不写旗标（验收 13）', () => {
     const before = s as unknown as Record<string, unknown>
     const after = t as unknown as Record<string, unknown>
     const touched = Object.keys(t).filter((k) => after[k] !== before[k])
-    expect(touched.sort()).toEqual(['log', 'player', 'talks']) // 没有结局 / 旗标一类字段被写上
+    // `notices` 也在里面：赠予**必须留下一条要给玩家看的提示**（不然东西到手了却像没发生）
+    expect(touched.sort()).toEqual(['log', 'notices', 'player', 'talks']) // 没有结局 / 旗标一类字段被写上
     expect(t.phase).toBe(s.phase)
     expect(t.phase).not.toBe('won')
     expect(t.phase).not.toBe('dead')

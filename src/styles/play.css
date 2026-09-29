@@ -406,6 +406,65 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 「主角得到了什么」浮条（对话赠予 / 商店成交）：
+   压在一切弹层之上 —— 对话开着的时候选完那一条，提示就得当场看见，不能被弹层盖住 */
+.gain-pop {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  max-width: min(420px, calc(100vw - 24px));
+  padding: 8px 14px 9px;
+  background: #fdfaf2;
+  border: 1.5px solid #a9c4a0;
+  border-radius: var(--radius-rough);
+  box-shadow: 0 6px 18px rgba(80, 60, 40, 0.22);
+  cursor: pointer;
+  text-align: left;
+  animation: gain-pop-in 220ms ease-out;
+  transform: translateX(-50%) rotate(-0.5deg);
+}
+
+@keyframes gain-pop-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px) rotate(-0.5deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) rotate(-0.5deg);
+  }
+}
+
+/* 谁给的：`对话：小乞丐` / `开箱：木箱` —— 一行小字，说清来源 */
+.gain-pop-src {
+  font-family: var(--font-cn);
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.gain-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gain-line {
+  font-family: var(--font-cn);
+  font-size: 13px;
+  font-weight: 600;
+  color: #3f6a38;
+}
+
+/* 没拿下（背包满 / 钱不够）—— 也是提示的一部分，别省略 */
+.gain-line.bad {
+  color: #96372a;
+}
+
 /* 遭遇弹层的主确认按钮：游戏感，别缩成 Excel 的小格子 */
 .encounter-confirm {
   padding: 9px 24px;

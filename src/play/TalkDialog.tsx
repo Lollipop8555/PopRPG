@@ -3,16 +3,36 @@
  *
  * 一个弹层吃三种状态：
  * - `menu`：重入的**选择对话框**（继续 / 重新 / 走完过才有的路过）
- * - `line`：**逐条展示台词**，点「继续」推进
- * - `choose`：台词播完 —— 本层没 `dice` 就列**选项按钮**（文本取子记录的 `result`），有 `dice` 就点「掷骰」
+ * - `line`：**逐条展示台词**，点「继续」推进（台词是**聊天记录**：一路说过的都留在上面，只往后追加）
+ * - `choose`：台词播完 —— 本层没 `dice` 就列**选项按钮**（文本取子记录的 `result`）；
+ *   **有 `dice`（掷骰层）就先把这层所有答复一次摆出来**，每条前面标出它的**命中区间**，
+ *   配一枚骰子：**点骰子才掷** → 骰面停住 → 高亮命中的那一条 → 自动进那一条接着说
  *
- * 立绘区（VS）留了位置：V2.1 皮肤接进来后填，**缺位不渲染、不回退 emoji**。
+ * **掷骰层不许只说"看运气"**：玩家不是来听旁白的。选项清单、命中区间、骰面、命中的是哪一条，
+ * 四件事都得上屏 —— 玩家看完才知道自己落在哪，而不是被一句提示词带着盲掷。
+ *
+ * **这里没有「VS」**：这是文字游戏，对话框里不谈立绘、更不做双方对比（对战对话框同理）。
+ * 一个弹层只有三样东西——**标题栏（谁在说）＋ 聊天记录 ＋ 选项**；原先顶部那条「你 VS 他」的立绘对比区
+ * （两侧名条 ＋ 中间「VS」）是**对战的语汇**，已整块删除。
+ *
+ * **聊天记录不挑人**：既然是记录，**双方的话都得留在上面** —— NPC 的台词靠左，
+ * 玩家挑的那一条（`result` 原文，掷骰命中的也算自己挑的）靠右，一路累积、选完不清空
+ * （`talkView().log` 由 `talk.path` 反推，所以退出再【继续对话】回来记录照样在）。
+ *
+ * **标题栏只写 NPC 那一行**（`icon` ＋ 名字）：`talk.dialog` 是**作者侧的方案名**（`Mod1` / `Mod2`…），属于编辑器内部标识，
+ * 游玩态**一律不显示**——玩家看的是"跟谁说话"，不是"这套对话在库里叫什么"。玩家的名字同理：跟 NPC 说话的人是自己，
+ * 「骑士」出现在这里只会像在报幕。`icon` 这一格是 `role.npcs` 素材的落点（V2.1 皮肤接进来后替换 emoji）。
  */
 
+import { useEffect, useRef, useState } from 'react'
 import type { Session } from '../types/session'
 import type { TalkMenuAction } from './talk'
 import { talkView } from './talk'
+import { DieFace } from './DiceLog'
 import Overlay from '../ui/Overlay'
+
+/** 骰子转多久才停（比底栏那枚略短：这里是玩家自己点的，手感要脆） */
+const SPIN_MS = 520
 
 export default function TalkDialog({
   session,
@@ -24,45 +44,59 @@ export default function TalkDialog({
   session: Session
   onNext: () => void
   onChoose: (index: number) => void
+  /** 点骰子 → 掷（掷出与高亮都在 store 里，进那一条由 `GameScreen` 卡一拍后调 `talkHit`） */
   onRoll: () => void
   onMenu: (action: TalkMenuAction) => void
 }) {
+  const [rolling, setRolling] = useState(false)
+  const [spinPips, setSpinPips] = useState<number | null>(null)
+  /** 台词区：记录越攒越长，新的一句得自己滚进视野（不然追加了也看不见） */
+  const linesRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const el = linesRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  })
+
+  // 转骰：点子快速滚动，转完定格（真正的掷点在 `onRoll`，它一按下就已经掷了 —— 转只是为了看得见）
+  useEffect(() => {
+    if (!rolling) {
+      setSpinPips(null)
+      return
+    }
+    const spin = setInterval(() => setSpinPips(1 + Math.floor(Math.random() * 6)), 70)
+    const stop = setTimeout(() => setRolling(false), SPIN_MS)
+    return () => {
+      clearInterval(spin)
+      clearTimeout(stop)
+    }
+  }, [rolling])
+
   const view = talkView(session)
   if (!view) return null
 
-  const { talk, node, lines, needsRoll, options, canPass, delivered } = view
+  const { talk, node, log, needsRoll, options, canPass } = view
   const npc = session.scenario.library.npcs.find((n) => n.id === talk.npc)
-  const cls = session.player.cls
-
-  const vs = (
-    <div className="talk-vs">
-      <div className="talk-side">
-        <div className="talk-portrait" aria-hidden />
-        <div className="talk-who">{cls?.icon} {cls?.name ?? '你'}</div>
-      </div>
-      <div className="talk-mid">VS</div>
-      <div className="talk-side right">
-        <div className="talk-portrait" aria-hidden />
-        <div className="talk-who">{npc?.icon} {npc?.name ?? talk.npc}</div>
-      </div>
-    </div>
-  )
+  // "正在说的那一句" ＝ 记录里最后一条 NPC 台词（下面跟着的玩家答复已经答完了）
+  const nowIdx = log.reduce((acc, e, i) => (e.who === 'npc' ? i : acc), -1)
+  // 转动期间先不揭晓：骰面还在滚，玩家该看的是滚，不是答案
+  const hit = rolling ? undefined : talk.hit
+  const dieText = rolling
+    ? '掷骰中…'
+    : talk.rolled === undefined
+      ? `掷 ${node?.dice}`
+      : `${node?.dice} = ${talk.rolled}`
 
   // 重入：选择对话框
   if (talk.stage === 'menu') {
     return (
       <Overlay>
         <div className="modal talk-modal">
-          <div className="panel-head" style={{ justifyContent: 'space-between' }}>
-            <span className="hand" style={{ fontSize: 16 }}>又要交谈？</span>
-            <span className="badge">{talk.dialog}</span>
+          <div className="panel-head">
+            <span className="hand" style={{ fontSize: 16 }}>
+              {npc?.icon} {npc?.name ?? talk.npc}
+            </span>
           </div>
-          {vs}
-          <p className="muted">
-            {delivered
-              ? '这段对话已经交付过 —— 可以再看一遍（不会重复给东西），或者直接路过。'
-              : '已经见过这位了 —— 可以接着上次的话说，也可以从头再听一遍。'}
-          </p>
           <div className="row" style={{ gap: 6, marginTop: 4 }}>
             <button className="btn primary talk-choice" onClick={() => onMenu('continue')}>
               继续对话
@@ -84,28 +118,25 @@ export default function TalkDialog({
   return (
     <Overlay>
       <div className="modal talk-modal">
-        <div className="panel-head" style={{ justifyContent: 'space-between' }}>
-          <span className="hand" style={{ fontSize: 16 }}>{npc?.name ?? talk.npc}</span>
-          <span className="badge">{talk.dialog}</span>
+        <div className="panel-head">
+          <span className="hand" style={{ fontSize: 16 }}>
+            {npc?.icon} {npc?.name ?? talk.npc}
+          </span>
         </div>
 
-        {vs}
-
-        {/* 已展示的台词（逐条推进，当前这条高亮） */}
-        <div className="talk-lines">
-          {lines.map((line, i) => (
-            <div key={i} className={`talk-bubble${i === talk.line ? ' now' : ''}`}>
-              {line || '……'}
+        {/* 聊天记录：**双方的对话与选择都留着**（`view.log` 只往后追加）。
+            NPC 的台词靠左、玩家挑的那一条靠右（谁说的靠位置与墨色分，不靠名条 —— 这里不报幕） */}
+        <div className="talk-lines" ref={linesRef}>
+          {log.map((e, i) => (
+            <div
+              key={i}
+              className={`talk-bubble${e.who === 'me' ? ' mine' : ''}${i === nowIdx ? ' now' : ''}`}
+            >
+              {e.who === 'npc' ? e.text || '……' : e.text}
             </div>
           ))}
-          {lines.length === 0 && <div className="talk-bubble now">……</div>}
+          {log.length === 0 && <div className="talk-bubble now">……</div>}
         </div>
-
-        {talk.replay && (
-          <div className="hintbox" style={{ marginTop: 4 }}>
-            这段已经交付过 —— 只回放台词，不再给东西。
-          </div>
-        )}
 
         {talk.stage === 'line' && (
           <div className="row" style={{ marginTop: 6, justifyContent: 'flex-end' }}>
@@ -116,18 +147,43 @@ export default function TalkDialog({
         )}
 
         {talk.stage === 'choose' && !talk.replay && needsRoll && (
-          <div style={{ marginTop: 6 }}>
-            <div className="hintbox">
-              这一层要看运气（{node?.dice}）—— 点「掷骰」，命中的那一条就是接下来发生的。
-            </div>
-            {talk.missed && (
-              <div className="hintbox warn" style={{ marginTop: 4 }}>
-                掷出 {talk.rolled} —— 没有选项命中，再掷一次。
+          <div className="talk-roll">
+            {/* 本层全部答复**共用一只框**（行与行之间是分割线，不是各自描边 —— 各自描边读起来像几条台词）：
+                左格是**命中区间**，右侧是答复本身 */}
+            <div className="talk-optbox">
+              <div className="talk-rows">
+                {options.map((o) => (
+                  <div
+                    key={o.index}
+                    className={`talk-row${hit === o.index ? ' hit' : ''}${hit !== undefined && hit !== o.index ? ' dim' : ''}`}
+                  >
+                    <span className="talk-hit">{o.hitLabel}</span>
+                    <span className="talk-row-text">{o.label}</span>
+                  </div>
+                ))}
               </div>
-            )}
-            <div className="row" style={{ marginTop: 6, justifyContent: 'flex-end' }}>
-              <button className="btn primary talk-choice" onClick={onRoll}>
-                {talk.missed ? '再掷一次' : '掷骰'}
+            </div>
+
+            {/* 骰子：**点它才掷**。掷完骰面停住、命中的那一条亮起，一拍之后自动接着说 */}
+            <div className="talk-roll-bar">
+              <button
+                className="talk-die"
+                title={talk.rolled === undefined ? `掷 ${node?.dice}` : `再掷 ${node?.dice}`}
+                disabled={rolling || hit !== undefined}
+                onClick={() => {
+                  setRolling(true)
+                  onRoll()
+                }}
+              >
+                <span
+                  key={rolling ? 'spinning' : `pips-${talk.rolled ?? 0}`}
+                  className={`die ${rolling ? 'spinning' : 'rolled'}`}
+                  style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  {rolling ? (spinPips ? <DieFace pips={spinPips} /> : '🎲') : talk.rolled ? <DieFace pips={talk.rolled} /> : '🎲'}
+                </span>
+                <span className="hand">{dieText}</span>
+                {!rolling && talk.missed && <span className="badge err">未命中 · 再掷</span>}
               </button>
             </div>
           </div>

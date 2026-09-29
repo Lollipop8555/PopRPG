@@ -69,7 +69,7 @@
 
 ## B8 商店 / 事件 / 战利品 UI（§4.8.9 / §4.8.11）
 
-- [x] 事件：查 `gate`(不满足按 `on_missing`)→`check` 判定(复用力值链)→`on_success`/`on_fail`(文本/扣资源/给点/给道具/挂状态)；必成/必败提示
+- [x] 事件：查 `gate`(不满足按 `on_missing`)→`check` 判定(复用力值链)→`on_success`/`on_fail`(文本/扣资源/给点/赠予道具/挂状态)；必成/必败提示
 - [x] 商店：按 `stock` 上架→每件 `price` 掷定→玩家用 `currency` 指的那件道具付款（`payAndTake`）
 - [x] 战利品/奖励结果揭晓动画 + 入背包
 

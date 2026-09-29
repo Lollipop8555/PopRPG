@@ -2,7 +2,7 @@
  * 对话树（§4.9.2）的公共工具 —— 导入容错 / 组件页摘要 / 模组面板命中检查 / 清单校验**共用一份**。
  *
  * 只有一条结构规矩：**全树同一个类型**，`items` 递归指向自己，**没有 `type` 判别**。
- * 一层的「命中骰」写在自己的 `dice` 上，子层的 `hit` 按点数落区间（§4.9.2）。
+ * 一层的「答复骰子」写在自己的 `dice` 上（管的是**它下面**那些答复），子层的 `hit` 按点数落区间（§4.9.2）。
  */
 
 import { diceMax, parseDice } from '../engine/dice'
@@ -27,6 +27,26 @@ export function parseHit(hit: string | undefined | null): [number, number] | nul
   const hi = Number(range[2])
   if (lo < 1 || hi < lo) return null
   return [lo, hi]
+}
+
+/**
+ * `parseHit` 的逆：`(1, 3)` → `'1-3'`、`(6, 6)` → `'6'`。
+ * 面板的「命中」是两个点数下拉（起点 / 终点），选完靠它拼回 `hit` —— 因此**写不出非法值**。
+ */
+export function formatHit(lo: number, hi: number): string {
+  const a = Math.max(1, Math.floor(lo))
+  const b = Math.max(a, Math.floor(hi))
+  return a === b ? String(a) : `${a}-${b}`
+}
+
+/**
+ * 命中区间给玩家看的那一格：`'1~2'` → `'1-2'`（归一）、`'6'` → `'6'`；
+ * **缺省 / 非法 → `'—'`**（这一条没被任何点数认领）。
+ * 掷骰层每条答复前都标它 —— 玩家先看见"哪几个点数落在这条上"，再掷。
+ */
+export function hitLabel(hit: string | undefined | null): string {
+  const range = parseHit(hit)
+  return range ? formatHit(range[0], range[1]) : '—'
 }
 
 /** 本层 `dice` 的点数上界（`'1D6'` → 6）；非法 → null */
@@ -192,7 +212,7 @@ export interface DialogPlanSummary {
   nodes: number
   /** 最深层级（根层 = 1） */
   depth: number
-  /** 这套方案里给不给道具 */
+  /** 这套方案里给不赠予道具 */
   hasGive: boolean
   /** 这套方案里有没有掷骰层 */
   hasDice: boolean
@@ -232,7 +252,7 @@ export function summarizeNpc(npc: NpcDef | undefined): DialogPlanSummary[] {
   return Object.entries(npc.dialogs).map(([plan, nodes]) => summarizeDialogPlan(plan, nodes))
 }
 
-/** 一句话摘要：`2 套方案 · 默认 7 节点/3 层 · 给道具` —— 组件页那一行只读文字 */
+/** 一句话摘要：`2 套方案 · 默认 7 节点/3 层 · 赠予道具` —— 组件页那一行只读文字 */
 export function dialogSummaryText(npc: NpcDef | undefined): string {
   const plans = summarizeNpc(npc)
   if (plans.length === 0) return '还没有对话方案'
@@ -244,6 +264,6 @@ export function dialogSummaryText(npc: NpcDef | undefined): string {
     .map((p) => `${p.plan} ${p.nodes} 节点/${p.depth} 层`)
     .join(' · ')
   const more = plans.length > 2 ? ` 等 ${plans.length} 套` : ''
-  const gives = plans.some((p) => p.hasGive) ? ' · 给道具' : ''
+  const gives = plans.some((p) => p.hasGive) ? ' · 赠予道具' : ''
   return `${plans.length} 套方案 · ${head}${more}${gives}`
 }

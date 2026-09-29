@@ -101,10 +101,10 @@ export default function ComponentPage() {
       <Field label="颜色">
         <div className="row" style={{ gap: 6 }}>
           <input
+            className="color-input"
             type="color"
             value={def.color ?? '#cccccc'}
             onChange={(e) => patch({ color: e.target.value })}
-            style={{ width: 42, height: 26, padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}
           />
           <button className="btn small" onClick={() => patch({ color: randomComponentColor() })} title="随机换一个颜色">
             随机
@@ -145,7 +145,7 @@ export default function ComponentPage() {
 
 /**
  * NPC 的对话方案一栏（§5.6 组件页）—— **只读摘要**：方案名 / 节点数 / 最深几层 /
- * 有没有给道具 / 有没有掷骰节点；建设（新建 / 改名 / 删方案 / 改树）一律在**NPC 模组**整页里做。
+ * 有没有赠予道具 / 有没有掷骰节点；建设（新建 / 改名 / 删方案 / 改树）一律在**NPC 模组**整页里做。
  */
 function NpcDialogs({ def, referencedCount }: { def: NpcDef; referencedCount: number }) {
   const plans = summarizeNpc(def)
@@ -179,7 +179,7 @@ function NpcDialogs({ def, referencedCount }: { def: NpcDef; referencedCount: nu
           <span className="faint">
             {p.nodes} 节点 / 最深 {p.depth} 层
           </span>
-          {p.hasGive && <Badge tone="custom" title={`给出：${p.gives.map(nameOf).join('、')}`}>给道具</Badge>}
+          {p.hasGive && <Badge tone="custom" title={`给出：${p.gives.map(nameOf).join('、')}`}>赠予道具</Badge>}
           {p.hasDice && <Badge tone="preset" title="这套方案里有掷骰层">掷骰</Badge>}
         </div>
       ))}
@@ -189,9 +189,7 @@ function NpcDialogs({ def, referencedCount }: { def: NpcDef; referencedCount: nu
           <b>NPC 住在建筑里</b>：去地图上挑一栋建筑，在<b>实例页</b>里选它（任何建筑都能挂，对话发生在
           「进入建筑后、建筑事件前」）。
         </div>
-        <div className="faint">
-          多套方案等权：只有一套就一定用它；多套则由实例的骰子（规则面板 `talk.dice`）抽一套。
-        </div>
+        <div className="faint">多套方案等权：只有一套时必定使用；多套时由建筑实例抽定一套。</div>
         {referencedCount === 0 && (
           <div style={{ color: 'var(--amber)' }}>还没有任何建筑实例用到它 —— 铺多久都不会遇到。</div>
         )}

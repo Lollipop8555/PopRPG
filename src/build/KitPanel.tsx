@@ -177,7 +177,7 @@ function KitRow({
     useUiStore.getState().setInspectorTab('component')
   }
 
-  // 编辑 / 复制 / 启用已提为第三行独立按钮；菜单只保留删除与恢复默认
+  // 编辑 / 启用以第三行独立按钮呈现；菜单保留复制成新组件、删除与恢复默认（§5.3）
   const menu: { label: string; onClick: () => void; tone?: 'danger'; disabled?: boolean; title?: string }[] = []
   // NPC 的 `⋯` 多一项「编辑对话」—— 直接跳到「NPC 模组」面板并选中它（§5.6）
   if (isNpc) {
@@ -188,6 +188,11 @@ function KitRow({
     })
   }
   menu.push(
+    {
+      label: '复制成新组件',
+      title: '以这条为起点派生一条新组件（原条目不受影响）',
+      onClick: duplicate,
+    },
     {
       label: '删除',
       tone: 'danger' as const,

@@ -6,10 +6,13 @@
 import { describe, expect, it } from 'vitest'
 import type { DialogNode } from '../../types'
 import {
+  CARD_W,
   appendChild,
   blankNode,
   descendantCount,
   detachChild,
+  edgePath,
+  edgePoints,
   isAncestorOrSelf,
   keyOf,
   layoutTree,
@@ -141,5 +144,87 @@ describe('排版（只影响显示）', () => {
     expect(byKey.get('0')?.parentHasDice).toBe(false)
     expect(byKey.get('0.0')?.parentHasDice).toBe(true)
     expect(byKey.get('0.0.0')?.parentHasDice).toBe(false)
+  })
+})
+
+describe('连线 ＝ 父子（§5.6.1：连不出来就等于一堆散方块）', () => {
+  it('每条父子关系都配一条边；根没有父，所以边数 ＝ 条数 − 根数', () => {
+    const { items, edges } = layoutTree(tree(), new Set())
+    // 深度优先：父 → 头一个子 →（子树里的边）→ 后面的兄弟
+    expect(edges.map((e) => `${e.from.key}>${e.to.key}`)).toEqual([
+      '0>0.0',
+      '0.0>0.0.0',
+      '0>0.1',
+      '0>0.2',
+    ])
+    expect(edges).toHaveLength(items.length - 2)
+  })
+
+  it('折叠的卡片整枝都不排版，也就没有边（子卡片还挂在树上）', () => {
+    const { edges } = layoutTree(tree(), new Set(['0']))
+    expect(edges).toEqual([])
+  })
+
+  it('实测高度优先于估高 —— 连线才接得住卡片边', () => {
+    const measured = layoutTree(tree(), new Set(), '', { x: 0, y: 0 }, { '0': 400 })
+    const byKey = new Map(measured.items.map((i) => [i.key, i]))
+    expect(byKey.get('0')?.h).toBe(400)
+    // 下一列的卡片被顶下去：它的起点得排在父卡片底边之下
+    expect(byKey.get('0.0')?.y).toBeGreaterThanOrEqual(400)
+  })
+
+  it('走线从父卡片底部出发、落在子卡片顶部，且全程走在两列之间的通道里', () => {
+    const { items } = layoutTree(tree(), new Set())
+    const byKey = new Map(items.map((i) => [i.key, i]))
+    const from = byKey.get('0')
+    const to = byKey.get('0.1')
+    expect(from && to).toBeTruthy()
+
+    const d = edgePath(from!, to!)
+    expect(d.startsWith(`M ${from!.x + CARD_W / 2} ${from!.y + from!.h}`)).toBe(true)
+    expect(d.endsWith(`L ${to!.x + CARD_W / 2} ${to!.y}`)).toBe(true)
+    // 通道的 x 落在父卡片右边缘与子列左边缘之间 —— 不会压到任何卡片
+    const lane = from!.x + CARD_W + 14
+    expect(d).toContain(`L ${lane} `)
+    expect(lane).toBeGreaterThan(from!.x + CARD_W)
+    expect(lane).toBeLessThan(to!.x)
+  })
+
+  it('没有一条线压在卡片上（线段全是水平的 / 竖直的，正好能逐段验）', () => {
+    const { items, edges } = layoutTree(tree(), new Set(), '', { x: 0, y: 0 }, { '0': 320, '0.0': 90 })
+    // 卡片矩形往里收 2px：线头本来就接在卡片边上，贴着边框不算「压」
+    const boxes = items.map((i) => ({
+      key: i.key,
+      x1: i.x + 2,
+      x2: i.x + CARD_W - 2,
+      y1: i.y + 2,
+      y2: i.y + i.h - 2,
+    }))
+    const hits: string[] = []
+
+    for (const edge of edges) {
+      const points = edgePoints(edge.from, edge.to)
+      for (let i = 1; i < points.length; i++) {
+        const [ax, ay] = points[i - 1]
+        const [bx, by] = points[i]
+        for (const box of boxes) {
+          if (ay === by) {
+            const [x1, x2] = ax < bx ? [ax, bx] : [bx, ax]
+            if (ay > box.y1 && ay < box.y2 && x2 > box.x1 && x1 < box.x2) {
+              hits.push(`${edge.from.key}>${edge.to.key} 横穿 ${box.key}`)
+            }
+          } else if (ax === bx) {
+            const [y1, y2] = ay < by ? [ay, by] : [by, ay]
+            if (ax > box.x1 && ax < box.x2 && y2 > box.y1 && y1 < box.y2) {
+              hits.push(`${edge.from.key}>${edge.to.key} 竖穿 ${box.key}`)
+            }
+          } else {
+            hits.push(`${edge.from.key}>${edge.to.key} 出现斜段（布线只能是直角）`)
+          }
+        }
+      }
+    }
+
+    expect(hits).toEqual([])
   })
 })

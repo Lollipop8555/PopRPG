@@ -5,56 +5,24 @@
  * - **池在组件上，算法在 rules 里**（treasure / loot 各一套，件数恒被 `|池|` 夹住）
  * - **货币就是一件道具**（`price.currency` 指的那件）
  * - **技能书就是一件道具**：`learn_skill` 由 `applyEffects` 直接把技能塞进技能栏，无需新增机制
+ *
+ * 还有一条：**谁说"主角得到了什么"，都只能从 `heroGain()` 走**（`./gain.ts`）——
+ * 结算与提示同出一门，不要在这里再自己拼文案 / 自己塞背包。
  */
 
 import type { BuildingDef, EventBlock, PriceDef } from '../types'
 import type { Rng } from '../engine/dice'
-import { addToInventory, resolvePrice, shopGoods, payAndTake } from '../engine/item'
+import { resolvePrice, shopGoods } from '../engine/item'
 import { resolveEvent, checkAnalysis } from '../engine/event'
 import { resolveItemPool, resolveReward } from '../engine/pool'
 import type { MonsterUnit } from '../engine/units'
-import type { EncounterState, Session } from '../types/session'
+import type { EncounterState, GainNote, Session } from '../types/session'
 import { buildingKey, log, logs, recordRoll, skillIndex } from './kit'
+import { gainEmpty, heroGain } from './gain'
 
-/* ------------------------------------------------------------------ */
-/* 通用的「给东西」                                                     */
-/* ------------------------------------------------------------------ */
-
-interface GrantInput {
-  pieces?: { id: string; count: number }[]
-  pointReward?: number
-}
-
-/** 进背包（背包满就拒收并说明，§4.2.4）+ 属性点进**剩余自由点**（§4.8.8） */
-export function grant(s: Session, input: GrantInput): { session: Session; rejected: { id: string; count: number; reason: string }[]; gained: { id: string; count: number }[] } {
-  let session = s
-  const gained: { id: string; count: number }[] = []
-  let rejected: { id: string; count: number; reason: string }[] = []
-
-  if (input.pieces && input.pieces.length > 0) {
-    const result = addToInventory(session.player.cls, session.player.inventory, input.pieces)
-    session = { ...session, player: { ...session.player, inventory: result.inventory } }
-    gained.push(...input.pieces.filter((p) => !result.rejected.some((r) => r.id === p.id)))
-    rejected = result.rejected
-    for (const piece of gained) {
-      const item = session.scenario.library.items.find((i) => i.id === piece.id)
-      session = log(session, `获得 ${item?.icon ?? ''}${item?.name ?? piece.id} ×${piece.count}`, 'good')
-    }
-    for (const rej of rejected) {
-      const item = session.scenario.library.items.find((i) => i.id === rej.id)
-      session = log(session, `${item?.name ?? rej.id} 未能获得：${rej.reason}`, 'bad')
-    }
-  }
-
-  if (input.pointReward && input.pointReward > 0) {
-    session = {
-      ...session,
-      player: { ...session.player, earnedPoints: session.player.earnedPoints + input.pointReward },
-    }
-    session = log(session, `自由属性点 +${input.pointReward}`, 'good')
-  }
-
-  return { session, rejected, gained }
+/** 遭遇弹层里那条「获得」记录：**什么都没到手就不挂**（空箱 / 纯失败的事件） */
+function encounterGain(note: GainNote): GainNote | undefined {
+  return gainEmpty(note) ? undefined : note
 }
 
 /* ------------------------------------------------------------------ */
@@ -71,20 +39,21 @@ export function openTreasure(s: Session, building: BuildingDef, rng?: Rng): Sess
   let session = logs(s, result.logs, 'dice')
   if (result.roll !== undefined) session = recordRoll(session, '开箱件数', pick.dice, result.roll)
 
-  const { session: afterGrant, rejected, gained } = grant(session, {
+  // 开箱有揭晓弹层 → 提示写在弹层里（`prompt: 'modal'`），不再叠一条浮条
+  const { session: afterGain, note } = heroGain(session, {
+    source: `开箱：${building.name}`,
     pieces: result.pieces,
     pointReward: building.point_reward ?? 0,
+    prompt: 'modal',
   })
 
   const encounter: EncounterState = {
     kind: 'treasure',
     title: building.name,
     text: result.pieces.length ? '箱内物品如下。' : '箱内无物品。',
-    pieces: gained,
-    rejected,
-    pointReward: building.point_reward ?? 0,
+    gain: encounterGain(note),
   }
-  return { ...afterGrant, phase: 'encounter', encounter }
+  return { ...afterGain, phase: 'encounter', encounter }
 }
 
 /* ------------------------------------------------------------------ */
@@ -102,23 +71,23 @@ export function grantLoot(s: Session, monster: MonsterUnit, rng?: Rng): Session 
   session = logs(session, result.logs, 'dice')
   if (result.roll !== undefined) session = recordRoll(session, '战利品件数', pick.dice, result.roll)
 
-  const { session: afterGrant, rejected, gained } = grant(session, {
+  const { session: afterGain, note } = heroGain(session, {
+    source: `战利品：${monster.name}`,
     pieces: result.pieces,
     pointReward: monster.point_reward ?? 0,
+    prompt: 'modal',
   })
 
-  if (gained.length === 0 && (monster.point_reward ?? 0) === 0) return afterGrant
+  if (gainEmpty(note)) return afterGain
 
   return {
-    ...afterGrant,
+    ...afterGain,
     phase: 'encounter',
     encounter: {
       kind: 'loot',
       title: '战利品',
       text: `打赢 ${monster.name} 之后`,
-      pieces: gained,
-      rejected,
-      pointReward: monster.point_reward ?? 0,
+      gain: encounterGain(note),
     },
   }
 }
@@ -146,20 +115,26 @@ export function openShop(s: Session, building: BuildingDef, cell: [number, numbe
   return { ...s, phase: 'encounter', encounter }
 }
 
+/**
+ * 买下一件货：**成交也走统一接口**（`heroGain` 的 `pay`）——
+ * 付钱与拿货是同一笔账，怎么记账、怎么提示跟开箱 / 赠予同出一门。
+ * 商店没有揭晓弹层那块「获得」，所以落点是**浮条**（缺省 `notice`）。
+ */
 export function buyGood(s: Session, index: number): Session {
   const goods = s.encounter?.goods
   const good = goods?.[index]
   if (!good) return s
-  const price: { value: number; currency: string } = { value: good.price, currency: good.currency }
-  const result = payAndTake(s.player.cls, s.player.inventory, good.id, 1, price)
-  if (!result.ok) return log(s, result.reason ?? '买不了', 'bad')
 
   const item = s.scenario.library.items.find((i) => i.id === good.id)
-  return log(
-    { ...s, player: { ...s.player, inventory: result.inventory }, encounter: { ...s.encounter!, goods: goods?.filter((_, i) => i !== index) } },
-    `买下 ${item?.icon ?? ''}${item?.name ?? good.id}，支付 ${result.paid}`,
-    'good',
-  )
+  const { session, note } = heroGain(s, {
+    source: `买下：${item?.icon ?? ''}${item?.name ?? good.id}`,
+    pieces: [{ id: good.id, count: 1 }],
+    pay: { value: good.price, currency: good.currency },
+  })
+
+  // 没成交（钱不够 / 装不下）→ 货留在架上，只说明理由；成交了才把它撤下来
+  if (note.items.length === 0) return session
+  return { ...session, encounter: { ...session.encounter!, goods: goods.filter((_, i) => i !== index) } }
 }
 
 /* ------------------------------------------------------------------ */
@@ -183,12 +158,14 @@ export function runEvent(s: Session, building: BuildingDef, cell: [number, numbe
     session = recordRoll(session, '事件判定', block.check.dice ?? rules.event.dice, result.roll)
   }
 
-  const { session: afterGrant, rejected, gained } = grant(session, {
+  const { session: afterGain, note } = heroGain(session, {
+    source: `事件：${building.name}`,
     pieces: result.grants,
     pointReward: result.pointReward,
+    prompt: 'modal',
   })
 
-  let next = afterGrant
+  let next = afterGain
   const onceKey = buildingKey(s, cell) // 以节点为单位（多格建筑同一节点）
   if (block.once && result.verdict === 'success') {
     if (!next.onceDone.includes(onceKey)) next = { ...next, onceDone: [...next.onceDone, onceKey] }
@@ -198,9 +175,7 @@ export function runEvent(s: Session, building: BuildingDef, cell: [number, numbe
     kind: 'event',
     title: building.name,
     text: result.text ?? block.text,
-    pieces: gained,
-    rejected,
-    pointReward: result.pointReward,
+    gain: encounterGain(note),
     event: {
       verdict: result.verdict,
       roll: result.roll,

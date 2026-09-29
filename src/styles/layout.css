@@ -95,6 +95,21 @@
   transform: rotate(0deg);
 }
 
+/* NPC 模组左栏条目：单行排布 —— 名称在左（超长以省略号收尾）、状态徽章靠右且纵向居中。
+   `.kit-row` 自身只画边框，内边距与排布由使用方给出（组件库条目为三行竖排，故不复用同一份） */
+.kit-row.npc-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  cursor: pointer;
+}
+
+/* 状态徽章固定宽度，不被超长名称挤压 */
+.kit-row.npc-item .badge {
+  flex: 0 0 auto;
+}
+
 .inspector {
   flex: 1 1 auto;
   display: flex;

@@ -23,6 +23,7 @@ import DiceHud from './DiceHud'
 import RadarChart from './RadarChart'
 import EncounterView from './EncounterView'
 import TalkDialog from './TalkDialog'
+import HeroNotice from './HeroNotice'
 import Overlay from '../ui/Overlay'
 import { navigate } from '../app/router'
 
@@ -48,6 +49,15 @@ export default function GameScreen({ session }: { session: Session }) {
     const t = setTimeout(() => play.commitRoll(), 750)
     return () => clearTimeout(t)
   }, [pending, play])
+
+  // 对话掷骰（§4.9.2）：骰面停住、命中的那一条高亮一拍之后，自动进那一条接着说；
+  // **未命中的点数不在此列** —— 停在原地等玩家再掷
+  const talkHit = session.talk?.hit
+  useEffect(() => {
+    if (talkHit === undefined) return
+    const t = setTimeout(() => play.talkHit(), 1100)
+    return () => clearTimeout(t)
+  }, [talkHit, play])
 
   const finished = session.phase === 'won' || session.phase === 'dead'
   const { player } = session
@@ -198,6 +208,13 @@ export default function GameScreen({ session }: { session: Session }) {
       </div>
 
       {session.encounter && <EncounterView session={session} onBuy={(i) => play.buy(i)} onClose={() => play.close()} />}
+
+      {/* 「主角得到了什么」浮条：对话赠予 / 商店成交这些**没有揭晓弹层**的场合，
+          提示只有这一个落点 —— 压在一切弹层之上（z-index 70），选完就看得见。
+          `key` 用队列长度：新一条进队 / 队头出队都换个元素，弹出的动画才会重放 */}
+      {!finished && (
+        <HeroNotice key={session.notices?.length ?? 0} session={session} onDismiss={() => play.dismissNotice()} />
+      )}
 
       {/* 菜单对话框：独立浮层，不挤压底栏 */}
       {menuOpen && (

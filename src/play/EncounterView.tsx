@@ -1,10 +1,14 @@
 /**
  * 遭遇弹层（§4.8.5 / §4.8.9 / §4.8.11）：宝箱揭晓 / 事件后果 / 商店货架 / 战利品。
  * 商店里付的「钱」就是背包里一件普通道具 —— 面板上直接写它的名字。
+ *
+ * 揭晓出来的东西不在这层拼 —— 交给**统一渲染** `GainNoteView`（数据来自 `heroGain()`，
+ * 与浮条同一份），这一层只负责"把弹层摆出来"。
  */
 
 import type { Session } from '../types/session'
 import Overlay from '../ui/Overlay'
+import GainNoteView from './GainNoteView'
 
 export default function EncounterView({
   session,
@@ -52,42 +56,9 @@ export default function EncounterView({
           </div>
         )}
 
-        {/* 宝箱 / 战利品：揭晓（大卡片，图 + 名 + 数量） */}
-        {!!encounter.pieces?.length && (
-          <div className="reward-block">
-            <div className="reward-title">获得</div>
-            <div className="reward-grid">
-              {encounter.pieces.map((p, i) => {
-                const item = session.scenario.library.items.find((x) => x.id === p.id)
-                return (
-                  <div key={i} className="reward-card" title={item?.desc ?? item?.name ?? p.id}>
-                    <span className="reward-ico">{item?.icon ?? '❔'}</span>
-                    <span className="reward-name">{item?.name ?? p.id}</span>
-                    <span className="reward-count">×{p.count}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-        {encounter.pieces?.length === 0 && encounter.kind === 'treasure' && (
-          <div className="hintbox">箱内无物品。</div>
-        )}
-        {!!encounter.rejected?.length && (
-          <div className="hintbox warn" style={{ marginTop: 4 }}>
-            {encounter.rejected.map((r, i) => (
-              <div key={i}>
-                {nameOf(r.id)} 没拿下：{r.reason}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!!encounter.pointReward && (
-          <div className="row" style={{ gap: 4, marginTop: 6 }}>
-            <span className="badge on">自由属性点 +{encounter.pointReward}</span>
-          </div>
-        )}
+        {/* 宝箱 / 战利品 / 事件：**主角得到了什么** —— 与浮条同一份数据、同一处措辞 */}
+        {encounter.gain && <GainNoteView note={encounter.gain} />}
+        {!encounter.gain && encounter.kind === 'treasure' && <div className="hintbox">箱内无物品。</div>}
 
         {/* 商店：货架 */}
         {encounter.kind === 'shop' && (

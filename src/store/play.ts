@@ -13,7 +13,8 @@ import { allocatePoint, canMoveAnywhere, nextRound, startSession, stepTo } from 
 import { playerAttack, resolveDefense } from '../play/combat'
 import { afterTalk, closeEncounter, enterBuilding } from '../play/encounter'
 import { buyGood } from '../play/reward'
-import { talkAdvance, talkChoose, talkMenu, talkRoll, type TalkMenuAction } from '../play/talk'
+import { dropNotice } from '../play/gain'
+import { talkAdvance, talkChoose, talkHit, talkMenu, talkRoll, type TalkMenuAction } from '../play/talk'
 import { equipItem, unequip, useItem } from '../play/inventory'
 import { pickStorage } from './storage'
 
@@ -55,11 +56,15 @@ interface PlayStore {
   unequip: (itemId: string) => void
   buy: (index: number) => void
   close: () => void
+  /** 浮条弹完／被点掉 —— 「主角得到了什么」的提示队头出队 */
+  dismissNotice: () => void
 
   /** 对话弹层（§4.9.2 / §4.8.12） */
   talkNext: () => void
   talkChoose: (index: number) => void
   talkRoll: () => void
+  /** 掷骰层：骰面停住、命中的那一条高亮一拍之后进它；未命中时是空操作（等再掷） */
+  talkHit: () => void
   talkMenu: (action: TalkMenuAction) => void
 
   /** §7.2：玩家点动作后先弹骰子，点投掷才真正结算 */
@@ -151,6 +156,12 @@ export const usePlayStore = create<PlayStore>()(
         set({ session: closeEncounter(current) })
       },
 
+      dismissNotice: () => {
+        const current = get().session
+        if (!current) return
+        set({ session: dropNotice(current) })
+      },
+
       talkNext: () => {
         const current = get().session
         if (!current) return
@@ -165,6 +176,11 @@ export const usePlayStore = create<PlayStore>()(
         const current = get().session
         if (!current) return
         set({ session: settleTalk(current, talkRoll(current)) })
+      },
+      talkHit: () => {
+        const current = get().session
+        if (!current) return
+        set({ session: settleTalk(current, talkHit(current)) })
       },
       talkMenu: (action) => {
         const current = get().session

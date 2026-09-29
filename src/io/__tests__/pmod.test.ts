@@ -192,7 +192,7 @@ describe('NPC 与对话（§4.9 / §3.3）', () => {
     expect(door?.npcs).toEqual(['lost_child'])
     expect(door?.dialog).toBe('Mod1')
 
-    // 对话树原样带出：掷骰层 / 命中区间 / 给道具（同种两次＝两份）
+    // 对话树原样带出：掷骰层 / 命中区间 / 赠予道具（同种两次＝两份）
     const keeper = parsed.components.npcs.find((n) => n.id === 'grave_keeper')
     const mod1 = keeper?.dialogs.Mod1 ?? []
     expect(mod1[0].dice).toBe('1D6')

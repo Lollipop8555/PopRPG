@@ -37,21 +37,60 @@ export type CombatStage = 'player' | 'defend'
 
 export type EncounterKind = 'treasure' | 'event' | 'shop' | 'loot' | 'empty'
 
+/* ------------------------------------------------------------------ */
+/* 「主角得到了什么」                                                  */
+/* ------------------------------------------------------------------ */
+
+/** 到手的一件东西（名字与图**在结算时就查好写进来**，UI 不必再回库查） */
+export interface GainItem {
+  id: string
+  count: number
+  name: string
+  icon: string
+}
+
+/** 没拿下的一件东西 —— **也要说**，否则跟"什么都没发生"分不清 */
+export interface GainLoss {
+  id: string
+  count: number
+  reason: string
+  name: string
+  icon: string
+}
+
+/**
+ * 「主角得到了什么」的唯一记录（`src/play/gain.ts` 的 `heroGain()` 产出）。
+ *
+ * 开箱 / 战利品 / 事件赠予 / 对话 `give` / 商店成交**全部**由它承载：
+ * 谁给的 ＋ 拿到了什么 ＋ 什么没拿下。**同一份数据**喂给两个落点 ——
+ * 遭遇弹层里那块「获得」（大卡）与游玩页的浮条（`notices` 队列的队头），
+ * 措辞同出一处（`gainLines`）。于是"得到东西"这件事**只有一种说法**。
+ */
+export interface GainNote {
+  /** 谁给的：`开箱：木箱` / `对话：小乞丐` / `战利品：史莱姆` / `买下：布药` */
+  source: string
+  /** 到手的东西 */
+  items: GainItem[]
+  /** 顺带给的自由属性点（也是"得到的东西"，一并提示） */
+  points: number
+  /** 没拿下的（背包满等） */
+  losses: GainLoss[]
+}
+
 /** 弹层里正在处理的事 */
 export interface EncounterState {
   kind: EncounterKind
   title: string
   text?: string
-  /** 宝箱 / 战利品：揭晓出来的东西 */
-  pieces?: { id: string; count: number }[]
-  /** 因为背包满被拒的 */
-  rejected?: { id: string; count: number; reason: string }[]
+  /**
+   * 这一步**主角得到了什么**（统一记录；`items` / `points` / `losses` 都在里面）。
+   * **什么都没到手时缺省** —— 空箱 / 纯失败的事件不必挂一份空记录。
+   */
+  gain?: GainNote
   /** 事件：判定结果与后果 */
   event?: { verdict: 'blocked' | 'success' | 'fail'; roll?: number; value?: number; target?: number; rate?: number }
   /** 商店：上架的货（价格已掷定） */
   goods?: { id: string; price: number; currency: string }[]
-  /** 本次给的自由度点数 */
-  pointReward?: number
   /** 事件 once 用：这座建筑处理完就降级为普通空地（以建筑节点为单位） */
   onceKey?: string
   /** 商店所在建筑（以节点为单位；多格建筑同一座） */
@@ -103,11 +142,13 @@ export interface TalkState {
   path: number[]
   /** 当前记录 `message` 已展示到第几条（下标） */
   line: number
-  /** 本层掷骰结果（**未命中**时也记下，给玩家看并允许再掷） */
+  /** 本层**最近一次**掷骰点数（未命中时也记下 —— 骰面就停在这个点数上） */
   rolled?: number
-  /** 上一次掷骰未命中任何 `hit`（提示「再掷一次」） */
+  /** 本次点数命中的那条 `items` 下标（**未掷 / 未命中 → 无**）：UI 据此**高亮那一条**，展示一拍后进它 */
+  hit?: number
+  /** 本次点数落在所有 `hit` 之外（骰面配「未命中」徽标，允许再掷） */
   missed?: boolean
-  /** 只回放：本条是**已交付**的终态记录 → 不展开 `items`、不再给道具 */
+  /** 只回放：本条是**已交付**的终态记录 → 不展开 `items`、不再赠予道具 */
   replay?: boolean
 }
 
@@ -151,6 +192,17 @@ export interface Session {
   talks?: Record<string, TalkRecord>
   /** 正在展示的**对话弹层**（§4.8.12；进入建筑后、建筑事件之前） */
   talk?: TalkState
+  /**
+   * **待弹的「主角得到了什么」提示**（`GainNote` 队列，队头由 `HeroNotice` 弹出）。
+   *
+   * 落点只有这一处在"没有别的揭晓处"时用：对话赠予、商店成交。开箱 / 战利品 / 事件
+   * 本来就有遭遇弹层揭晓（`encounter.gain`），不往这里塞 —— 同一样东西**只提示一次**。
+   * 缺字段 ＝ 没有待弹提示（旧存档兼容）。
+   *
+   * 说白了它是 **UI 态**，放在会话里只是因为结算都发生在纯函数里（够不着 store）；
+   * 存进存档的副作用是：还没弹完就存档退出，读档时那一条会再弹一次 —— 无害。
+   */
+  notices?: GainNote[]
   log: LogLine[]
   /** 本次会话的骰子流水（§7.2：可回放） */
   rolls: { label: string; dice: string; pips: number }[]

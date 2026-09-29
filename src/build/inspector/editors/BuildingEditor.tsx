@@ -29,7 +29,7 @@ import { CopiesEditor, PickEditor } from '../controls/RewardAlgoEditor'
 
 const ENCOUNTER_LABEL: Record<EncounterKind, string> = {
   empty: '空地（纯装饰 / 占位）',
-  treasure: '宝箱（开箱给东西）',
+  treasure: '宝箱（开箱赠予）',
   monster: '怪物房（抽一只开打）',
   event: '事件（门槛 + 判定 + 后果）',
   shop: '商店（用钱换东西）',
@@ -304,7 +304,7 @@ function OutcomeEditor({
             <NumberBox value={outcome.point_reward} min={0} onChange={(n) => onChange({ ...outcome, point_reward: n ?? 0 })} />
           </Field>
 
-          <Field label="给道具（grant）">
+          <Field label="赠予道具（grant）">
             {grants.map((grant, index) => (
               <GrantRow
                 key={index}

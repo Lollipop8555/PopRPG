@@ -46,7 +46,7 @@ export function pathOf(key: string): number[] {
   return key === '' ? [] : key.split('.').map(Number)
 }
 
-/** 某条记录的子树的条数（含自己）—— 删除前提示「将删除 N 个后续节点」用 */
+/** 某条记录的后续项条数（含自己）—— 删除前提示「该记录含 N 条后续项」用 */
 export function subtreeSize(node: DialogNode): number {
   let n = 1
   for (const child of node.items ?? []) n += subtreeSize(child)
@@ -153,67 +153,158 @@ export interface LaidOutNode {
   depth: number
   /** 折叠状态与选中态都按它查（跨「主树 / 未连接」两组不撞车） */
   key: string
-  /** 这条记录的父层写了 `dice` 吗 —— 决定要不要给 `hit` 输入框 */
+  /** 这条记录的父层写了 `dice` 吗 —— 决定要不要给 `hit` 控件 */
   parentHasDice: boolean
+  /** 父层那条 `dice` 的原文（`'1D6'`）—— `hit` 的可选点数就按它的面数生成 */
+  parentDice?: string
+  /** 这张卡片占多高（量到过就用实测，没量到就先估）—— 连线要正好接在卡片边上 */
+  h: number
   x: number
   y: number
+}
+
+/** 一条后续连线（连线 ＝ 后续关系，§5.6.1） */
+export interface LaidOutEdge {
+  from: LaidOutNode
+  to: LaidOutNode
 }
 
 /** 一列多宽 / 卡片多宽（排版与卡片本体共用同一个值） */
 export const COL_W = 300
 export const CARD_W = 272
-const ROW_GAP = 20
+/** 同列的上下间距 —— 连线要从这段缝里横穿，所以别压太紧 */
+export const ROW_GAP = 26
 const CARD_MIN = 52
+/** 折线拐角的圆角半径 */
+const ELBOW_R = 9
 
 /** 估一张卡片的高（只为排版，不必与真实像素完全一致） */
-function estimateHeight(node: DialogNode, collapsed: boolean): number {
-  let h = 34 // 卡片头（result / 骰子下拉 / 按钮）
-  if (node.dice) h += 22
+function estimateHeight(node: DialogNode, collapsed: boolean, isRoot: boolean): number {
+  let h = 34 // 「答复」段（输入框一行；删除按钮固定于右上角，不占行）
+  if (!isRoot) {
+    h += 22 // 「命中」行，在 result 之上（根卡片没有上一级，不显示）
+    h += 16 // 「命中 | 答复」分隔线 —— 带段名，比纯线高一截
+  }
+  h += 16 // 「答复 | 台词」分隔线 —— 带段名
   h += Math.max(1, node.message.length) * 26
   h += 24 // 「＋ 一句」
-  if (collapsed) return Math.max(CARD_MIN, h + 10)
-  if (node.give && node.give.length > 0) h += 28 + 24
-  h += 30 // 「＋ 给道具 / ＋ 选项」
-  h += 12 // 底部端口
+  h += 16 // 「台词 | 赠予道具」分隔线
+  h += 26 // 「赠予道具」行（道具 chip ＋ 「＋ 赠予道具」下拉；chip 多到换行时另算）
+  if (node.give && node.give.length > 0) h += 6 // 有 chip 时这一行略高
+  h += 16 // 「赠予道具 | 后续项」分隔线
+  h += 22 // 「答复骰子」行，在后续项之上（始终显示）
+  if (node.dice) h += 40 // 「命中覆盖」提示（行数随空档 / 重叠多少而变，取常见的一行量级）
+  // 折叠只隐藏后续项子树，卡片自身各段（赠予道具 / 底部一行）照常显示
+  // （「断开」在卡片右上角，绝对定位、不占正文行，故不计入高度）
+  if (collapsed) h += 16 // 「（已折叠 N 条后续项）」
+  h += 30 // 底部一行：「＋ 选项」＋ 连接端口 ＋ 折叠箭头
   return Math.max(CARD_MIN, h + 10)
 }
 
 /**
- * 树形分栏布局：**列 ＝ 层深**、**行按书写顺序往下排**。
+ * 树形分栏布局：**列 ＝ 层深**、**行按书写顺序往下排**，顺手把**后续连线**也配好。
  * 折叠的卡片整棵子树都不排版（只影响显示，§5.6.1）。
  *
  * `prefix` / `offset` 给「未连接」那一组用：路径 key 前缀不同、整体平移一段距离。
+ * `heights` 是卡片**实测高度表**（key → px）：量到过就用真的，连线才接得住卡片边。
  */
 export function layoutTree(
   roots: DialogNode[],
   collapsed: Set<string>,
   prefix = '',
   offset: { x: number; y: number } = { x: 0, y: 0 },
-): { items: LaidOutNode[]; width: number; height: number } {
+  heights: Record<string, number> = {},
+): { items: LaidOutNode[]; edges: LaidOutEdge[]; width: number; height: number } {
   const items: LaidOutNode[] = []
+  const edges: LaidOutEdge[] = []
   let cursor = offset.y
   let maxDepth = 0
 
-  const walk = (list: DialogNode[] | undefined, path: number[], depth: number, parentHasDice: boolean) => {
+  const walk = (
+    list: DialogNode[] | undefined,
+    path: number[],
+    depth: number,
+    parentDice?: string,
+    parent?: LaidOutNode,
+  ) => {
     ;(list ?? []).forEach((node, i) => {
       const childPath = [...path, i]
       const key = prefix + keyOf(childPath)
-      const y = cursor
-      cursor += estimateHeight(node, collapsed.has(key)) + ROW_GAP
-      items.push({
+      const measured = heights[key]
+      const h = measured && measured > 0 ? measured : estimateHeight(node, collapsed.has(key), depth === 0)
+      const laid: LaidOutNode = {
         path: childPath,
         node,
         depth,
         key,
-        parentHasDice,
+        parentHasDice: !!parentDice,
+        parentDice,
+        h,
         x: offset.x + depth * COL_W,
-        y,
-      })
+        y: cursor,
+      }
+      cursor += h + ROW_GAP
+      items.push(laid)
+      if (parent) edges.push({ from: parent, to: laid })
       maxDepth = Math.max(maxDepth, depth)
-      if (!collapsed.has(key)) walk(node.items, childPath, depth + 1, !!node.dice)
+      if (!collapsed.has(key)) walk(node.items, childPath, depth + 1, node.dice, laid)
     })
   }
-  walk(roots, [], 0, false)
+  walk(roots, [], 0)
 
-  return { items, width: (maxDepth + 1) * COL_W, height: cursor - offset.y }
+  return { items, edges, width: (maxDepth + 1) * COL_W, height: cursor - offset.y }
+}
+
+/** 折线转成带圆角的 `path`（拐角切成 Q 曲线；太短的段就退化成直角） */
+function roundedPath(points: number[][], radius = ELBOW_R): string {
+  const seq = points
+  const first = seq[0]
+  let d = `M ${first[0]} ${first[1]}`
+  for (let i = 1; i < seq.length - 1; i++) {
+    const [px, py] = seq[i - 1]
+    const [cx, cy] = seq[i]
+    const [nx, ny] = seq[i + 1]
+    const inLen = Math.hypot(cx - px, cy - py)
+    const outLen = Math.hypot(nx - cx, ny - cy)
+    const r = Math.min(radius, inLen / 2, outLen / 2)
+    if (r < 0.75 || !Number.isFinite(r)) {
+      d += ` L ${cx} ${cy}`
+      continue
+    }
+    d += ` L ${cx - ((cx - px) / inLen) * r} ${cy - ((cy - py) / inLen) * r}`
+    d += ` Q ${cx} ${cy} ${cx + ((nx - cx) / outLen) * r} ${cy + ((ny - cy) / outLen) * r}`
+  }
+  const last = seq[seq.length - 1]
+  return d + ` L ${last[0]} ${last[1]}`
+}
+
+/**
+ * 一条后续连线的**折点**：**上下方向的肘形折线**。
+ *
+ * 父卡片**底部**出发 → 钻到两列之间那条**缝**（列宽减去卡宽的那半格，压不到任何卡片）
+ * → 顺着缝下来 → 落到子卡片**顶部**。同一个父的多条分支共用缝里的竖直段，
+ * 看上去就是「一条主干，几处分叉」。
+ */
+export function edgePoints(from: LaidOutNode, to: LaidOutNode): number[][] {
+  const sx = from.x + CARD_W / 2
+  const sy = from.y + from.h
+  const tx = to.x + CARD_W / 2
+  const ty = to.y
+  const lane = from.x + CARD_W + (COL_W - CARD_W) / 2
+  const half = ROW_GAP / 2
+  const outY = sy + half
+  const inY = Math.max(outY, ty - half)
+  return [
+    [sx, sy],
+    [sx, outY],
+    [lane, outY],
+    [lane, inY],
+    [tx, inY],
+    [tx, ty],
+  ]
+}
+
+/** 交给 SVG 的 `d`（折点 + 圆角） */
+export function edgePath(from: LaidOutNode, to: LaidOutNode): string {
+  return roundedPath(edgePoints(from, to))
 }

@@ -25,7 +25,7 @@
             "message": ["那就慢走。"]
           },
           {
-            "result": "C：这些你带上。",
+            "result": "C：我能带点什么下去吗？",
             "hit": "5-6",
             "message": ["拿着，路上用得上。"],
             "give": ["red_potion", "red_potion", "blue_potion"]

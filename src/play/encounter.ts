@@ -124,7 +124,8 @@ export function enterBuilding(s: Session, building: BuildingDef, cell: [number, 
       }
       const opened = markDone(openTreasure(s, building, rng))
       // 空宝箱 ＋ 有 NPC：**NPC 就是它的内容物** → 不输出"箱内无物品"（§4.8.5⑥）
-      if (talked && opened.encounter?.kind === 'treasure' && (opened.encounter.pieces?.length ?? 0) === 0) {
+      // （`encounter.gain` 缺省 ＝ 这一箱什么都没到手）
+      if (talked && opened.encounter?.kind === 'treasure' && !opened.encounter.gain) {
         return { ...opened, phase: 'explore', encounter: undefined }
       }
       return opened

@@ -2,8 +2,9 @@
  * 「NPC 模组」面板（§5.6 / §5.6.1）—— 与「规则」并列的**第二个整页入口**。
  *
  * 分工别搞混：
- * - **组件库 / 组件页** —— NPC 的基础字段 + `dialogs` 的**只读摘要**（不在这里改树）
- * - **这里** —— 对话树本身：方案（`dialogs` 的键）＋ 树（卡片 / 连线 / 骰子 / 给道具）
+ * - **组件库 / 组件页** —— NPC 的基础字段（图标 / 名称 / 标签）+ `dialogs` 的**只读摘要**（不在这里改树）
+ * - **这里** —— 对话树本身：方案（`dialogs` 的键）＋ 树（卡片 / 连线 / 骰子 / 赠予道具）；
+ *   顺带把公共字段里的**描述**与**颜色**也放在这儿（本页盖住整屏、组件页看不见，来回切换太别扭）
  * - **地图实例页** —— 谁挂这个 NPC（NPC 没有位置字段，只能被建筑实例引用）
  *
  * 方案名**不写权重**：多套方案等权，由实例的骰子（规则面板 `talk.dice`）抽一套。
@@ -19,7 +20,8 @@ import { useUiStore } from '../store/ui'
 import { npcReferenceCounts } from '../lib/refs'
 import { summarizeNpc } from '../lib/dialog'
 import Overlay from '../ui/Overlay'
-import { Badge } from '../ui/primitives'
+import { Badge, Field, TextBox } from '../ui/primitives'
+import { randomComponentColor } from '../lib/color'
 import DialogCanvas from './npc/DialogCanvas'
 
 /** `Mod1`、`Mod2`… 取第一个没被占用的编号 */
@@ -52,17 +54,11 @@ export default function NpcModScreen() {
   const counts = useMemo(() => npcReferenceCounts(project), [project])
 
   /**
-   * 左侧只列**本局被引用的** NPC（§5.6.1）—— 另外总把「从组件页点进来的那一条」加进来，
-   * 免得「还没挂到建筑上」的 NPC 连对话都写不了。
+   * 左侧列出**库里的全部 NPC**（§5.6.1）：被引用的显示 `×N`，未被引用的显示「未引用」并降低不透明度。
+   * **引用数是本局状态，不是能否撰写对话的前提** —— 故不按引用过滤列表。
    */
-  const listed = useMemo(() => {
-    const out = npcs.filter((n) => (counts.get(n.id) ?? 0) > 0)
-    if (target && !out.some((n) => n.id === target)) {
-      const extra = npcs.find((n) => n.id === target)
-      if (extra) out.push(extra)
-    }
-    return out
-  }, [npcs, counts, target])
+  const listed = useMemo(() => [...npcs], [npcs])
+  const referencedCount = useMemo(() => listed.filter((n) => (counts.get(n.id) ?? 0) > 0).length, [listed, counts])
 
   useEffect(() => {
     if (!open) return
@@ -110,7 +106,7 @@ export default function NpcModScreen() {
     const name = window.prompt('新的方案名', plan)?.trim()
     if (!name || name === plan) return
     if (plans.includes(name)) {
-      window.alert(`已经有叫「${name}」的方案了`)
+      window.alert(`方案「${name}」已存在，请换一个名称。`)
       return
     }
     writeNpc((current) => ({ ...current, dialogs: renamePlan(current.dialogs, plan, name) }))
@@ -119,8 +115,9 @@ export default function NpcModScreen() {
 
   const doDeletePlan = () => {
     if (!npc || !plan) return
-    if (plans.length <= 1 && !window.confirm('这是最后一套方案 —— 删掉后这个 NPC 被踩到就没话说了。确定？')) return
-    if (plans.length > 1 && !window.confirm(`删掉方案「${plan}」？`)) return
+    if (plans.length <= 1 && !window.confirm('这是最后一套方案，删除后该 NPC 将没有任何对话内容。确定删除？'))
+      return
+    if (plans.length > 1 && !window.confirm(`确定删除方案「${plan}」？`)) return
     const rest = Object.fromEntries(Object.entries(npc.dialogs).filter(([key]) => key !== plan))
     writeNpc((current) => ({ ...current, dialogs: rest }))
     setParkedByPlan((prev) => {
@@ -142,40 +139,46 @@ export default function NpcModScreen() {
             <span className="hand" style={{ fontSize: 16 }}>
               NPC 模组
             </span>
-            <span className="badge">{listed.length} 条被引用</span>
+            <span className="badge">
+              共 {listed.length} 条 · 被引用 {referencedCount} 条
+            </span>
           </span>
           <button className="btn small" onClick={() => setOpen(false)}>
-            <X size={13} /> 关掉
+            <X size={13} /> 关闭
           </button>
         </div>
 
         {listed.length === 0 ? (
           <div className="hintbox warn" style={{ margin: 'auto', maxWidth: 520 }}>
-            这里只列<b>本局被引用的 NPC</b> —— 现在一条都没有。
+            组件库里<b>还没有任何 NPC</b>。
             <div style={{ marginTop: 6 }}>
-              先回 <b>组件库</b> 建一条 NPC（或用预设），再去地图上挑一栋建筑，在它的<b>实例页</b>里把这条 NPC 挂上。
-              NPC 没有「位置」字段，它<b>住在建筑里</b>（§4.9.3）。
+              先回 <b>组件库</b> 新建一条 NPC（或使用预设），再回到这里写它的对话树。
+              NPC 不含位置字段，出场位置由所挂的建筑决定（§4.9.3）：要让它在游戏中出现，请到地图实例页把它挂到某栋建筑上。
             </div>
           </div>
         ) : (
           <div className="row" style={{ flex: 1, minHeight: 0, gap: 8, alignItems: 'stretch' }}>
-            {/* 左：本局被引用的 NPC */}
+            {/* 左：全部 NPC —— 引用数只作标注，未被引用者同样可选中并撰写对话 */}
             <div className="panel" style={{ width: 210, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div className="panel-title" style={{ fontSize: 12 }}>
-                <Users size={12} /> 本局被引用
+                <Users size={12} /> 全部 NPC
               </div>
-              <div className="scroll" style={{ flex: 1, minHeight: 0 }}>
+              <div className="scroll" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {listed.map((n) => {
                   const n0 = counts.get(n.id) ?? 0
                   return (
                     <div
                       key={n.id}
-                      className={'kit-row' + (n.id === selectedId ? ' selected' : '')}
-                      title={n0 > 0 ? `${n.name} —— 被 ${n0} 个建筑实例引用` : `${n.name} —— 还没有建筑用到它`}
-                      style={{ opacity: n0 > 0 ? 1 : 0.62, cursor: 'pointer' }}
+                      className={'kit-row npc-item' + (n.id === selectedId ? ' selected' : '')}
+                      title={
+                        n0 > 0
+                          ? `${n.name} —— 被 ${n0} 个建筑实例引用`
+                          : `${n.name} —— 尚未被任何建筑引用（对话仍可编辑）`
+                      }
+                      style={{ opacity: n0 > 0 ? 1 : 0.62 }}
                       onClick={() => setSelectedId(n.id)}
                     >
-                      <span className="truncate" title={n.name}>
+                      <span className="truncate" style={{ flex: 1 }} title={n.name}>
                         {n.name}
                       </span>
                       <Badge tone={n0 > 0 ? 'on' : 'off'}>{n0 > 0 ? `×${n0}` : '未引用'}</Badge>
@@ -184,7 +187,7 @@ export default function NpcModScreen() {
                 })}
               </div>
               <div className="faint" style={{ fontSize: 11 }}>
-                新建 / 删除 NPC 回组件库；这里只管对话。
+                NPC 的新建与删除在组件库中完成；此处编辑对话，兼改「描述」与「颜色」。
               </div>
             </div>
 
@@ -196,7 +199,7 @@ export default function NpcModScreen() {
                 </span>
                 {npc && summarizeNpc(npc).length > 0 && (
                   <span className="faint" style={{ fontSize: 11 }}>
-                    {summarizeNpc(npc).length} 套方案 · 等权（哪一套由实例的骰子抽，`talk.dice`）
+                    {summarizeNpc(npc).length} 套方案 · 等权
                   </span>
                 )}
                 <span style={{ flex: 1 }} />
@@ -214,7 +217,7 @@ export default function NpcModScreen() {
                     </option>
                   ))}
                 </select>
-                <button className="btn small" onClick={addPlan} title="新建一套方案（方案名不写权重）">
+                <button className="btn small" onClick={addPlan} title="新建一套方案">
                   <Plus size={11} /> 方案
                 </button>
                 <button className="btn small ghost" disabled={!plan} onClick={doRename}>
@@ -224,6 +227,51 @@ export default function NpcModScreen() {
                   删方案
                 </button>
               </div>
+
+              {/* 基础字段（§5.6）：描述与颜色都是 `ComponentBase` 的公共字段，组件页里能改，
+                  但本页是盖住整屏的整页面板（组件页根本看不见），故把这俩也搬进来 ——
+                  给一条 NPC 写说明、定颜色时不必先关掉整页再回组件库找它 */}
+              {npc && (
+                <div className="row" style={{ gap: 6, alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Field label="描述">
+                      <TextBox
+                        value={npc.desc ?? ''}
+                        rows={2}
+                        placeholder="这条 NPC 的一句话说明"
+                        onChange={(v) => writeNpc((cur) => ({ ...cur, desc: v }))}
+                      />
+                    </Field>
+                  </div>
+                  <Field label="颜色">
+                    <div className="row" style={{ gap: 4 }}>
+                      <input
+                        className="color-input"
+                        type="color"
+                        value={npc.color ?? '#cccccc'}
+                        title="NPC 的颜色（描边 100% alpha ＋ 填充 30% alpha）"
+                        onChange={(e) => writeNpc((cur) => ({ ...cur, color: e.target.value }))}
+                      />
+                      <button
+                        className="btn small"
+                        title="随机换一个颜色"
+                        onClick={() => writeNpc((cur) => ({ ...cur, color: randomComponentColor() }))}
+                      >
+                        随机
+                      </button>
+                      {npc.color && (
+                        <button
+                          className="btn small"
+                          title="清除，改为按 id 取兜底色"
+                          onClick={() => writeNpc((cur) => ({ ...cur, color: undefined }))}
+                        >
+                          清除
+                        </button>
+                      )}
+                    </div>
+                  </Field>
+                </div>
+              )}
 
               {plan && npc ? (
                 <DialogCanvas
@@ -236,21 +284,23 @@ export default function NpcModScreen() {
                 />
               ) : (
                 <div className="hintbox warn" style={{ margin: 'auto', maxWidth: 460 }}>
-                  这条 NPC <b>还没有任何对话方案</b> —— 被踩到时会没有话说。
+                  该 NPC <b>还没有任何对话方案</b>，与其对话时将没有内容可显示。
                   <div className="row" style={{ marginTop: 6, gap: 6 }}>
                     <button className="btn small primary" onClick={addPlan}>
                       <Plus size={11} /> 建一套方案
                     </button>
                     <span className="faint">
-                      一套就够：只有一套方案时一定用它 <ChevronRight size={11} />
+                      仅一套方案时必定使用该方案 <ChevronRight size={11} />
                     </span>
                   </div>
                 </div>
               )}
 
               <div className="faint" style={{ fontSize: 11 }}>
-                连线 ＝ 父子（从卡片底部端口拖到目标卡片）；「＋ 选项」＝ 加一张子卡片；卡片头部的
-                <b>命中骰</b>留空 ＝ 玩家直接点选。
+                在卡片底部的连接端口按住并拖到另一张卡片，后者即成为这条记录的后续项；「＋ 选项」也可直接新增一条后续项。
+                卡片自上而下分五段，<b>段名就写在卡片的分隔线上</b>：<b>命中</b>（该条记录在哪些点数上轮到）→{' '}
+                <b>答复</b>（玩家可见的选项文本）→ <b>台词</b>（NPC 台词）→ <b>赠予道具</b>（走到这一条赠予什么）→{' '}
+                <b>后续项</b>（之后接哪些答复；「答复骰子」留空表示玩家直接点选，选定骰子后按各后续项的「命中」判定）。
               </div>
             </div>
           </div>

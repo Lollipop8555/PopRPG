@@ -112,6 +112,15 @@ textarea {
   font-size: 11px;
 }
 
+/* 单行截断：超长文本以省略号收尾，不换行、不撑破容器。
+   `min-width: 0` 是必需项 —— flex 子项缺省不收缩，省略号不会出现 */
+.truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .hintbox {
   border-left: 3px solid var(--line);
   background: rgba(233, 220, 190, 0.45);
@@ -241,6 +250,27 @@ textarea {
   min-height: 62px;
   line-height: 1.6;
   font-family: var(--font-cn);
+}
+
+/* 取色器：与旁边的小按钮同高一排，切成**胶囊** ——
+   原生色块默认是硬邦邦的直角矩形，摆在满屏手绘风里太生硬（§5.6 / §6.1） */
+.color-input {
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.06s ease;
+}
+
+.color-input:hover {
+  border-color: #c1503f;
+}
+
+.color-input:active {
+  transform: translateY(1px);
 }
 
 .row {
@@ -534,6 +564,27 @@ textarea {
   pointer-events: none;
 }
 
+/* 常驻的后续连线（画在卡片下面，线头被卡片压住） */
+.dlg-link {
+  fill: none;
+  stroke: #b09068;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* 父层开了答复骰子：这条分支是「掷到点数才走」的那一支，用红棕区分 */
+.dlg-link.dice {
+  stroke: #bf6a4a;
+  stroke-width: 1.8;
+}
+
+/* 选中某张卡片时，连着它的线一起亮 */
+.dlg-link.hot {
+  stroke: var(--green);
+  stroke-width: 2.6;
+}
+
 .dlg-card {
   position: absolute;
   background: var(--paper-card);
@@ -567,10 +618,127 @@ textarea {
   border-color: #c1503f;
 }
 
+/* 卡片右上角的一排操作：断开设左、删除在右。
+   二者都不属于任何一段内容，故并排固定于右上角、不占正文行；
+   四周留出与卡片内边距相称的间距，不贴边框 */
+.dlg-card-ops {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dlg-card-del,
+.dlg-card-cut {
+  padding: 1px 3px;
+  line-height: 1;
+  opacity: 0.5;
+}
+
+.dlg-card-del:hover,
+.dlg-card-cut:hover {
+  opacity: 1;
+  color: #c1503f;
+  background: transparent;
+}
+
 .dlg-card-head {
   display: flex;
   align-items: center;
   gap: 3px;
+}
+
+/* 右上角那一排操作固定不占正文行，而卡片第一行即「命中」行（根卡片为标题行），
+   仅该行需要为其让位（右缩进 5px ＋ 删除宽约 27px ＋ 间距 4px ＋ 端口宽 26px）；
+   答复行在下一行、照常使用满宽 */
+.dlg-hit-row {
+  padding-right: 66px;
+}
+
+/* 答复行行首的箭头图标：标出这一行是玩家点击的答复，与下方的 NPC 台词区分 */
+.dlg-reply-mark {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  color: var(--green);
+  opacity: 0.8;
+}
+
+/* 段与段之间的分隔线：段名嵌在线的中间，两侧各留一小段虚线（读起来是「— 答复 —」）。
+   卡片上的每一段因此都能自报家门，不必回头翻窗口说明、也不必靠上下文去猜哪块是哪块 */
+.dlg-sep {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dlg-sep > span {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  color: var(--ink-faint);
+}
+
+.dlg-sep::before,
+.dlg-sep::after {
+  content: '';
+  flex: 1 1 auto;
+  border-top: 1px dashed var(--line);
+  opacity: 0.55;
+}
+
+/* 卡片底部一行：「＋ 选项」＋ 连接端口 ＋ 折叠箭头。
+   三者都只作用于后续项（新增一条 / 拖出后续关系 / 折叠挂在底部的子树），故同排；
+   且**同一款式、同一尺寸**（等宽等高的一排小按钮）—— 不许一个文字按钮、一个图标小框、
+   一个虚线箭头各长各的 */
+.dlg-foot-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.dlg-foot-row > * {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-sizing: border-box;
+  width: 52px;
+  height: 20px;
+  padding: 0;
+  font-family: inherit;
+  font-size: 11.5px;
+  line-height: 1;
+  color: var(--ink-faint);
+  background: #fffdf4;
+  border: 1.5px solid var(--line);
+  border-radius: 12px 9px 13px 8px / 9px 13px 8px 12px;
+  cursor: pointer;
+  transition: transform 0.06s ease;
+}
+
+.dlg-foot-row > .dlg-port {
+  /* 端口与左右两枚样式完全相同，只把光标换成十字，暗示「按住可拖」 */
+  cursor: crosshair;
+}
+
+.dlg-foot-row > *:hover:not(:disabled) {
+  border-color: #c1503f;
+  color: #c1503f;
+  background: #fffaf0;
+}
+
+.dlg-foot-row > *:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.dlg-foot-row > *:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .dlg-result {
@@ -638,30 +806,9 @@ textarea {
   gap: 3px;
 }
 
-.dlg-card-foot {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
+/* 连接端口（底部一行里居中那枚）：尺寸与样式由 `.dlg-foot-row > *` 统一给，这里只是个挂钩 */
 .dlg-port {
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 14px;
-  margin-top: 1px;
-  border: 1.5px solid var(--line);
-  border-radius: 8px;
-  background: #fffdf4;
-  color: var(--ink-faint);
   cursor: crosshair;
-}
-
-.dlg-port:hover {
-  border-color: #c1503f;
-  color: #c1503f;
 }
 
 .dlg-parked-label {
@@ -704,59 +851,7 @@ textarea {
   gap: 6px;
 }
 
-/* 立绘区：左=你 / 中=VS / 右=NPC。立绘缺位不渲染（回声留给 V2.1 皮肤） */
-.talk-vs {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: end;
-  gap: 8px;
-  padding: 8px 6px 6px;
-  border: 1.5px dashed var(--line);
-  border-radius: var(--radius-rough);
-  background: rgba(233, 220, 190, 0.28);
-}
-
-.talk-side {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-width: 0;
-}
-
-.talk-side.right {
-  align-items: flex-end;
-}
-
-.talk-portrait {
-  width: 100%;
-  min-height: 46px;
-  border-radius: var(--radius-rough);
-  background: repeating-linear-gradient(
-    -45deg,
-    rgba(150, 130, 100, 0.09) 0 6px,
-    rgba(150, 130, 100, 0.02) 6px 12px
-  );
-}
-
-.talk-who {
-  font-family: var(--font-cn);
-  font-size: 13px;
-  color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.talk-mid {
-  font-family: var(--font-cn);
-  font-size: 15px;
-  color: var(--ink-faint);
-  padding-bottom: 4px;
-}
-
-/* 台词：逐条展示，当前这条高亮 */
+/* 聊天记录：只往后追加（选完不清空），自身滚动、新的一句自动滚进视野 */
 .talk-lines {
   display: flex;
   flex-direction: column;
@@ -767,6 +862,10 @@ textarea {
 }
 
 .talk-bubble {
+  /* 气泡**按内容自适应宽度**（不拉满一整行）：短句就是一小块，
+     长了才长到 `.talk-lines` 的 86% 为止 —— 靠左站（NPC 说的） */
+  align-self: flex-start;
+  max-width: 86%;
   font-family: var(--font-cn);
   font-size: 13px;
   line-height: 1.6;
@@ -777,6 +876,7 @@ textarea {
   border-radius: var(--radius-rough);
   padding: 6px 9px;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .talk-bubble.now {
@@ -785,12 +885,30 @@ textarea {
   box-shadow: 0 2px 8px rgba(80, 60, 40, 0.12);
 }
 
+/* 玩家挑的那一条：靠右站、粗边换到右边 —— 一眼分清"谁说的"，但**不挂名条**（这里不报幕） */
+.talk-bubble.mine {
+  align-self: flex-end;
+  background: rgba(233, 220, 190, 0.5);
+  border-left-width: 1.5px;
+  border-right-width: 4px;
+  border-right-color: var(--accent, #c1503f);
+}
+
+/* 记录 ↔ 选择 之间**一条虚线**：上面是"说过的话"（聊天记录 `.talk-lines`），
+   下面是"轮到你要做的事"（手动选项 / 掷骰答复框）。
+   用实线会被读成又一只框把选项圈进去、跟记录糊成一块；虚线才是"分界"，不是"描边"。 */
+.talk-options,
+.talk-roll {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1.5px dashed var(--line);
+}
+
 /* 选项：本层没有 dice 时一排按钮，文本取子记录的 result */
 .talk-options {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  margin-top: 6px;
 }
 
 .talk-option {
@@ -806,6 +924,106 @@ textarea {
   font-family: var(--font-cn);
   font-size: 13px;
   padding: 6px 14px;
+}
+
+/* 掷骰层：本层全部答复先摆出来（每条前面格子里是**命中区间**），配一枚点了才掷的骰子
+   （`.talk-roll` 与聊天记录之间那条虚线见上面的分组规则） */
+
+/* 本层答复**共用一只框** —— 与台词（`.talk-bubble` 一条一只框）明确区分：这是一张表，不是几句台词 */
+.talk-optbox {
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-rough);
+  background: rgba(233, 220, 190, 0.3);
+  overflow: hidden;
+}
+
+.talk-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.talk-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-cn);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink);
+  padding: 6px 9px;
+  transition: opacity 140ms ease, background 140ms ease;
+}
+
+/* 行与行之间只用一条分割线 —— 每条各自描边会被读成"三条描述" */
+.talk-row + .talk-row {
+  border-top: 1px dashed rgba(201, 183, 149, 0.95);
+}
+
+.talk-row-text {
+  min-width: 0;
+}
+
+/* 命中区间那一格：等宽，几点落在这一条上一眼看得出 */
+.talk-hit {
+  flex: none;
+  min-width: 36px;
+  text-align: center;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  background: rgba(150, 130, 100, 0.14);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* 掷出的点数没落在这一条上 */
+.talk-row.dim {
+  opacity: 0.4;
+}
+
+/* 命中的那一条：整条提亮 ＋ 左侧一道红边（边框在框内，不撑破外框） */
+.talk-row.hit {
+  background: #fffdf4;
+  box-shadow: inset 4px 0 0 var(--accent, #c1503f);
+}
+
+.talk-row.hit .talk-row-text {
+  font-weight: 700;
+}
+
+.talk-row.hit .talk-hit {
+  color: #fff;
+  background: var(--accent, #c1503f);
+}
+
+.talk-roll-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.talk-die {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: var(--radius-rough);
+}
+
+.talk-die:hover:not(:disabled) {
+  background: rgba(233, 220, 190, 0.5);
+}
+
+.talk-die:disabled {
+  cursor: default;
+}
+
+.talk-die .hand {
+  font-size: 13px;
 }
 
 /* 窄屏：并排按钮换行 */

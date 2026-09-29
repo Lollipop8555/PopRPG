@@ -11,7 +11,8 @@ import { scenarioFromProject } from '../load'
 import { allocatePoint, freePoints, nextRound, startSession, stepTo } from '../flow'
 import { playerAttack, resolveDefense, startCombat } from '../combat'
 import { enterBuilding } from '../encounter'
-import { grant, openShop, buyGood, runEvent } from '../reward'
+import { openShop, buyGood, runEvent } from '../reward'
+import { heroGain } from '../gain'
 import { equipItem, useItem } from '../inventory'
 import { makeMonsterUnit, capabilities } from '../../engine/units'
 import { exportSave, parseSave } from '../../io/psave'
@@ -214,7 +215,7 @@ describe('B7 遭遇与商店事件（验收 11 / 14）', () => {
 
   it('商店：货币就是一件道具 —— 给够金币就能买下（§4.8.11）', () => {
     let s = knight(0.5)
-    s = grant(s, { pieces: [{ id: 'gold', count: 50 }] }).session
+    s = heroGain(s, { source: '测试', pieces: [{ id: 'gold', count: 50 }] }).session
     const shop = openShop(s, findBuilding(s, 'merchant'), [6, 0], fixed(0.5))
     const goods = shop.encounter?.goods ?? []
     expect(goods.length).toBeGreaterThan(0)
@@ -222,15 +223,22 @@ describe('B7 遭遇与商店事件（验收 11 / 14）', () => {
     const bought = buyGood(shop, 0)
     const goldLeft = bought.player.inventory.find((e) => e.id === 'gold')?.count ?? 0
     expect(goldLeft).toBeLessThan(50)
+
+    // 成交也是"主角得到了什么" → 走统一接口，**顺带排一条提示**（商店没有揭晓弹层，靠浮条说）
+    const good = goods[0]
+    const boughtItem = s.scenario.library.items.find((i) => i.id === good.id)!
+    const notice = bought.notices?.at(-1)!
+    expect(notice.source).toBe(`买下：${boughtItem.icon}${boughtItem.name}`)
+    expect(notice.items.map((i) => i.id)).toEqual([good.id])
   })
 })
 
 describe('B9 背包 / 穿戴 / 技能书', () => {
   it('背包满了就拒收（同一种叠加只占 1 格，第二种被拒）', () => {
     const s = { ...knight(0.5), player: { ...knight(0.5).player, cls: { ...knight(0.5).player.cls!, inventory_size: 1 } } }
-    const result = grant(s, { pieces: [{ id: 'red_potion', count: 1 }, { id: 'iron_sword', count: 1 }] })
-    expect(result.gained.length).toBe(1)
-    expect(result.rejected.length).toBe(1)
+    const { note } = heroGain(s, { source: '测试', pieces: [{ id: 'red_potion', count: 1 }, { id: 'iron_sword', count: 1 }] })
+    expect(note.items.length).toBe(1)
+    expect(note.losses.length).toBe(1)
   })
 
   it('状态 tag 进能力集合：吃了御火符过火焰山就不掉血（§4.8.10 临时通行）', () => {
