@@ -54,8 +54,23 @@ export function nodeAtCell(s: Session, cell: [number, number]): MapNode | undefi
   })
 }
 
-export function cellKey(mapIndex: number, cell: [number, number]): string {
-  return `${mapIndex}:${cell[0]},${cell[1]}`
+/**
+ * 地图的**持久标识** —— **地图名**（不是序号！见 [`docs/design/02-data-model.md`] §4.9.3）。
+ *
+ * `.psave` 里的建筑 / 格子键都含它：图层**重排或删图**会让序号变化，用序号会让
+ * 「已开过的宝箱」等状态**整体错位**到别的建筑上。地图名**必须唯一且稳定**——
+ * 编辑器对重名只**标黄提示、不改名**（默认命名也不回收旧编号），**去重发生在两个出口**：
+ * `exportPmod`（导出文件）与 `scenarioFromProject`（直接开局）共用 `uniqueMapNames`，
+ * 第 2 张重名地图起自动改为 `名字 (2)` / `名字 (3)`…（§8.3 设定 6）——两条出口必须得到
+ * **同一套键**，否则同一份 `.psave` 在「导出后再导入」与「直接开局」两处对不上。
+ */
+export function mapKey(s: Session): string {
+  return currentMap(s)?.name ?? `#${s.mapIndex}`
+}
+
+/** 普通格的持久键：`<地图名>@<x>,<y>`（图层重排不会错位） */
+export function cellKey(s: Session, cell: [number, number]): string {
+  return `${mapKey(s)}@${cell[0]},${cell[1]}`
 }
 
 /** 当前所在格对应的节点信息（用于探索期的「环境提示」常驻条） */
@@ -123,16 +138,19 @@ export function neighbors(cell: [number, number]): [number, number][] {
 }
 
 /**
- * 一座**建筑**的标识键 —— 以「节点」为单位（节点左上角格）。
+ * 一座**建筑**的标识键 —— **`<地图名>#<ref>@<锚点>`**（§4.9.3）。
  *
- * 一个节点 = 一座建筑：多格建筑是**同一个节点**（带 `w`/`h`），从它覆盖的任意一格进入都算同一座；
- * 而紧挨着放的两个宝箱屋是**两个节点**，属于两座（各记各的「已开」）。
- * **绝不**按"相邻同种"聚合 —— 相邻不代表同一座。
+ * 锚点 ＝ **节点自己的坐标**（`node.x`, `node.y`）：一个节点 = 一座建筑，多格建筑是**同一个节点**
+ * （带 `w`/`h`），从它覆盖的任意一格进入都算同一座；紧挨着放的两个宝箱屋是**两个节点**、两座
+ * （各记各的「已开」）——**绝不**按"相邻同种"聚合。
+ *
+ * 键里用**地图名**（不是序号）与 `ref`：图层重排 / 删图不会错位；`.pmod` 改了 `ref` / 坐标 /
+ * 地图名 → 键不匹配 ＝ **视为没触发过**（弱引用，不报错、不做迁移）。
  */
 export function buildingKey(s: Session, cell: [number, number]): string {
   const node = nodeAtCell(s, cell)
-  if (!node || node.type !== 'building') return cellKey(s.mapIndex, cell)
-  return cellKey(s.mapIndex, [node.x, node.y])
+  if (!node || node.type !== 'building') return cellKey(s, cell)
+  return `${mapKey(s)}#${node.ref ?? '?'}@${node.x},${node.y}`
 }
 
 export function statLabel(key: StatKey): string {

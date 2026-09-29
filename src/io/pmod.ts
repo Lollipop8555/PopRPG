@@ -116,7 +116,41 @@ function serializeNodes(map: GameMap): unknown {
   }
 }
 
-export function exportPmod(library: Library, project: Project): { text: string; missing: string[] } {
+/**
+ * **地图名去重**（§8.3 设定 6）：地图名是**建筑实例 key**（`<地图名>#<ref>@<锚点>`）的一部分，
+ * 两张地图同名会让对话抽取结果 / `prop` 终态在 `.psave` 里撞车。
+ *
+ * 规矩：**第一张保持原名**，第 2 张起追加 ` (2)` / ` (3)`…（若后缀名也被占用就继续顺延）。
+ * 编辑器里**不改名、只标黄提示**——去重发生在**离开构建页的两个出口**：导出文件、直接开局。
+ */
+export function uniqueMapNames(maps: GameMap[]): {
+  names: string[]
+  renamed: { from: string; to: string }[]
+} {
+  const taken = new Set<string>()
+  const names: string[] = []
+  const renamed: { from: string; to: string }[] = []
+
+  for (const map of maps) {
+    let name = map.name
+    if (taken.has(name)) {
+      let n = 2
+      while (taken.has(`${name} (${n})`)) n += 1
+      const fixed = `${name} (${n})`
+      renamed.push({ from: map.name, to: fixed })
+      name = fixed
+    }
+    taken.add(name)
+    names.push(name)
+  }
+
+  return { names, renamed }
+}
+
+export function exportPmod(
+  library: Library,
+  project: Project,
+): { text: string; missing: string[]; renamed: { from: string; to: string }[] } {
   const { used, missing } = collectUsedComponents(library, project)
   ensureBackground(library, used)
 
@@ -152,13 +186,14 @@ export function exportPmod(library: Library, project: Project): { text: string; 
   parts.push('\n')
 
   parts.push('## 地图\n\n')
-  for (const map of project.maps) {
-    parts.push(`### ${map.name}\n\n`)
+  const { names, renamed } = uniqueMapNames(project.maps)
+  project.maps.forEach((map, i) => {
+    parts.push(`### ${names[i]}\n\n`)
     parts.push(yamlBlock(serializeNodes(map)))
     parts.push('\n')
-  }
+  })
 
-  return { text: parts.join(''), missing }
+  return { text: parts.join(''), missing, renamed }
 }
 
 /* ------------------------------------------------------------------ */
@@ -310,14 +345,22 @@ export function parsePmod(text: string): ParsedPmod {
             end: loaded.end,
             nodes: (loaded.nodes ?? [])
               .filter((n) => typeof n?.x === 'number' && typeof n?.y === 'number')
-              .map((n) => ({
-                x: n.x,
-                y: n.y,
-                type: n.type,
-                ref: n.ref,
-                w: n.w,
-                h: n.h,
-              })),
+              .map((n) => {
+                // road / start / end 恒为 1×1：写了 w / h 也归一为 1（§4.9.3 / §8.3 设定 6）
+                if (n.type !== 'building' && ((n.w ?? 1) !== 1 || (n.h ?? 1) !== 1)) {
+                  warn(`(${n.x}, ${n.y}) 的 ${n.type} 不该有大小，已按 1×1 处理`)
+                  return { x: n.x, y: n.y, type: n.type, ref: n.ref }
+                }
+                const size = (v: number | undefined) => Math.max(1, Math.trunc(v ?? 1))
+                return {
+                  x: n.x,
+                  y: n.y,
+                  type: n.type,
+                  ref: n.ref,
+                  w: n.type === 'building' ? size(n.w) : undefined,
+                  h: n.type === 'building' ? size(n.h) : undefined,
+                }
+              }),
           })
         }
       }

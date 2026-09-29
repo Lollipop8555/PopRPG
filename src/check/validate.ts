@@ -380,6 +380,18 @@ export function validateProject(library: Library, project: Project): Issue[] {
           cell: [node.x, node.y],
         })
       }
+      /** K13：非建筑节点带了 w / h —— road / start / end 恒为 1×1（§4.9.3 / §8.3 设定 6） */
+      if (node.type !== 'building' && ((node.w ?? 1) !== 1 || (node.h ?? 1) !== 1)) {
+        issues.push({
+          key: 'K13',
+          severity: 'error',
+          title: `(${node.x}, ${node.y}) 的${{ road: '道路', start: '起点', end: '终点' }[node.type] ?? node.type}不该有大小`,
+          detail: '这些件恒为 1×1 —— 大小会被忽略（导入时归一为 1），删掉 w / h 即可。',
+          mapId: map.id,
+          mapName: map.name,
+          cell: [node.x, node.y],
+        })
+      }
       if ((node.type === 'road' || node.type === 'building') && node.ref && !exists.get(node.ref)) {
         issues.push({
           key: 'K3',
@@ -479,6 +491,7 @@ const KEY_LABEL: Record<string, string> = {
   K10: '货币没有产出来源',
   K11: '背包容量不足',
   K12: '道路节点缺引用',
+  K13: '非建筑节点带了大小',
 }
 
 export function groupIssues(issues: Issue[]): IssueGroup[] {

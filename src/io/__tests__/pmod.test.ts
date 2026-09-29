@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import { presetLibrary } from '../../presets'
 import { fixtureProject } from '../../test/fixtures'
-import { collectUsedComponents, exportPmod, parsePmod, placedIds } from '../pmod'
+import { collectUsedComponents, exportPmod, parsePmod, placedIds, uniqueMapNames } from '../pmod'
 import type { Project } from '../../types'
 
 const library = presetLibrary()
@@ -71,5 +71,50 @@ describe('round-trip', () => {
     const withLegacyDice = `# 老档\n\n## 规则配置\n\`\`\`yaml\ndiceConfig:\n  default: 1D6\n\`\`\`\n`
     const parsed2 = parsePmod(withLegacyDice)
     expect(parsed2.warnings.join()).toContain('diceConfig')
+  })
+})
+
+describe('地图名去重（§8.3 设定 6：导出时对重名地图自动加后缀）', () => {
+  it('第一张保持原名，第 2 张起追加 (2) / (3)…，后缀名被占用就顺延', () => {
+    const maps = ['地图 1', '地图 1', '地图 1', '地图 1 (2)', '地图 2'].map((name, i) => ({
+      ...project.maps[0],
+      id: `m_dup${i}`,
+      name,
+    }))
+    const { names, renamed } = uniqueMapNames(maps)
+
+    expect(names).toEqual(['地图 1', '地图 1 (2)', '地图 1 (3)', '地图 1 (2) (2)', '地图 2'])
+    expect(renamed).toEqual([
+      { from: '地图 1', to: '地图 1 (2)' },
+      { from: '地图 1', to: '地图 1 (3)' },
+      { from: '地图 1 (2)', to: '地图 1 (2) (2)' },
+    ])
+  })
+
+  it('导出的文件里地图名一定唯一，且往返无损', () => {
+    const dup: Project = {
+      ...project,
+      maps: ['地图 1', '地图 1', '地图 1'].map((name, i) => ({
+        ...project.maps[0],
+        id: `m_dup${i}`,
+        name,
+      })),
+    }
+    const { text, renamed } = exportPmod(library, dup)
+
+    expect(text).toContain('### 地图 1\n')
+    expect(text).toContain('### 地图 1 (2)\n')
+    expect(text).toContain('### 地图 1 (3)\n')
+    expect(renamed.length).toBe(2)
+
+    const parsed = parsePmod(text)
+    expect(parsed.maps.map((m) => m.name)).toEqual(['地图 1', '地图 1 (2)', '地图 1 (3)'])
+    expect(parsed.warnings).toEqual([])
+  })
+
+  it('没有重名时一个名字都不动', () => {
+    const { text, renamed } = exportPmod(library, project)
+    expect(renamed).toEqual([])
+    for (const map of project.maps) expect(text).toContain(`### ${map.name}\n`)
   })
 })

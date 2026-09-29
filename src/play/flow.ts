@@ -12,7 +12,7 @@ import { remainingPoints, canPass, capabilities, payMapCost, makePlayerUnit, typ
 import { addToInventory } from '../engine/item'
 import { tickStates } from '../engine/state'
 import type { EncounterState, Session } from '../types/session'
-import { currentMap, log, logs, neighbors, nodeAtCell, recordRoll, roll, statLabel, syncPlayer } from './kit'
+import { cellKey, currentMap, log, logs, neighbors, nodeAtCell, recordRoll, roll, statLabel, syncPlayer } from './kit'
 import { encounterNeedsRoll, enterBuilding } from './encounter'
 
 /* ------------------------------------------------------------------ */
@@ -251,7 +251,7 @@ export function stepTo(s: Session, cell: [number, number], rng?: Rng): StepResul
     player,
     pos: cell,
     stepsLeft: s.stepsLeft - stepCost,
-    visited: [...s.visited.slice(-199), `${s.mapIndex}:${cell[0]},${cell[1]}`],
+    visited: [...s.visited.slice(-199), cellKey(s, cell)],
   }
   const costText = [cost?.hp ? `-${cost.hp} 生命` : '', cost?.mp ? `-${cost.mp} 法力` : '', pass.penalty ? '（强行通过加罚）' : '']
     .filter(Boolean)

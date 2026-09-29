@@ -86,9 +86,15 @@ export interface Session {
    * 玩家踩上遭遇格后先记在这里；点骰子区「掷骰」才真正调 `enterBuilding` 结算。
    */
   awaitingEncounter?: { ref: string; cell: [number, number] }
-  /** 已经用掉 once 的格子：`mapIndex:x,y` */
+  /**
+   * 已经用掉 `once` 的建筑 / 格子键。
+   *
+   * **建筑 ＝ `<地图名>#<ref>@<x>,<y>`**（一个节点一座建筑，锚点 ＝ 节点坐标）；非建筑格 ＝ `<地图名>@<x>,<y>`
+   * （`src/play/kit.ts` 的 `buildingKey` / `cellKey`）。**用地图名而不是序号**——图层重排 / 删图不会让状态错位；
+   * `.pmod` 改动导致键不匹配 → 该实例**视为未触发**（弱引用，§4.9.3）。**旧档（`mapIndex:x,y`）一律视为未触发**。
+   */
   onceDone: string[]
-  /** 上一步有没有踩到过（避免同一格反复触发） */
+  /** 上一步有没有踩到过（避免同一格反复触发）；键格式同 `onceDone` */
   visited: string[]
   log: LogLine[]
   /** 本次会话的骰子流水（§7.2：可回放） */

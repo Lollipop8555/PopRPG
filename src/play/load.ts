@@ -6,6 +6,7 @@
 import type { AnyComponent, Library, LibraryKey, Project } from '../types'
 import { collectUsedComponents } from '../io/pmod'
 import { parsePmod } from '../io/pmod'
+import { uniqueMapNames } from '../io/pmod'
 import type { Scenario } from '../types/session'
 
 const NON_MAP_KEYS: LibraryKey[] = ['items', 'monsters', 'classes', 'skills', 'backgrounds']
@@ -58,12 +59,16 @@ export function scenarioFromProject(library: Library, project: Project, version 
     const missing = (library[key] as AnyComponent[]).filter((c) => project.enabledIds.includes(c.id) && !have.has(c.id))
     if (missing.length) merged[key] = [...(used[key] as AnyComponent[]), ...missing] as never
   }
+  // §8.3 设定 6：开局前与导出时做**同一次**地图名去重——否则「直接开局」与「导出后再导入」
+  // 会得出两套建筑实例 key（§4.9.3），同一份 `.psave` 在两处对不上。无重名时名字原样不动。
+  const { names } = uniqueMapNames(project.maps)
+
   return {
     version,
     name: project.name,
     background: project.background,
     rules: project.rules,
-    maps: project.maps.map((m) => ({ ...m, nodes: m.nodes.map((n) => ({ ...n })) })),
+    maps: project.maps.map((m, i) => ({ ...m, name: names[i], nodes: m.nodes.map((n) => ({ ...n })) })),
     enabledIds: enabledFrom(merged),
     library: merged,
   }

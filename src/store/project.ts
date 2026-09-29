@@ -34,6 +34,21 @@ export interface ProjectStore extends Project {
   placeMarker: (mapId: string, type: 'start' | 'end', x: number, y: number) => void
 }
 
+/**
+ * 地图默认名：**不回收旧编号**（§4.9.3 / §8.3 设定 6）。
+ *
+ * 地图名是**建筑实例 key**（`<地图名>#<ref>@<锚点>`）的一部分，必须唯一且稳定 ——
+ * 删掉「地图 2」后再新建得到「地图 4」，**绝不复用**「地图 2」；
+ * 否则新图会继承旧图留在 `.psave` 里的对话抽取结果与 `prop` 终态。
+ */
+export function nextMapName(maps: GameMap[]): string {
+  const nums = maps
+    .map((m) => /^地图\s*(\d+)$/.exec(m.name)?.[1])
+    .filter((n): n is string => !!n)
+    .map(Number)
+  return `地图 ${nums.length ? Math.max(...nums) + 1 : 1}`
+}
+
 export function newProject(name = '未命名的一局'): Project {
   return {
     name,
@@ -104,7 +119,7 @@ export const useProjectStore = create<ProjectStore>()(
       addMap: (name) => {
         const id = newMapId()
         set((s) => ({
-          maps: [...s.maps, { id, name: name ?? `地图 ${s.maps.length + 1}`, nodes: [] }],
+          maps: [...s.maps, { id, name: name ?? nextMapName(s.maps), nodes: [] }],
         }))
         return id
       },

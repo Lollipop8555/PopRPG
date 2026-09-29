@@ -41,7 +41,7 @@ Phase A  BUILD     ：构建页（编辑器）—— 一次性把信息架构 / 
    │
 Phase B  PLAY      ：游玩页（引擎 + UI）—— 加载 .pmod → 开局 → 移动/战斗/状态/遭遇/商店 → 存档         ★build 完成后做
    │
-V2.0     追加改造  ：新增 NPC 与对话（第 8 类组件 ＋ 进入建筑后、建筑事件之前的触发节点）—— 数据模型 / 组件库与组件页 / NPC 模组面板（思维导图，节点掷骰命中 `dice`/`hit`）/ 实例页与校验 / 运行时抽取与弹层（方案锁死、`prop` 一次性交付）   ★优先级 ①：E0–E3 只依赖 A（已完成）→ 立即开工；E4 依赖 B
+V2.0     追加改造  ：新增 NPC 与对话（第 8 类组件 ＋ 进入建筑后、建筑事件之前的触发节点）—— 数据模型（道具清单叫 `give`；进度按实例记 `cursor`/`talkDone`/`deliveredNode`）/ 组件库与组件页 / NPC 模组面板（思维导图，节点掷骰命中 `dice`/`hit`）/ 实例页与校验 / 运行时抽取与弹层（方案锁死、**重入三选项【继续对话】【重新对话】【路过】**、`prop` 一次性交付）   ★优先级 ①：E0–E3 只依赖 A（已完成）→ 立即开工；E4 依赖 B
    │
 V2.1     SKIN 基础 ：（`.pp` / `.pgame`）容器加载（zip 走 `fflate`）/ 贴图渲染器 / 逐屏素材接入   ★优先级 ②：V2.0 之后
    │
@@ -66,7 +66,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 | [task/02-play.md](task/02-play.md) | Phase B PLAY（游玩页） | 框架加载/开局/移动回合/战斗UI/骰子公示/技能交互/状态/遭遇/商店/装备背包/存档 | 待做（A 后） |
 | [task/03-polish.md](task/03-polish.md) | Phase C 收尾 | 视觉打磨 / GitHub Pages 部署 | 部分已完成 |
 | [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | 待做（**优先级 ②**；端到端依赖 B；D0–D2 可提前） |
-| [task/05-npc.md](task/05-npc.md) | **V2.0** 新增 NPC 与对话（跨 A / B） | NPC 数据模型与对话树（含节点 `dice` / 选项 `hit`）/ 组件库与组件页 / **NPC 模组面板（思维导图，命中覆盖检查）** / 建筑实例页与校验 / 运行时抽取与弹层（掷定锁死 / `prop` 一次性交付）/ 皮肤侧接口约定 | 待做（**优先级 ①**；**排在已完成任务之后 → 下一件要做的事**，E0–E3 可立即开工；E4 依赖 B） |
+| [task/05-npc.md](task/05-npc.md) | **V2.0** 新增 NPC 与对话（跨 A / B） | NPC 数据模型与对话树（道具清单 `give`；含节点 `dice` / 选项 `hit`）/ 组件库与组件页 / **NPC 模组面板（思维导图，命中覆盖检查）** / 建筑实例页与校验 / 运行时抽取与弹层（掷定锁死 / **重入三选项 ＋ 三标记** / `prop` 一次性交付）/ 皮肤侧接口约定 | 待做（**优先级 ①**；**排在已完成任务之后 → 下一件要做的事**，E0–E3 可立即开工；E4 依赖 B） |
 
 ---
 
@@ -80,7 +80,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 | **V2.2** | **音频播放** | `audio`（3 个 BGM 场景键 ＋ 9 个音效事件键）：加载 / 解码 / 播放 / 音量与开关——V1 只解析与校验 | 裁决 16；[`docs/design/skin/07-audio.md`](docs/design/skin/07-audio.md) |
 | **V2.2** | **贴图 `nine` 策略** | `drawTexture` 增加九宫格拉伸策略；V1 只实现 `stretch`（`.9.png` 按普通拉伸处理） | 裁决 21；[`docs/design/skin.md`](docs/design/skin.md) §四 |
 | **V2.2** | **九宫格切片消费** | Creative 切分工具产出的切片（四线切分 / 九张切片）在渲染端启用 | 裁决 21；[`docs/design/skin/09-creative.md`](docs/design/skin/09-creative.md) §2.3 |
-| **V2.0 后** | **对话后续扩展** | `chat` 项加 `gate`（条件选项，复用事件门槛）；方案加 `once: true`（整段只可看一次，复用已揭晓奖励那套进度记录） | [`docs/design/06-future.md`](docs/design/06-future.md) §7.6 |
+| **V2.0 后** | **对话后续扩展** | `chat` 项加 `gate`（条件选项，复用事件门槛）；方案加 `once: true`（**连重播都只给一次**——"走完过一次"已由 `talkDone` 记录、**重播本身永远允许**，复用同一族进度记录） | [`docs/design/06-future.md`](docs/design/06-future.md) §7.6 |
 | **V2.1** | **立绘遗留** | 表情 / 受击变体、VS 字样是否素材化、尺寸档位 | `Q30`；[`docs/design/skin/02-role.md`](docs/design/skin/02-role.md) §四 |
 | **V2.1** | **未决项裁决** | `Q26`（BGM 按地图）、`Q28`（跨包 `extends`）、`Q29`（`pack.json.entry` 语义） | [`docs/design/skin.md`](docs/design/skin.md) §八 |
 | **—** | **多项目管理** | `.psave` 之外的多项目 / 多周目切换（Phase B 只做单例） | [`docs/design/06-future.md`](docs/design/06-future.md) §7.3 |
@@ -176,15 +176,15 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 
 **2026-09-29 · 补充裁决 25 / 26（单人唯一主人公 · 受击两法 · 立绘按窗口缩放 · NPC 与对话）**
 - **裁决 25**：本引擎为**单人游戏、只有一位主人公**——立绘即**唯一形象**，无队伍 / 队友 / 多角色切换；**受击两法**＝有 `hurt` 素材则显示受击图、未提供则改用**形变**（×1.15 / ×0.9、约 `120ms`）；**立绘按窗口短边 `W` 的比例缩放**（底栏与状态面板 6% / 对战与对话 VS 区 18% / 出身卡 10%），废弃固定像素档；校验项新增 `KR-9` / `KR-10`，取舍新增 `S-31` / `S-32`。
-- **裁决 26**：素材库新增 `npcs` 分组；NPC **只出现在建筑里**、**不走「启用」**（入包条件 ＝ 被建筑实例引用）；建筑新增**第六种行为** `encounter: talk`；建筑实例以 `npcs` / `dialog` **两级各掷一次** `talk.dice`（缺省 `1D6`，踩到抽定、整场不重掷）；**树状对话**支持多套方案（节点 `message` ＋ `items`；`chat` 选项分支可嵌套、`prop` 给道具并终止且道具可重复列举＝多份）；编辑器新增 `NPC` 分区与**整页「NPC 模组」思维导图面板**（§5.6.1，不占画布模式条，G7）；前置配置新增 `talk.dice` 后总账 **14 项**；对话**不产生结局、不记旗标、不影响通关条件**。
+- **裁决 26**：素材库新增 `npcs` 分组；NPC **只出现在建筑里**、**不走「启用」**（入包条件 ＝ 被建筑实例引用）；建筑新增**第六种行为** `encounter: talk`；建筑实例以 `npcs` / `dialog` **两级各掷一次** `talk.dice`（缺省 `1D6`，踩到抽定、整场不重掷）；**树状对话**支持多套方案（节点 `message` ＋ `items`；`chat` 选项分支可嵌套、`prop` 给道具并终止且道具可重复列举＝多份——**道具清单的字段名后改为 `give`**，见下方「NPC 追加裁决 3 项」条）；编辑器新增 `NPC` 分区与**整页「NPC 模组」思维导图面板**（§5.6.1，不占画布模式条，G7）；前置配置新增 `talk.dice` 后总账 **14 项**；对话**不产生结局、不记旗标、不影响通关条件**。
 - 设计侧同步：[`docs/design/02-data-model.md`](docs/design/02-data-model.md) 新增 **§4.9**、[`docs/design/01-pmod.md`](docs/design/01-pmod.md) `### NPC` 段与**八大类** id 表、[`docs/design/04-editor.md`](docs/design/04-editor.md) 分区 ×9 / **§5.6.1** / G7 / 组件页 / 实例页 / 校验项、[`docs/design/03-engine.md`](docs/design/03-engine.md) 与 [`docs/design/05-mvp.md`](docs/design/05-mvp.md) 配置项 **14 项**、[`docs/design/06-future.md`](docs/design/06-future.md) 新增 **§7.6** 并修订 §7.4、[`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.2、[`docs/design/skin/02-role.md`](docs/design/skin/02-role.md)（§二 / §4.2 / §4.4 / §八 / §九 / §十）、[`docs/design/skin.md`](docs/design/skin.md)、[`docs/design/skin/00-package.md`](docs/design/skin/00-package.md)、[`docs/design/skin/03-window.md`](docs/design/skin/03-window.md)、[`docs/DESIGN.md`](docs/DESIGN.md) 模块映射 / 章节映射 / 进度同步。
-- 任务侧：新增里程碑 [`task/05-npc.md`](task/05-npc.md)（E0–E5 ＋ 13 项原子验收）；[`task/04-skin.md`](task/04-skin.md) 立绘条目按裁决 25 / 26 修订；[`task/01-build.md`](task/01-build.md) 与 [`task/02-play.md`](task/02-play.md) 指向本里程碑。
+- 任务侧：新增里程碑 [`task/05-npc.md`](task/05-npc.md)（E0–E5 ＋ 13 项原子验收，后随细化与追加设定扩为 **18 项** → **19 项**）；[`task/04-skin.md`](task/04-skin.md) 立绘条目按裁决 25 / 26 修订；[`task/01-build.md`](task/01-build.md) 与 [`task/02-play.md`](task/02-play.md) 指向本里程碑。
 
 **2026-09-29 · 裁决 26 对话细化（⑨~⑪）**
 - **掷定即锁死**：选 NPC / 选方案只要由骰子定过，**本局永久不变**（重踩不重掷、不换人、不换方案），锁在**建筑实例**。
 - **节点选项抽取（`dice` ＋ `hit`）**：节点写 `dice` → 本层选项**靠掷骰命中**（各 `chat` / `prop` 项带 `hit` 区间，**未命中再掷**）；不写 `dice` → 玩家**直接点选**。编辑器**检查 `hit` 是否覆盖骰面**（重叠 / 越界也提示），**只提示、不拦截**保存 / 导出。
 - **`prop` 一次性交付**：交付后该实例进**终态**，再次对话**只回放交付节点的 `message`**、不再出选项、不再发道具（防刷）；与"抽定结果"同源写进 `.psave`。
-- 设计侧同步：[`docs/design/02-data-model.md`](docs/design/02-data-model.md) §4.9.2–§4.9.4、[`docs/design/01-pmod.md`](docs/design/01-pmod.md) `### NPC` 示例、[`docs/design/03-engine.md`](docs/design/03-engine.md) 场景索引（**6 → 7 处骰子**）与 §4.8.6、[`docs/design/04-editor.md`](docs/design/04-editor.md) §5.6.1 / §5.7、[`docs/design/06-future.md`](docs/design/06-future.md) §7.6、[`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.2 裁决 26、[`docs/DESIGN.md`](docs/DESIGN.md)；任务侧同步 [`task/05-npc.md`](task/05-npc.md)（原子验收 **13 → 15**）。
+- 设计侧同步：[`docs/design/02-data-model.md`](docs/design/02-data-model.md) §4.9.2–§4.9.4、[`docs/design/01-pmod.md`](docs/design/01-pmod.md) `### NPC` 示例、[`docs/design/03-engine.md`](docs/design/03-engine.md) 场景索引（**6 → 7 处骰子**）与 §4.8.6、[`docs/design/04-editor.md`](docs/design/04-editor.md) §5.6.1 / §5.7、[`docs/design/06-future.md`](docs/design/06-future.md) §7.6、[`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.2 裁决 26、[`docs/DESIGN.md`](docs/DESIGN.md)；任务侧同步 [`task/05-npc.md`](task/05-npc.md)（原子验收 **13 → 15 → 16 → 18**）；再随「进入 / 重入 / 空宝箱」三条追加设定修订 E3 / E4 口径与校验项（**非 `talk` 挂 NPC 合法不报**、补 **`dialog` 方案名悬空标红** 与 **空宝箱 ＋ NPC 不报"空的"**、E4 新增**进入判定 / 重入选择框 / `.psave` 对话字段**）。**三条裁决（2026-09-29）**：① `dialog` 悬空 → **编辑器标红 ＋ 清单标记，运行时跳过、当没有 NPC**（**导出不剔除**该字段）；② `.psave` 对话状态以**建筑实例 key** 记账（**key 统一 `<地图名>#<ref>@<锚点>`**——**一座建筑 ＝ 一个节点**，多格由节点自带的 `w` / `h` 标记（**缺省 1**；`road` / `start` / `end` 恒 1×1）；**锚点 ＝ 节点自己的坐标**；**相邻的两座同名建筑是两座**、**不按"相邻同种"聚合**；`ref` 保护 ＝ **不做顺序编号 / 删除不回收 / 新增不复用**，地图默认名也**不回收旧编号**；**弱引用**不匹配 → 视为未触发）；③ **重入列表只列已锁定的那一位 NPC**（确认）。 **结构修订（2026-09-29）**：多格建筑 ＝ **一个节点带 `w` / `h`**（解析时非建筑节点**归一为 1×1** ＋ 校验 **`K13`**），引擎**绝不**按"相邻同种"合并；`src/store/project.ts` 的地图默认名由 `maps.length + 1` 改为**"现有最大编号 ＋ 1"**（删中间图后不再重名撞 key）。
 
 **2026-09-29 · V2.x 版本线上线（NPC ＝ V2.0 追加设定）**
 - **版本线定稿**：**V1**（Phase 0 / A / B；七大类 · 13 项配置 · `encounter` 五选一）**冻结**；**V2.0 ＝ 新增 NPC 结构**（**追加设定 / 结构改造**，不属于 V1 的阶段性设计）；**V2.1 ＝ SKIN 基础**（三件套容器 / 贴图渲染器 / 逐屏素材接入）；**V2.2 ＝ SKIN 进阶 ＋ 音频**（Creative 模式 / 九宫格切片消费 / 皮肤校验 / 音频播放）。优先级 **V2.0 ＞ V2.1 ＞ V2.2**——**结构改造先做、再做皮肤**。
@@ -192,7 +192,14 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 - **V1 口径回退（不覆盖史实）**：[`task/00-foundation.md`](task/00-foundation.md) 的「七大类 / 内置表」恢复 **V1 口径**，NPC（`n_` 前缀）标注为 **V2.0 追加**。
 - **06-future 定位**：[`docs/design/06-future.md`](docs/design/06-future.md) 明确为**记录文档**（不是任务依据），§7 标题与说明改回记录口径，权威口径指向 [`docs/design/05-mvp.md`](docs/design/05-mvp.md) / 各 `design/*.md` / 本文件。
 - **登记**：「V1.1 清单」改名 **「V2.1 / V2.2 清单」**（加版本列、逐项归位；音频与九宫格归 **V2.2**，立绘遗留与未决项归 **V2.1**）。
-- **追加设定补完（进入 / 重入 / 空宝箱）**：NPC 触发**只在「从建筑外踏入该建筑任意一格」那一次**——**建筑内部移动不再触发**（多格建筑是**同一座**、同一 key）；**首次进入一定进对话**，**已触发过的实例再入先弹「选择对话框」**（点**已锁定的 NPC 名字**重看 / 选「**直接进入**」跳过对话跑建筑事件），**不换人、不重掷**；**`treasure` 空池 ＋ 配了 NPC → 不再提示"什么也没有 / 已经空了"**（**NPC 即内容物**）。落点：[`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.3 **设定 2–4**、[`docs/design/02-data-model.md`](docs/design/02-data-model.md) §4.9.3、[`docs/design/03-engine.md`](docs/design/03-engine.md) §4.8.12 / §4.8.5⑥、[`docs/design/04-editor.md`](docs/design/04-editor.md) §5.6.1 / §5.7、[`docs/design/05-mvp.md`](docs/design/05-mvp.md) 11i、[`task/05-npc.md`](task/05-npc.md) E4。
+- **追加设定补完（进入 / 重入 / 空宝箱）**：NPC 触发**只在「从建筑外踏入该建筑任意一格」那一次**——**建筑内部移动不再触发**（多格建筑是**同一座**、同一 key）；**首次进入一定进对话**，**已触发过的实例再入先弹「选择对话框」**（**不换人、不重掷**；*同日后续裁决细化为【继续对话】/【重新对话】/【路过】三个选项，见下条*）；**`treasure` 空池 ＋ 配了 NPC → 不再提示"什么也没有 / 已经空了"**（**NPC 即内容物**）。落点：[`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.3 **设定 2–4**、[`docs/design/02-data-model.md`](docs/design/02-data-model.md) §4.9.3、[`docs/design/03-engine.md`](docs/design/03-engine.md) §4.8.12 / §4.8.5⑥、[`docs/design/04-editor.md`](docs/design/04-editor.md) §5.6.1 / §5.7、[`docs/design/05-mvp.md`](docs/design/05-mvp.md) 11i、[`task/05-npc.md`](task/05-npc.md) E4。
+
+**2026-09-29 · NPC 追加裁决 3 项（重入三选项 / `give` 改名 / 重名地图后缀）**
+- **重入 ＝ 三个标记 ＋ 三个选项**（[`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.3 **设定 3（改）**）：进度按**建筑实例**只记三个标记——`cursor`（**当前停留节点**，每进一个节点就更新；**没有它 ＝ 没有进度**）/ `talkDone`（**对话走完过一次**）/ `deliveredNode`（**已交付**，与前者**分开记**）。**首次进入不弹框**（从根节点开始）；**重入**先弹**选择对话框**（只列已锁定的那一位 NPC）：**未走完**给【**继续对话**】（回到 `cursor` 节点接着走，**没有 `cursor` 就从根开始**）＋【**重新对话**】（从根完整重播）；**已走完**再加【**路过**】（跳过对话、直接跑建筑事件）。【继续】在已交付时**只回放交付节点台词**；【重新】**不重置**标记——**已交付的实例不会重复发道具**（防刷）；【**路过**只在"走完过"之后出现】。
+- **`prop` 的道具清单改名 `give`**（**设定 8（新）**）：`items` **永远只表示"子项"**（对象数组），`prop` 的道具清单独立叫 `give`（**字符串数组**、可重复＝多份）——两者不再共用一个 key。
+- **重名地图导出时自动加后缀**（**设定 6（改）**，原「地图重名的自动消歧」未决项结案）：编辑器**仍标黄提示、不改名**（改名会让旧档 key 全部不匹配）；**导出与开局时**给第 2 张起加 `名字 (2)` / `名字 (3)`…（第一张保持原名，后缀名被占用就继续顺延）。理由：key 含地图名，**两条出口必须得到同一套 key**，否则同一份 `.psave` 在两处对不上。
+- **代码已落地**（本项属跨版本小修，先行实现）：`src/io/pmod.ts` 新增 `uniqueMapNames`（`exportPmod` 返回值加 `renamed`）、`src/play/load.ts` 的 `scenarioFromProject` 共用、`src/build/ioActions.ts` 导出后 toast 提示改名；`src/io/__tests__/pmod.test.ts` 新增 3 个单测（全量单测通过 ＋ `tsc --noEmit` 无错）。
+- 设计侧同步：[`docs/design/02-data-model.md`](docs/design/02-data-model.md) §4.9.2 / §4.9.3、[`docs/design/03-engine.md`](docs/design/03-engine.md) §4.8.12、[`docs/design/01-pmod.md`](docs/design/01-pmod.md) `### NPC` 与地图名段、[`docs/design/04-editor.md`](docs/design/04-editor.md) §5.7、[`docs/design/05-mvp.md`](docs/design/05-mvp.md) 11i、[`docs/design/06-future.md`](docs/design/06-future.md) §7.6、[`docs/DESIGN.md`](docs/DESIGN.md) 进度同步；任务侧同步 [`task/05-npc.md`](task/05-npc.md)（原子验收 **18 → 19 项**，E0 类型 / E0 单测 / E3 引用完整性 / E4 重入与 `.psave` 字段全部改字）。
 
 **2026-09-29 · 链路审计与优先级重排（NPC ＞ skin ＞ V1.1）** *(历史条目：版本号口径已被上一条 V2.x 版本线取代，内容保留)*
 - **优先级定稿**：**Phase E（NPC 对话）＞ Phase D（皮肤）＞ V1.1**——编号仅为**稳定标识、不代表先后**。**E0–E3 只依赖已完成的 Phase A → 可立即开工**；E4 依赖 Phase B 的遭遇流程与对话框壳；D 端到端依赖 B（D0–D2 可提前，**与 E0–E3 可并行**）。

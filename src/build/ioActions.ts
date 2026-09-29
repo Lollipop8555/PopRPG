@@ -30,7 +30,7 @@ function mapsMissing(project: Project): { noStart: string[]; noEnd: string[] } {
 export function exportCurrentPmod(): void {
   const library = librarySnapshot()
   const project = projectSnapshot()
-  const { text, missing } = exportPmod(library, project)
+  const { text, missing, renamed } = exportPmod(library, project)
   downloadText(`${project.name || '未命名的一局'}.pmod`, text)
 
   // §5.7：起终点缺 → toast 提示但**不阻塞导出**；悬空引用自动剔除后也告知一声
@@ -39,7 +39,11 @@ export function exportCurrentPmod(): void {
   if (noStart.length) parts.push(`缺起点：${noStart.join('、')}`)
   if (noEnd.length) parts.push(`缺终点：${noEnd.join('、')}`)
   if (missing.length) parts.push(`剔除了 ${missing.length} 个悬空引用`)
-  notify(parts.join('；'), noStart.length || noEnd.length || missing.length ? 'warn' : 'info')
+  // §8.3 设定 6：重名地图在导出时自动加后缀（文件里必须唯一，否则建筑实例 key 会撞车）
+  if (renamed.length) {
+    parts.push(`重名地图已改名：${renamed.map((r) => `${r.from} → ${r.to}`).join('、')}`)
+  }
+  notify(parts.join('；'), noStart.length || noEnd.length || missing.length || renamed.length ? 'warn' : 'info')
 }
 
 /* ------------------------------------------------------------------ */
