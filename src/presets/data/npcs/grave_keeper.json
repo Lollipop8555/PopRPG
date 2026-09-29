@@ -1,0 +1,44 @@
+{
+  "id": "grave_keeper",
+  "name": "守墓人",
+  "icon": "🕯️",
+  "dialogs": {
+    "Mod1": [
+      {
+        "message": ["地穴的入口已被封了三代。", "你若执意下去，先听我一句。"],
+        "dice": "1D6",
+        "items": [
+          {
+            "result": "A：我想知道那扇门后面有什么。",
+            "hit": "1-2",
+            "message": ["门后是路，路上是选择。"],
+            "items": [
+              {
+                "result": "A1：那我应该走哪条？",
+                "message": ["走你想走的。"]
+              }
+            ]
+          },
+          {
+            "result": "B：我只是路过。",
+            "hit": "3-4",
+            "message": ["那就慢走。"]
+          },
+          {
+            "result": "C：这些你带上。",
+            "hit": "5-6",
+            "message": ["拿着，路上用得上。"],
+            "give": ["red_potion", "red_potion", "blue_potion"]
+          }
+        ]
+      }
+    ],
+    "Mod2": [
+      {
+        "message": ["又见面了。"]
+      }
+    ]
+  },
+  "desc": "守着地穴入口的老人，两套对话方案：一套带掷骰分支并赠药，一套只有一句。",
+  "color": "#8a7b6b"
+}

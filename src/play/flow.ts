@@ -13,7 +13,7 @@ import { addToInventory } from '../engine/item'
 import { tickStates } from '../engine/state'
 import type { EncounterState, Session } from '../types/session'
 import { cellKey, currentMap, log, logs, neighbors, nodeAtCell, recordRoll, roll, statLabel, syncPlayer } from './kit'
-import { encounterNeedsRoll, enterBuilding } from './encounter'
+import { beginBuilding } from './encounter'
 
 /* ------------------------------------------------------------------ */
 /* B1 开局                                                             */
@@ -266,13 +266,8 @@ export function stepTo(s: Session, cell: [number, number], rng?: Rng): StepResul
   // 建筑：只在**从外部踏入**这一座时结算遭遇；已在同一座内部换格 → 只是普通移动（可以随便走）
   if (node.type === 'building' && found?.kind === 'building' && !insideSameBuilding) {
     const building = found.def as BuildingDef
-    // 要掷骰的遭遇（开锁判定 / 开箱 / 怪物 / 商店）→ 先停在这格，等玩家点「掷骰」再结算（§7.2 点击投掷）
-    if (encounterNeedsRoll(next, building, cell)) {
-      return { session: { ...next, awaitingEncounter: { ref: building.id, cell } }, moved: true }
-    }
-    const after = enterBuilding(next, building, cell, rng)
-    // 步数用尽、或剩余步数不足以再走任何一格 → 本回合移动结束，等点「下一回合」
-    return { session: endMoveIfStuck(after), moved: true }
+    // 进入建筑：① NPC 触发与对话 → ② 该建筑的 `encounter`（要掷骰的会停在等待态，§4.8.12 / §7.2）
+    return { session: endMoveIfStuck(beginBuilding(next, building, cell, rng)), moved: true }
   }
   return { session: endMoveIfStuck(next), moved: true }
 }
@@ -280,8 +275,11 @@ export function stepTo(s: Session, cell: [number, number], rng?: Rng): StepResul
 /**
  * 一次移动的收尾：**步数用尽**，或**剩余步数已走不动任何一格**（如每格要 2 步却只剩 1 步）→ 本回合到此为止。
  * 否则会卡死：既走不动、又不满足「下一回合」的条件。
+ *
+ * **在等遭遇掷骰 / 对话弹层时不动它**：那两种状态下这个收尾不该插手（回合是否结束由它们各自结算后判定）。
  */
 function endMoveIfStuck(s: Session): Session {
+  if (s.awaitingEncounter || s.talk) return s
   return s.stepsLeft <= 0 || !canMoveAnywhere(s) ? { ...s, awaitingRound: true } : s
 }
 

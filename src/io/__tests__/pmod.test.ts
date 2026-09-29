@@ -147,6 +147,141 @@ describe('round-trip', () => {
   })
 })
 
+describe('NPC 与对话（§4.9 / §3.3）', () => {
+  it('NPC 的入包条件＝被建筑实例的 `npcs` 引用（不走 enabledIds）', () => {
+    const lean: Project = { ...project, enabledIds: ['red_potion', 'blue_potion'] }
+    const { used, missing } = collectUsedComponents(library, lean)
+
+    expect(used.npcs.map((n) => n.id).sort()).toEqual(['grave_keeper', 'lost_child'])
+    // 对话树 `give` 的道具沿引用进包（已启用 → 不算悬空）
+    expect(used.items.map((i) => i.id)).toContain('red_potion')
+    expect(used.items.map((i) => i.id)).toContain('blue_potion')
+    expect(missing).not.toContain('grave_keeper')
+    expect(missing).not.toContain('red_potion')
+  })
+
+  it('没被任何建筑实例点到、也没启用的 NPC 不跟着走', () => {
+    const noNpc: Project = {
+      ...project,
+      enabledIds: [],
+      maps: [{ ...project.maps[0], nodes: project.maps[0].nodes.map(({ npcs, dialog, ...rest }) => rest) }],
+    }
+    const { used } = collectUsedComponents(library, noNpc)
+    expect(used.npcs).toEqual([])
+  })
+
+  it('`give` 指向没启用的道具 → 悬空（导出剔除并提示，§5.7）', () => {
+    const lean: Project = { ...project, enabledIds: [] }
+    const { used, missing } = collectUsedComponents(library, lean)
+    expect(used.npcs.length).toBe(2)
+    expect(missing).toContain('red_potion')
+  })
+
+  it('节点 `npcs` / `dialog` 与 `### NPCs` 段往返无损', () => {
+    const { text } = exportPmod(library, project)
+    expect(text).toContain('### NPCs\n')
+
+    const parsed = parsePmod(text)
+    expect(parsed.warnings).toEqual([])
+
+    const chest = parsed.maps[0].nodes.find((n) => n.x === 2 && n.y === 0)
+    expect(chest?.npcs).toEqual(['grave_keeper'])
+    expect(chest?.dialog).toBeUndefined()
+
+    const door = parsed.maps[0].nodes.find((n) => n.x === 7 && n.y === 1)
+    expect(door?.npcs).toEqual(['lost_child'])
+    expect(door?.dialog).toBe('Mod1')
+
+    // 对话树原样带出：掷骰层 / 命中区间 / 给道具（同种两次＝两份）
+    const keeper = parsed.components.npcs.find((n) => n.id === 'grave_keeper')
+    const mod1 = keeper?.dialogs.Mod1 ?? []
+    expect(mod1[0].dice).toBe('1D6')
+    expect(mod1[0].items?.map((i) => i.hit)).toEqual(['1-2', '3-4', '5-6'])
+    expect(mod1[0].items?.[2].give).toEqual(['red_potion', 'red_potion', 'blue_potion'])
+    expect(Object.keys(keeper?.dialogs ?? {})).toEqual(['Mod1', 'Mod2'])
+  })
+
+  it('对话骰 `rules.talk.dice` 往返（§4.8.6 第 14 项）', () => {
+    const withTalk: Project = { ...project, rules: { ...project.rules, talk: { dice: '1D8' } } }
+    const parsed = parsePmod(exportPmod(library, withTalk).text)
+    expect(parsed.rules.talk.dice).toBe('1D8')
+  })
+
+  it('导入容错：`type` / 根层 `result` / 无所属的 `hit` 一律忽略并提示，导出不再出现（§4.9.2）', () => {
+    const legacyNpc = [
+      '# 老档',
+      '',
+      '## Components',
+      '',
+      '### NPCs',
+      '```yaml',
+      '- id: legacy_npc',
+      '  name: 老 NPC',
+      '  dialogs:',
+      '    Mod1:',
+      '      - type: chat',
+      '        result: 根层的答复',
+      '        message: [你好]',
+      '        items:',
+      '          - type: prop',
+      '            hit: 1-2',
+      '            message: [嗯]',
+      '```',
+      '',
+    ].join('\n')
+    const parsed = parsePmod(legacyNpc)
+    const warnings = parsed.warnings.join('\n')
+    expect(warnings).toContain('`type` 字段已忽略')
+    expect(warnings).toContain('根层的 `result` 已忽略')
+    expect(warnings).toContain('父层没有 `dice`')
+
+    const mod1 = parsed.components.npcs[0].dialogs.Mod1
+    expect(mod1[0].result).toBeUndefined()
+    expect('type' in mod1[0]).toBe(false)
+    expect(mod1[0].items?.[0].hit).toBeUndefined()
+    expect(mod1[0].items?.[0].result).toBeUndefined()
+    expect(mod1[0].items?.[0].message).toEqual(['嗯'])
+
+    // 导入 → 再导出：旧字段已剔干净，不会再写出去
+    const lib = presetLibrary()
+    lib.npcs = parsed.components.npcs
+    const out = exportPmod(lib, {
+      ...project,
+      enabledIds: [],
+      maps: [
+        {
+          ...project.maps[0],
+          nodes: [{ x: 0, y: 0, type: 'building', ref: 'chest_room', npcs: ['legacy_npc'] }],
+        },
+      ],
+    }).text
+    expect(out).toContain('### NPCs\n')
+    expect(out).toContain('id: legacy_npc')
+    expect(out).not.toContain('type: chat')
+    expect(out).not.toContain('type: prop')
+    expect(out).not.toContain('根层的答复')
+  })
+
+  it('NPC 挂在非建筑节点上 → 剔除并提示（§4.9.3，手改文件）', () => {
+    const wrong = [
+      '# 手改的一局',
+      '',
+      '## Maps',
+      '',
+      '### 测试地穴',
+      '```yaml',
+      'nodes:',
+      '  - { x: 0, y: 0, type: road, ref: path, npcs: [grave_keeper], dialog: Mod1 }',
+      '```',
+      '',
+    ].join('\n')
+    const parsed = parsePmod(wrong)
+    expect(parsed.warnings.join()).toContain('不该带 NPC')
+    expect(parsed.maps[0].nodes[0].npcs).toBeUndefined()
+    expect(parsed.maps[0].nodes[0].dialog).toBeUndefined()
+  })
+})
+
 describe('地图名去重（§8.3 设定 6：导出时对重名地图自动加后缀）', () => {
   it('第一张保持原名，第 2 张起追加 (2) / (3)…，后缀名被占用就顺延', () => {
     const maps = ['地图 1', '地图 1', '地图 1', '地图 1 (2)', '地图 2'].map((name, i) => ({

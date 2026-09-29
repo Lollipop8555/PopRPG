@@ -13,6 +13,7 @@ import ModeBar from './ModeBar'
 import Inspector from './Inspector'
 import Checklist from './Checklist'
 import RulesScreen from './RulesScreen'
+import NpcModScreen from './NpcModScreen'
 import Overlay from '../ui/Overlay'
 import { useShortcuts } from './useShortcuts'
 import { useUiStore } from '../store/ui'
@@ -53,6 +54,7 @@ export default function BuildApp() {
 
       <Checklist />
       <RulesScreen />
+      <NpcModScreen />
       <ToastView />
     </div>
   )

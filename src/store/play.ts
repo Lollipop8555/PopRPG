@@ -11,8 +11,9 @@ import type { StatKey } from '../types'
 import type { Session } from '../types/session'
 import { allocatePoint, canMoveAnywhere, nextRound, startSession, stepTo } from '../play/flow'
 import { playerAttack, resolveDefense } from '../play/combat'
-import { closeEncounter, enterBuilding } from '../play/encounter'
+import { afterTalk, closeEncounter, enterBuilding } from '../play/encounter'
 import { buyGood } from '../play/reward'
+import { talkAdvance, talkChoose, talkMenu, talkRoll, type TalkMenuAction } from '../play/talk'
 import { equipItem, unequip, useItem } from '../play/inventory'
 import { pickStorage } from './storage'
 
@@ -23,6 +24,18 @@ export type PendingAction =
   | { kind: 'nextRound' }
   /** 结算当前建筑遭遇（开锁判定 / 开箱 / 怪物 / 商店）—— 玩家点「掷骰」触发 */
   | { kind: 'encounter' }
+
+/**
+ * 对话动作的收尾：弹层关掉（对话谈完 / 选了【路过】）→ 接着跑这栋建筑的建筑事件；
+ * 之后按移动收尾（与 `stepTo` 同一口径：步数用尽 / 走不动 → 本回合结束）。
+ */
+function settleTalk(before: Session, after: Session): Session {
+  let next = before.talk && !after.talk ? afterTalk(after, before.talk) : after
+  if (next.talk || next.encounter || next.monster || next.phase !== 'explore') return next
+  if (next.awaitingEncounter) return next
+  next = next.stepsLeft <= 0 || !canMoveAnywhere(next) ? { ...next, awaitingRound: true } : next
+  return next
+}
 
 interface PlayStore {
   session?: Session
@@ -42,6 +55,12 @@ interface PlayStore {
   unequip: (itemId: string) => void
   buy: (index: number) => void
   close: () => void
+
+  /** 对话弹层（§4.9.2 / §4.8.12） */
+  talkNext: () => void
+  talkChoose: (index: number) => void
+  talkRoll: () => void
+  talkMenu: (action: TalkMenuAction) => void
 
   /** §7.2：玩家点动作后先弹骰子，点投掷才真正结算 */
   pendingAction: PendingAction | null
@@ -132,6 +151,27 @@ export const usePlayStore = create<PlayStore>()(
         set({ session: closeEncounter(current) })
       },
 
+      talkNext: () => {
+        const current = get().session
+        if (!current) return
+        set({ session: settleTalk(current, talkAdvance(current)) })
+      },
+      talkChoose: (index) => {
+        const current = get().session
+        if (!current) return
+        set({ session: settleTalk(current, talkChoose(current, index)) })
+      },
+      talkRoll: () => {
+        const current = get().session
+        if (!current) return
+        set({ session: settleTalk(current, talkRoll(current)) })
+      },
+      talkMenu: (action) => {
+        const current = get().session
+        if (!current) return
+        set({ session: settleTalk(current, talkMenu(current, action)) })
+      },
+
       pendingAction: null,
       requestRoll: (action) => set({ pendingAction: action }),
       cancelRoll: () => set({ pendingAction: null }),
@@ -153,6 +193,7 @@ export const usePlayStore = create<PlayStore>()(
           if (!at || !building) {
             next = { ...current, awaitingEncounter: undefined }
           } else {
+            // 掷骰结算：`enterBuilding` 只跑建筑事件本体（不再触发对话、也不会又停在等待态）
             const after = enterBuilding({ ...current, awaitingEncounter: undefined }, building, at.cell)
             // 与 stepTo 一致：步数用尽 / 剩余步数走不动任何一格 → 本回合移动结束
             next = after.stepsLeft <= 0 || !canMoveAnywhere(after) ? { ...after, awaitingRound: true } : after

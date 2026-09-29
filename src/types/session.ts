@@ -63,6 +63,54 @@ export interface LogLine {
   tone?: 'info' | 'good' | 'bad' | 'dice' | 'item'
 }
 
+/**
+ * 一次建筑实例对话的**抽定结果 ＋ 三个进度标记**（§4.9.2 / §4.9.3）。
+ *
+ * 按**建筑实例 key**（`<地图名>#<ref>@<锚点>`，§7.3）记账、写进 `.psave`：
+ * - `npc` / `dialog`：抽定（或唯一 / 写死）的结果 —— **掷定即锁死**，本局不重掷、不换人、不换方案
+ * - `cursor`：当前停留的那条记录（从根层起算的下标路径）—— **没有它 ＝ 没有进度**
+ * - `talkDone`：对话走完过一次（走到正常结尾、或交付完带 `give` 的记录）
+ * - `deliveredNode`：已交付的那条带 `give` 的记录（存在 ＝ 这件东西已经发过了），与 `talkDone` 分开记
+ *
+ * **弱引用**：`.pmod` 改动导致 key 不匹配 → 该实例**视为未触发**（不报错、不迁移）；旧档缺本字段同样视为未触发。
+ */
+export interface TalkRecord {
+  npc: string
+  dialog: string
+  cursor?: number[]
+  talkDone?: boolean
+  deliveredNode?: number[]
+}
+
+/** 对话弹层的运行时状态（§4.9.2 / §4.8.12）；持久进度在 `talks[key]` */
+export interface TalkState {
+  /** 建筑实例 key（`buildingKey`） */
+  key: string
+  /** 建筑 ref —— 对话结束后接着跑它的 `encounter` 行为 */
+  ref: string
+  cell: [number, number]
+  /** 已锁定的 NPC（重入也不换人） */
+  npc: string
+  /** 已锁定的方案名 */
+  dialog: string
+  /**
+   * - `menu`：重入的**选择对话框**（继续 / 重新 / 走完过才有的路过）
+   * - `line`：**逐条展示台词**，点「继续」推进
+   * - `choose`：台词播完，等玩家**点选**或**掷骰**
+   */
+  stage: 'menu' | 'line' | 'choose'
+  /** 当前停留记录的下标路径 */
+  path: number[]
+  /** 当前记录 `message` 已展示到第几条（下标） */
+  line: number
+  /** 本层掷骰结果（**未命中**时也记下，给玩家看并允许再掷） */
+  rolled?: number
+  /** 上一次掷骰未命中任何 `hit`（提示「再掷一次」） */
+  missed?: boolean
+  /** 只回放：本条是**已交付**的终态记录 → 不展开 `items`、不再给道具 */
+  replay?: boolean
+}
+
 export interface Session {
   version: number
   scenario: Scenario
@@ -96,6 +144,13 @@ export interface Session {
   onceDone: string[]
   /** 上一步有没有踩到过（避免同一格反复触发）；键格式同 `onceDone` */
   visited: string[]
+  /**
+   * 建筑实例对话的**抽定结果与进度**（§4.9.2 / §4.9.3）：key ＝ `buildingKey`。
+   * **缺字段 ＝ 尚未触发**（旧存档兼容，不报错、不迁移）；孤儿 key 忽略。
+   */
+  talks?: Record<string, TalkRecord>
+  /** 正在展示的**对话弹层**（§4.8.12；进入建筑后、建筑事件之前） */
+  talk?: TalkState
   log: LogLine[]
   /** 本次会话的骰子流水（§7.2：可回放） */
   rolls: { label: string; dice: string; pips: number }[]

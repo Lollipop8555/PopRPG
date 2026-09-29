@@ -42,6 +42,13 @@ export interface UiStore {
   checklistOpen: boolean
   /** 规则面板（整局共用，顶栏入口） */
   rulesOpen: boolean
+  /**
+   * 「NPC 模组」面板（§5.6）—— 与「规则」并列的**第二个整页入口**，
+   * 不进右栏、不占画布模式条（G7）。
+   */
+  npcModOpen: boolean
+  /** 打开模组面板时要选中的那条 NPC（没给就选列表里第一条） */
+  npcModTargetId?: string
   toast?: Toast
 
   setCurrentMap: (id?: string) => void
@@ -60,6 +67,7 @@ export interface UiStore {
   panCamera: (dx: number, dy: number) => void
   setChecklistOpen: (open: boolean) => void
   setRulesOpen: (open: boolean) => void
+  setNpcModOpen: (open: boolean, npcId?: string) => void
   notify: (text: string, tone?: Toast['tone']) => void
   dismissToast: () => void
 }
@@ -93,6 +101,7 @@ export const useUiStore = create<UiStore>((set, get) => ({
   camera: { x: 0, y: 0, zoom: 40 },
   checklistOpen: false,
   rulesOpen: false,
+  npcModOpen: false,
 
   setCurrentMap: (id) => set({ currentMapId: id }),
 
@@ -138,6 +147,8 @@ export const useUiStore = create<UiStore>((set, get) => ({
   setChecklistOpen: (open) => set({ checklistOpen: open }),
 
   setRulesOpen: (open) => set({ rulesOpen: open }),
+
+  setNpcModOpen: (open, npcId) => set({ npcModOpen: open, npcModTargetId: open ? npcId : undefined }),
 
   notify: (text, tone = 'info') => set({ toast: { text, tone } }),
 

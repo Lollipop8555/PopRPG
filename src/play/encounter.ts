@@ -7,10 +7,11 @@
 import type { BuildingDef } from '../types'
 import type { Rng } from '../engine/dice'
 import { resolveMimic, resolveMonster } from '../engine/pool'
-import type { Session } from '../types/session'
+import type { Session, TalkState } from '../types/session'
 import { buildingKey, log, logs, skillIndex } from './kit'
 import { startCombat } from './combat'
 import { openShop, openTreasure, runEvent } from './reward'
+import { closeTalk, hasTalked, openTalk } from './talk'
 
 /**
  * 这次的建筑遭遇要不要**玩家掷骰**才结算（§7.2）。
@@ -33,11 +34,58 @@ export function encounterNeedsRoll(s: Session, building: BuildingDef, cell: [num
   }
 }
 
+/** 进入建筑时的可选参数 */
+export interface EnterOptions {
+  /**
+   * 对话阶段已经处理过（刚谈完 / 选了【路过】）→ **不再触发对话**，直接跑建筑事件。
+   * 避免「对话收尾 → 再进 `enterBuilding` → 又重新弹对话」的死循环。
+   */
+  talkHandled?: boolean
+}
+
+/**
+ * 踩到建筑的**总入口**：**① NPC 触发与对话 → ② 决定"等玩家掷骰"还是"直接跑建筑事件"**（§4.8.12）。
+ *
+ * - 对话触发（有 `npcs` 且方案不悬空）→ 返回带 `talk` 弹层的会话，**建筑事件延后**到 `afterTalk`
+ * - 需要掷骰才结算的遭遇 → 停在 `awaitingEncounter`，等玩家点「掷骰」（§7.2）
+ * - 其余 → 直接 `enterBuilding` 跑建筑事件
+ *
+ * `opts.talkHandled`：对话刚谈完 / 选了【路过】→ 不再触发对话（否则会死循环）。
+ */
+export function beginBuilding(
+  s: Session,
+  building: BuildingDef,
+  cell: [number, number],
+  rng?: Rng,
+  opts?: EnterOptions,
+): Session {
+  // ① NPC 触发与对话：**进入建筑的第一步**、与 `encounter` 正交（任何建筑实例都能挂，§4.9.3）
+  if (!opts?.talkHandled) {
+    const opened = openTalk(s, building, cell, rng)
+    if (opened) return opened
+  }
+
+  // 要掷骰的遭遇（开箱 / 怪物 / 商店 / 带判定的门）→ 先停在这格，等玩家点「掷骰」再结算（§7.2）
+  if (encounterNeedsRoll(s, building, cell)) {
+    return { ...s, awaitingEncounter: { ref: building.id, cell } }
+  }
+
+  return enterBuilding(s, building, cell, rng)
+}
+
+/**
+ * 跑该建筑的**建筑事件本体**（`empty` / `treasure` / `monster` / `event` / `shop`）。
+ *
+ * 调用时机只有两处：`beginBuilding` 判定"不用掷骰"之后，以及玩家掷完骰的 `commitRoll`。
+ * **不触发对话、不再要求掷骰**（再判一次会永远停在 `awaitingEncounter`）。
+ */
 export function enterBuilding(s: Session, building: BuildingDef, cell: [number, number], rng?: Rng): Session {
   // 「建筑键」：以节点为单位 —— 一个节点=一座建筑（多格建筑同一节点，相邻两座各算各的）
   const key = buildingKey(s, cell)
   const { library, enabledIds, rules } = s.scenario
   const done = s.onceDone.includes(key)
+  // 该实例真的触发过对话（**NPC 即内容物**）—— 空宝箱据此不再报"什么也没有 / 已经空了"（§4.8.5⑥）
+  const talked = hasTalked(s, key)
 
   // `once` 成功过的事件 → 整座降级成普通空地（§4.8.9）
   if (building.encounter === 'event' && done) {
@@ -46,10 +94,14 @@ export function enterBuilding(s: Session, building: BuildingDef, cell: [number, 
 
   // 宝箱是一次性的：**整座**开过一次就空。注意：只"不再产出"，绝不拦路 —— 踩上去照样移动
   if (building.encounter === 'treasure' && done) {
-    return log(s, `${building.name}：已经空了`)
+    return talked ? s : log(s, `${building.name}：已经空了`)
   }
 
   switch (building.encounter) {
+    case 'talk':
+      // 定义是 `talk` 但实例没写 `npcs` → 既无建筑事件、也无对话（等同 `empty`，§4.9.3）
+      return log(s, `${building.name}：什么也没有发生`)
+
     case 'empty':
       return log(s, `${building.name}：什么也没有发生`)
 
@@ -70,7 +122,12 @@ export function enterBuilding(s: Session, building: BuildingDef, cell: [number, 
           }
         }
       }
-      return markDone(openTreasure(s, building, rng))
+      const opened = markDone(openTreasure(s, building, rng))
+      // 空宝箱 ＋ 有 NPC：**NPC 就是它的内容物** → 不输出"箱内无物品"（§4.8.5⑥）
+      if (talked && opened.encounter?.kind === 'treasure' && (opened.encounter.pieces?.length ?? 0) === 0) {
+        return { ...opened, phase: 'explore', encounter: undefined }
+      }
+      return opened
     }
 
     case 'monster': {
@@ -100,6 +157,21 @@ export function enterBuilding(s: Session, building: BuildingDef, cell: [number, 
     default:
       return s
   }
+}
+
+/**
+ * 对话收尾（谈完 / 选了【路过】）→ 接着跑这栋建筑的 `encounter`（§4.8.12：①–⑤ 跑完才执行建筑事件）。
+ * 建筑事件若仍需掷骰，`beginBuilding` 会把它停在 `awaitingEncounter`（§7.2）。
+ *
+ * `talk` 默认取 `s.talk`；但对话动作常常是**先关闭弹层再收尾**，那时弹层已经不在会话里，
+ * 所以调用方（store）要把关闭前的 `talk` 显式传进来。
+ */
+export function afterTalk(s: Session, talk: TalkState | undefined = s.talk): Session {
+  if (!talk) return s
+  const building = s.scenario.library.buildings.find((b) => b.id === talk.ref)
+  const next = closeTalk(s)
+  if (!building) return next
+  return beginBuilding(next, building, talk.cell, undefined, { talkHandled: true })
 }
 
 /** 关掉弹层：还在打就回战斗，否则继续探索 */

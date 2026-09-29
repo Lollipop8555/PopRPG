@@ -19,7 +19,7 @@ import {
 const NODES: MapNode[] = [
   { x: 0, y: 0, type: 'start' },
   { x: 1, y: 0, type: 'road', ref: 'swamp' },
-  { x: 2, y: 0, type: 'building', ref: 'chest_room' },
+  { x: 2, y: 0, type: 'building', ref: 'chest_room', npcs: ['grave_keeper'] },
   { x: 3, y: 0, type: 'road', ref: 'volcano' },
   { x: 4, y: 0, type: 'building', ref: 'monster_room' },
   { x: 5, y: 0, type: 'road', ref: 'path' },
@@ -30,7 +30,7 @@ const NODES: MapNode[] = [
   { x: 10, y: 0, type: 'end' },
   { x: 5, y: 1, type: 'road', ref: 'river' },
   { x: 5, y: 2, type: 'building', ref: 'chest_room' },
-  { x: 7, y: 1, type: 'building', ref: 'stone_door' },
+  { x: 7, y: 1, type: 'building', ref: 'stone_door', npcs: ['lost_child'], dialog: 'Mod1' },
 ]
 
 export function fixtureMap(): GameMap {

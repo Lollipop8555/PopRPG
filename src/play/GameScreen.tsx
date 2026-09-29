@@ -22,6 +22,7 @@ import EquipPanel from './EquipPanel'
 import DiceHud from './DiceHud'
 import RadarChart from './RadarChart'
 import EncounterView from './EncounterView'
+import TalkDialog from './TalkDialog'
 import Overlay from '../ui/Overlay'
 import { navigate } from '../app/router'
 
@@ -76,6 +77,17 @@ export default function GameScreen({ session }: { session: Session }) {
 
         {/* 交锋：进入即弹出独立对话框，以文字呈现整场战斗 */}
         {session.monster && <BattleDialog session={session} />}
+
+        {/* 对话：进入建筑的第一步（§4.8.12），弹层关掉才接着跑建筑事件 */}
+        {session.talk && (
+          <TalkDialog
+            session={session}
+            onNext={() => play.talkNext()}
+            onChoose={(i) => play.talkChoose(i)}
+            onRoll={() => play.talkRoll()}
+            onMenu={(a) => play.talkMenu(a)}
+          />
+        )}
 
         {/* 底部悬浮栈：抽屉 / 环境提示 / 操作栏，都叠在地图上方（沉浸感） */}
         <div className="hud-bottom">
@@ -168,7 +180,7 @@ export default function GameScreen({ session }: { session: Session }) {
 
             <DiceHud
               session={session}
-              canRoll={!!(session.awaitingRound || session.awaitingEncounter) && !finished && !pending}
+              canRoll={!!(session.awaitingRound || session.awaitingEncounter) && !finished && !pending && !session.talk}
               spinning={!!pending}
               onRoll={() =>
                 play.requestRoll(session.awaitingEncounter ? { kind: 'encounter' } : { kind: 'nextRound' })

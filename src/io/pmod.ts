@@ -13,11 +13,13 @@ import {
   type GameMap,
   type Library,
   type LibraryKey,
+  type NpcDef,
   type Project,
   type Rules,
 } from '../types'
 import { emptyLibrary } from '../types'
-import { referenceIdsOf } from '../lib/refs'
+import { npcIdsOf, referenceIdsOf } from '../lib/refs'
+import { normalizeNpc } from '../lib/dialog'
 import { newMapId } from '../lib/ids'
 
 const ARRAY_OF_KIND: Record<ComponentKind, LibraryKey> = {
@@ -138,17 +140,19 @@ export function collectUsedComponents(
 
   const enabled = new Set(project.enabledIds)
   const placed = new Set(placedIds(project))
+  // NPC 不走 `enabledIds`（§4.9.3）：**被建筑实例点到**才算这一局的内容
+  const talkedTo = new Set(npcIdsOf(project))
   const out = emptyLibrary()
   const seen = new Set<string>()
   const missing = new Set<string>()
-  const queue: string[] = [...enabled, ...placed]
+  const queue: string[] = [...enabled, ...placed, ...talkedTo]
 
   while (queue.length > 0) {
     const id = queue.shift()!
     if (seen.has(id)) continue
     seen.add(id)
     const found = index.get(id)
-    if (!found || !(enabled.has(id) || placed.has(id))) {
+    if (!found || !(enabled.has(id) || placed.has(id) || talkedTo.has(id))) {
       missing.add(id)
       continue
     }
@@ -183,6 +187,11 @@ function serializeNodes(map: GameMap): unknown {
       if (n.ref) row.ref = n.ref
       if ((n.w ?? 1) > 1) row.w = n.w
       if ((n.h ?? 1) > 1) row.h = n.h
+      // NPC 只挂在**建筑实例**上（§4.9.3）：同一栋建筑铺到多格可以遇到不同的人
+      if (n.type === 'building') {
+        if (n.npcs && n.npcs.length > 0) row.npcs = n.npcs
+        if (n.dialog) row.dialog = n.dialog
+      }
       return row
     }),
   }
@@ -322,6 +331,7 @@ function mergeRules(loaded: Partial<Rules> | null, warn: (msg: string) => void):
   if (typeof loaded.state?.max_duration === 'number') rules.state.max_duration = loaded.state.max_duration
   if (loaded.shop?.price) rules.shop.price = loaded.shop.price
   if (loaded.event?.dice) rules.event.dice = loaded.event.dice
+  if (loaded.talk?.dice) rules.talk.dice = loaded.talk.dice
   if (Array.isArray(loaded.class_pool)) rules.class_pool = loaded.class_pool
   return rules
 }
@@ -386,9 +396,20 @@ export function parsePmod(raw: string): ParsedPmod {
           const { value } = pullYaml(lines, i + 1, end)
           const list = safeLoad<AnyComponent[]>(value, [], warn)
           if (Array.isArray(list)) {
-            ;(components as unknown as Record<string, AnyComponent[]>)[key].push(
-              ...list.filter((c): c is AnyComponent => !!c && typeof c.id === 'string'),
-            )
+            const clean = list.filter((c): c is AnyComponent => !!c && typeof c.id === 'string')
+            const ready =
+              key === 'npcs'
+                ? clean.map((def) => {
+                    // §4.9.2 导入容错：旧 `type` / 根层 `result` / 父层没 `dice` 的 `hit` 一律忽略并提示
+                    const { npc, notes } = normalizeNpc(def as NpcDef)
+                    for (const note of notes) {
+                      const where = note.path ? `对话方案「${note.path}」` : '对话树'
+                      warn(`NPC「${npc.name || npc.id}」的${where}：${note.text}`)
+                    }
+                    return npc
+                  })
+                : clean
+            ;(components as unknown as Record<string, AnyComponent[]>)[key].push(...ready)
           }
         } else {
           warn(`「${SECTION_TITLE.components}」里出现了未知分组：${h.title}（已忽略）`)
@@ -414,6 +435,14 @@ export function parsePmod(raw: string): ParsedPmod {
                   warn(`(${n.x}, ${n.y}) 的 ${n.type} 不该有大小，已按 1×1 处理`)
                   return { x: n.x, y: n.y, type: n.type, ref: n.ref }
                 }
+                // NPC 只挂在建筑实例上（§4.9.3）：挂在别处的一律剔除并提示
+                let npcs = n.npcs
+                let dialog = n.dialog
+                if (n.type !== 'building' && ((n.npcs?.length ?? 0) > 0 || n.dialog)) {
+                  warn(`(${n.x}, ${n.y}) 的 ${n.type} 不该带 NPC —— NPC 只挂在建筑实例上，已忽略`)
+                  npcs = undefined
+                  dialog = undefined
+                }
                 const size = (v: number | undefined) => Math.max(1, Math.trunc(v ?? 1))
                 return {
                   x: n.x,
@@ -422,6 +451,8 @@ export function parsePmod(raw: string): ParsedPmod {
                   ref: n.ref,
                   w: n.type === 'building' ? size(n.w) : undefined,
                   h: n.type === 'building' ? size(n.h) : undefined,
+                  npcs: npcs && npcs.length > 0 ? npcs.map((id) => String(id)) : undefined,
+                  dialog: dialog ? String(dialog) : undefined,
                 }
               }),
           })

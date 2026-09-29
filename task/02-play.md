@@ -109,3 +109,11 @@
 > 完成后进入 [`task/03-polish.md`](./03-polish.md)（收尾）。
 
 > **2026-09-29 修订**：**建筑内 NPC 对话**（`encounter: talk`）属 Phase E 的 E4，**不在本阶段验收**；B7 的 `encounter` 五选一在接上对话后为**六选一**。本文件其余验收项不受影响。
+
+---
+
+**2026-09-29 · Phase B 实现完成**
+- **B0–B10 与 B 验收 1–14 全部勾选**：框架与加载、开局、移动与回合、战斗引擎与 UI、骰子公示、技能 6 步交互、状态结算、建筑遭遇、商店与战利品、装备与背包、`.psave` 存读与组件库单独导入导出。
+- **B10 存档字段** 已含 V2.0 追加的 `talks`（`Record<建筑实例 key, TalkRecord>`）与 `talk`（对话弹层临时态），随 `exportSave` / `parseSave` 整份往返；旧档缺这两个字段时视为未触发。
+- **验证**：`npx tsc --noEmit` 无错；`npx vitest run` **16 个文件 / 197 项**全绿；`npm run build` 通过（1709 模块）。
+- 后续：**建筑内 NPC 对话** 已由 [`task/05-npc.md`](./05-npc.md) 的 E4 接上（`beginBuilding` → 对话 → `enterBuilding`），本文件的遭遇流程无须再改。

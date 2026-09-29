@@ -14,6 +14,8 @@ import type {
 import { ENCOUNTER_KINDS, STAT_KEYS, STAT_LABEL } from '../../../types'
 import { useLibraryStore } from '../../../store/library'
 import { useProjectStore } from '../../../store/project'
+import { useUiStore } from '../../../store/ui'
+import { resolveItemPool } from '../../../engine/pool'
 import { checkAnalysis } from '../../../engine/event'
 import { makePlayerUnit } from '../../../engine/units'
 import { eventText } from '../../../lib/human'
@@ -74,6 +76,7 @@ export default function BuildingEditor({
       {def.encounter === 'treasure' && (
         <>
           <PoolEditor value={def.reward_pool} onChange={(reward_pool) => onChange({ reward_pool })} kind="item" label="奖励池" />
+          <EmptyChestHint def={def} />
           <PickEditor value={def.pick} onChange={(pick) => onChange({ pick })} poolSize={poolSize} label="件数覆盖（可省）" />
           <CopiesEditor value={def.copies} onChange={(copies) => onChange({ copies })} label="份数覆盖（可省）" />
 
@@ -140,6 +143,55 @@ export default function BuildingEditor({
           </div>
         </>
       )}
+
+      {def.encounter === 'talk' && <TalkGuide />}
+    </div>
+  )
+}
+
+/**
+ * 空宝箱（§5.7）：奖励池筛出 0 项，**且所有实例都没挂 NPC** → 建筑页标黄。
+ * 挂了 NPC 就是**合法配置**（NPC 就是内容物，进入时走对话），一条都不报。
+ */
+function EmptyChestHint({ def }: { def: BuildingDef }) {
+  const library = useLibraryStore()
+  const project = useProjectStore()
+  const size = def.reward_pool ? resolveItemPool(library, project.enabledIds, def.reward_pool).length : 0
+  if (size > 0) return null
+
+  const hasNpc = project.maps.some((m) =>
+    m.nodes.some((n) => n.type === 'building' && n.ref === def.id && (n.npcs?.length ?? 0) > 0),
+  )
+  if (hasNpc) return null
+
+  return (
+    <div className="hintbox warn">
+      这个宝箱<b>什么都没装</b> —— 配个奖励池，或者给它挂一位 NPC（NPC 就是它的内容物）。
+    </div>
+  )
+}
+
+/**
+ * `talk` 建筑**不在组件页配 NPC**（§5.6 / §4.9.3）：遇到谁、用哪套对话方案都挂在**实例**上，
+ * 同一栋建筑铺到多格可以遇到不同的人 —— 这里只给一句指路和一个快捷按钮。
+ */
+function TalkGuide() {
+  return (
+    <div>
+      <div className="hintbox">
+        <div>
+          <b>NPC 挂在建筑实例上</b>（遇到谁、用哪套对话方案），请到实例页挑。
+        </div>
+        <div className="faint">同一栋建筑铺到多格，可以遇到不同的人。</div>
+      </div>
+      <button
+        className="btn small"
+        onClick={() => {
+          useUiStore.getState().setInspectorTab('instance')
+        }}
+      >
+        去实例页配置
+      </button>
     </div>
   )
 }

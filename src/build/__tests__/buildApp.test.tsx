@@ -32,8 +32,8 @@ describe('构建页骨架', () => {
     // 起点 / 终点不常驻模式条（按需出现在图层面板）
     expect(screen.queryByTitle('放置起点（S）：在画布上点一下')).toBeNull()
     expect(screen.queryByTitle('放置终点（F）：在画布上点一下')).toBeNull()
-    // 组件库八区
-    for (const section of ['道路', '建筑', '消耗品', '装备', '怪物', '职业', '技能', '背景']) {
+    // 组件库九区（NPC 列于「技能」与「背景」之间，§5.0.1）
+    for (const section of ['道路', '建筑', '消耗品', '装备', '怪物', '职业', '技能', 'NPC', '背景']) {
       expect(screen.getAllByText(section).length).toBeGreaterThan(0)
     }
   })
@@ -82,13 +82,15 @@ describe('右栏三页（§5.6）', () => {
     expect(screen.queryByTitle(/整局的前置配置/)).toBeNull()
   })
 
-  it('顶栏「规则」打开的是整局规则面板（13 项 + 模拟 10 次）', () => {
+  it('顶栏「规则」打开的是整局规则面板（14 项 + 模拟 10 次）', () => {
     useProjectStore.getState().replaceAll(fixtureProject())
     render(<BuildApp />)
     fireEvent.click(screen.getByTitle(/整局共用的规则/))
     expect(screen.getByText('这一局的规则')).toBeTruthy()
     expect(screen.getByText('移动 dice')).toBeTruthy()
     expect(screen.getByText('属性结算骰 stat_dice')).toBeTruthy()
+    // V2.0 追加：对话骰（§4.8.6 第 14 项）
+    expect(screen.getByText('对话骰 talk.dice')).toBeTruthy()
     expect(screen.getAllByText('模拟 10 次').length).toBeGreaterThan(0)
     // 没有 combat.attacks（攻击方式已升级为技能组件），也没有那块硬规则只读段
     expect(screen.queryByText(/attacks/)).toBeNull()

@@ -8,6 +8,7 @@
  *   data/monsters/    怪物
  *   data/classes/     职业
  *   data/skills/      技能
+ *   data/npcs/        NPC（第 8 类，V2.0）
  *   data/backgrounds/ 背景
  *
  * 通过 `import.meta.glob` 自动收录——**新增一个预设 = 加一个 JSON 文件，更新一个 = 改一个文件**，
@@ -93,6 +94,7 @@ const ALL: AnyComponent[] = [
   ...PRESET_MONSTERS,
   ...PRESET_CLASSES,
   ...PRESET_SKILLS,
+  ...PRESET_NPCS,
   ...PRESET_BACKGROUNDS,
 ]
 
@@ -115,6 +117,7 @@ export function presetKind(id: string): ComponentKind | undefined {
   if (PRESET_MONSTERS.some((c) => c.id === id)) return 'monster'
   if (PRESET_CLASSES.some((c) => c.id === id)) return 'class'
   if (PRESET_SKILLS.some((c) => c.id === id)) return 'skill'
+  if (PRESET_NPCS.some((c) => c.id === id)) return 'npc'
   if (PRESET_BACKGROUNDS.some((c) => c.id === id)) return 'background'
   return undefined
 }

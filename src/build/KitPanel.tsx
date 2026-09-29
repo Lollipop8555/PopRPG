@@ -30,7 +30,11 @@ export default function KitPanel() {
 
   const enabledIds = project.enabledIds
 
-  const referenced = useMemo(() => tallyUsage(library, enabledIds).referenced, [library, enabledIds])
+  // 传 `project`：NPC 的「被引用」来自建筑实例的 `npcs`（项目侧引用，§5.3）
+  const referenced = useMemo(
+    () => tallyUsage(library, enabledIds, project).referenced,
+    [library, enabledIds, project],
+  )
 
   const placed = useMemo(() => {
     const counts = new Map<string, number>()
@@ -162,6 +166,9 @@ function KitRow({
   const kind = section.kind
   const rowColor = def.color ?? fallbackColor(def.id)
   const mapPiece = isMapPiece(kind)
+  /** NPC 没有「启用」开关（§5.3）：它算不算内容，看**有没有被建筑实例点到** */
+  const isNpc = kind === 'npc'
+  const npcUsed = referencedCount > 0
 
   const duplicate = () => {
     const copy = duplicateOf(kind, def)
@@ -171,7 +178,16 @@ function KitRow({
   }
 
   // 编辑 / 复制 / 启用已提为第三行独立按钮；菜单只保留删除与恢复默认
-  const menu: { label: string; onClick: () => void; tone?: 'danger'; disabled?: boolean; title?: string }[] = [
+  const menu: { label: string; onClick: () => void; tone?: 'danger'; disabled?: boolean; title?: string }[] = []
+  // NPC 的 `⋯` 多一项「编辑对话」—— 直接跳到「NPC 模组」面板并选中它（§5.6）
+  if (isNpc) {
+    menu.push({
+      label: '编辑对话',
+      title: '跳到「NPC 模组」整页，构建它的对话树（§5.6.1）',
+      onClick: () => useUiStore.getState().setNpcModOpen(true, def.id),
+    })
+  }
+  menu.push(
     {
       label: '删除',
       tone: 'danger' as const,
@@ -190,7 +206,7 @@ function KitRow({
       title: '拿 id 去内置预设表取原始定义覆盖回来（仅预设条目）',
       onClick: () => commit(() => useLibraryStore.getState().resetToPreset(def.id)),
     },
-  ]
+  )
 
   return (
     <div
@@ -200,9 +216,15 @@ function KitRow({
         gap: 0,
         padding: '4px 6px',
         cursor: 'pointer',
-        opacity: mapPiece || enabled ? 1 : 0.62,
+        opacity: isNpc ? (npcUsed ? 1 : 0.62) : mapPiece || enabled ? 1 : 0.62,
       }}
-      title={mapPiece ? '地图件：铺到地图格才算内容' : '非地图件：显式启用才算内容'}
+      title={
+        isNpc
+          ? 'NPC：被某个建筑实例挂上才算这一局的内容（没有启用开关）'
+          : mapPiece
+            ? '地图件：铺到地图格才算内容'
+            : '非地图件：显式启用才算内容'
+      }
     >
       {/* 第一行：图标 + 名称 */}
       <div className="row" style={{ gap: 6, alignItems: 'center' }}>
@@ -228,19 +250,29 @@ function KitRow({
         ) : (
           <Badge tone="custom" title="用户自建">自建</Badge>
         )}
-        {mapPiece ? (
+        {isNpc ? (
+          npcUsed ? (
+            <Badge tone="on" title="被建筑实例挂上了（对话才会真的发生）">
+              已引用 ×{referencedCount}
+            </Badge>
+          ) : (
+            <Badge tone="off" title="还没有任何建筑实例挂他 —— 铺多久都不会遇到">
+              未引用
+            </Badge>
+          )
+        ) : mapPiece ? (
           placedCount > 0 ? (
             <Badge tone="on" title="已铺到地图上">已铺设 ×{placedCount}</Badge>
           ) : (
             <Badge tone="off" title="还没铺到格子上">未铺设</Badge>
           )
         ) : null}
-        {referencedCount > 0 && <Badge title="被几处引用">被引用 ×{referencedCount}</Badge>}
+        {!isNpc && referencedCount > 0 && <Badge title="被几处引用">被引用 ×{referencedCount}</Badge>}
       </div>
 
       {/* 第三行：操作 */}
       <div className="row" style={{ gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
-        {!mapPiece && (
+        {!mapPiece && !isNpc && (
           <button
             className="btn small"
             style={{ fontSize: 11, padding: '2px 7px' }}

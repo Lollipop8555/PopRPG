@@ -1,6 +1,6 @@
 /**
- * 规则面板（§5.6 / §4.8.6）—— 这一局的前置配置，**共 13 项，一个不多**：
- * move×1 · combat×4 · treasure×2 · loot×2 · state×1 · shop×1 · event×1 · class_pool×1
+ * 规则面板（§5.6 / §4.8.6）—— 这一局的前置配置，**共 14 项，一个不多**：
+ * move×1 · combat×4 · treasure×2 · loot×2 · state×1 · shop×1 · event×1 · talk×1 · class_pool×1
  *
  * 它是**整局共用**的一套算法，不跟任何单个组件走 —— 所以入口在顶栏，打开是一整页；
  * 每个字段旁一句说明，并给「模拟 10 次」按钮直接看产出分布。
@@ -150,9 +150,21 @@ export default function RulesPage() {
       />
       <Simulate label="掷一次" run={() => rollSum(rules.event.dice)} />
 
+      {/* ⑧ 对话：1 项（§4.8.6 · V2.0 追加） */}
+      <div className="panel-title hand" style={{ fontSize: 13, marginTop: 8 }}>
+        对话 talk
+      </div>
+      <DiceInput
+        value={rules.talk.dice}
+        onChange={(dice) => patch({ talk: { dice: dice ?? '1D6' } })}
+        label="对话骰 talk.dice"
+        allowEmpty={false}
+        hint="建筑里的 NPC 是随机遇到的：候选多位时掷这颗骰等权抽一位，某位 NPC 有多套对话方案时也用它抽一套；踩到时抽定，整场不再变"
+      />
+
       <div className="sketch-line" style={{ margin: '10px 0' }} />
 
-      {/* ⑧ 开局职业池 */}
+      {/* ⑨ 开局职业池 */}
       <Field
         label="开局职业池 class_pool"
         hint={
@@ -245,5 +257,5 @@ function Simulate({ label, run }: { label: string; run: () => number }) {
   )
 }
 
-/** 给清单 / 校验用的规则字段总数（§4.8.6：13 项，一个不多） */
-export const RULES_FIELD_COUNT = 13
+/** 给清单 / 校验用的规则字段总数（§4.8.6：14 项，一个不多） */
+export const RULES_FIELD_COUNT = 14

@@ -4,9 +4,10 @@
  */
 
 import { ComponentKind } from '../../types'
-import type { AnyComponent } from '../../types'
+import type { AnyComponent, NpcDef } from '../../types'
 import { isMapPiece } from '../../types'
 import { collectKnownTags, findComponent, skillSources, tallyUsage } from '../../lib/refs'
+import { summarizeNpc } from '../../lib/dialog'
 import { useLibraryStore } from '../../store/library'
 import { useProjectStore } from '../../store/project'
 import { commit } from '../../store/commit'
@@ -40,12 +41,15 @@ export default function ComponentPage() {
 
   const { kind, def } = found
   const enabled = project.enabledIds.includes(def.id)
-  const { referenced } = tallyUsage(library, project.enabledIds)
+  // 传 `project`：NPC 的「被引用」来自建筑实例的 `npcs`（§5.3 / §4.9.3）
+  const { referenced } = tallyUsage(library, project.enabledIds, project)
   const placed = project.maps.reduce(
     (sum, map) => sum + map.nodes.filter((n) => n.ref === def.id).length,
     0,
   )
   const sources = kind === 'skill' ? skillSources(library, project.enabledIds, def.id) : []
+  const isNpc = kind === 'npc'
+  const npcRefs = referenced.get(def.id) ?? 0
 
   const patch = (part: Partial<AnyComponent>) => {
     commit(() => useLibraryStore.getState().upsert(kind, { ...def, ...part } as AnyComponent))
@@ -56,14 +60,19 @@ export default function ComponentPage() {
       {/* ① 来源 + 本局状态（§5.6） */}
       <div className="row" style={{ gap: 4, marginBottom: 6 }}>
         {isPresetId(def.id) ? <Badge tone="preset">预设</Badge> : <Badge tone="custom">自建</Badge>}
-        {isMapPiece(kind) ? (
+        {isNpc ? (
+          /* NPC 没有「启用」开关（§5.3）—— 本局算不算内容只看有没有建筑实例点到它 */
+          <Badge tone={npcRefs > 0 ? 'on' : 'off'} title="NPC 的入包条件 ＝ 被某个建筑实例的 `npcs` 引用">
+            {npcRefs > 0 ? `被引用 ×${npcRefs}` : '未引用（还没有建筑用到它）'}
+          </Badge>
+        ) : isMapPiece(kind) ? (
           <Badge tone={placed > 0 ? 'on' : 'off'}>{placed > 0 ? `已铺设 ×${placed}` : '未铺设'}</Badge>
         ) : (
           <span onClick={() => commit(() => setEnabled(def.id, !enabled))} style={{ cursor: 'pointer' }}>
             <Badge tone={enabled ? 'on' : 'off'}>{enabled ? '☑ 已启用' : '☐ 未启用（不算内容）'}</Badge>
           </span>
         )}
-        {(referenced.get(def.id) ?? 0) > 0 && <Badge>被引用 ×{referenced.get(def.id)}</Badge>}
+        {!isNpc && (referenced.get(def.id) ?? 0) > 0 && <Badge>被引用 ×{referenced.get(def.id)}</Badge>}
         {isPresetId(def.id) && (
           <button className="btn small" onClick={() => commit(() => useLibraryStore.getState().resetToPreset(def.id))} title="使用内置预设覆盖当前定义">
             恢复默认
@@ -124,11 +133,69 @@ export default function ComponentPage() {
       {kind === 'item' && <ItemEditor def={def as never} onChange={(d) => patch(d as Partial<AnyComponent>)} />}
       {kind === 'class' && <ClassEditor def={def as never} onChange={(d) => patch(d as Partial<AnyComponent>)} />}
       {kind === 'skill' && <SkillEditor def={def as never} onChange={(d) => patch(d as Partial<AnyComponent>)} sources={sources} />}
+      {kind === 'npc' && <NpcDialogs def={def as NpcDef} referencedCount={npcRefs} />}
       {kind === 'background' && (
         <div className="hintbox">背景是全局的，始终算内容 —— 玩法字段都在上面这些公共字段里。</div>
       )}
 
       {kind !== 'skill' && kind !== 'background' && <div className="faint">{KIND_NOTE[kind]}</div>}
+    </div>
+  )
+}
+
+/**
+ * NPC 的对话方案一栏（§5.6 组件页）—— **只读摘要**：方案名 / 节点数 / 最深几层 /
+ * 有没有给道具 / 有没有掷骰节点；建设（新建 / 改名 / 删方案 / 改树）一律在**NPC 模组**整页里做。
+ */
+function NpcDialogs({ def, referencedCount }: { def: NpcDef; referencedCount: number }) {
+  const plans = summarizeNpc(def)
+  const items = useLibraryStore((s) => s.items)
+  const nameOf = (id: string) => items.find((i) => i.id === id)?.name ?? id
+
+  return (
+    <div style={{ opacity: referencedCount > 0 ? 1 : 0.72 }}>
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 4 }}>
+        <span className="panel-title hand" style={{ fontSize: 13 }}>
+          对话方案
+        </span>
+        <button
+          className="btn small primary"
+          onClick={() => useUiStore.getState().setNpcModOpen(true, def.id)}
+          title="跳到「NPC 模组」整页，在那里构建对话树"
+        >
+          编辑对话
+        </button>
+      </div>
+
+      {plans.length === 0 && (
+        <div className="hintbox warn">
+          还没有任何对话方案 —— NPC 被踩到时<b>没有话可说</b>。点「编辑对话」建一套（至少一套）。
+        </div>
+      )}
+
+      {plans.map((p) => (
+        <div key={p.plan} className="row" style={{ gap: 4, flexWrap: 'wrap', marginBottom: 3 }}>
+          <Badge>{p.plan}</Badge>
+          <span className="faint">
+            {p.nodes} 节点 / 最深 {p.depth} 层
+          </span>
+          {p.hasGive && <Badge tone="custom" title={`给出：${p.gives.map(nameOf).join('、')}`}>给道具</Badge>}
+          {p.hasDice && <Badge tone="preset" title="这套方案里有掷骰层">掷骰</Badge>}
+        </div>
+      ))}
+
+      <div className="hintbox" style={{ marginTop: 6 }}>
+        <div>
+          <b>NPC 住在建筑里</b>：去地图上挑一栋建筑，在<b>实例页</b>里选它（任何建筑都能挂，对话发生在
+          「进入建筑后、建筑事件前」）。
+        </div>
+        <div className="faint">
+          多套方案等权：只有一套就一定用它；多套则由实例的骰子（规则面板 `talk.dice`）抽一套。
+        </div>
+        {referencedCount === 0 && (
+          <div style={{ color: 'var(--amber)' }}>还没有任何建筑实例用到它 —— 铺多久都不会遇到。</div>
+        )}
+      </div>
     </div>
   )
 }

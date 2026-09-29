@@ -11,6 +11,8 @@ import { useUiStore } from '../store/ui'
 
 export default function LayerPanel() {
   const maps = useProjectStore((s) => s.maps)
+  const nameCount = new Map<string, number>()
+  for (const m of maps) nameCount.set(m.name, (nameCount.get(m.name) ?? 0) + 1)
   const currentMapId = useUiStore((s) => s.currentMapId)
   const setCurrentMap = useUiStore((s) => s.setCurrentMap)
   const [collapsed, setCollapsed] = useState(false)
@@ -88,6 +90,14 @@ export default function LayerPanel() {
 
                   {!hasStart && <span title="缺少起点" style={{ color: 'var(--red)' }}>●</span>}
                   {!hasEnd && <span title="缺少终点" style={{ color: 'var(--red)' }}>●</span>}
+                  {(nameCount.get(map.name) ?? 0) > 1 && (
+                    <span
+                      style={{ color: 'var(--amber)' }}
+                      title={`同名地图会让建筑实例 key 撞车（对话抽取结果 / 进度标记被串用）—— 导出与开局时会自动改成「${map.name} (2)」，建议直接改名免得存档对不上`}
+                    >
+                      ●
+                    </span>
+                  )}
 
                   {(!hasStart || !hasEnd) && (
                     <span className="row" style={{ gap: 2 }}>

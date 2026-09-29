@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState } from 'react'
-import { ClipboardList, Download, MoreHorizontal, Redo2, SlidersHorizontal, Undo2, Upload } from 'lucide-react'
+import { ClipboardList, Download, MessageSquareText, MoreHorizontal, Redo2, SlidersHorizontal, Undo2, Upload } from 'lucide-react'
 import { useProjectStore } from '../store/project'
 import { useHistoryStore } from '../store/history'
 import { redo, undo } from '../store/commit'
@@ -42,9 +42,17 @@ export default function TopBar() {
       <button
         className="btn small grow"
         onClick={() => useUiStore.getState().setRulesOpen(true)}
-        title="整局共用的规则（13 项），与当前选中的组件无关"
+        title="整局共用的规则（14 项），与当前选中的组件无关"
       >
         <SlidersHorizontal size={14} /> 规则
+      </button>
+
+      <button
+        className="btn small grow"
+        onClick={() => useUiStore.getState().setNpcModOpen(true)}
+        title="对话树整页面板（与「规则」并列的第二个整页入口）"
+      >
+        <MessageSquareText size={14} /> NPC 模组
       </button>
 
       <button className="btn small grow" onClick={importPmodFile} title="导入 .pmod">

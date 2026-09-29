@@ -10,19 +10,22 @@ import type {
   BuildingDef,
   ClassDef,
   ComponentKind,
+  DialogNode,
   EffectOp,
   EventBlock,
   Gate,
   ItemDef,
   Library,
   MonsterDef,
+  NpcDef,
   Project,
   SkillDef,
 } from '../types'
 import { checkAnalysis } from '../engine/event'
 import { resolveItemPool, resolveMonsterPool } from '../engine/pool'
 import { makePlayerUnit } from '../engine/units'
-import { skillSources, referenceIdsOf, componentsWithTag } from '../lib/refs'
+import { skillSources, referenceIdsOf, componentsWithTag, npcIdsOf } from '../lib/refs'
+import { hitCoverage, listPoints } from '../lib/dialog'
 import { SECTIONS } from '../lib/sections'
 
 export type Severity = 'error' | 'warn'
@@ -40,6 +43,8 @@ export interface Issue {
   componentId?: string
   componentKind?: ComponentKind
   section?: string
+  /** 对话树里的位置（`Mod1[2]`），供 NPC 模组面板直接跳过去（§5.6.1） */
+  dialogPath?: string
 }
 
 export function componentSection(kind: ComponentKind, def?: AnyComponent): string | undefined {
@@ -109,7 +114,10 @@ function effectDurationIssues(def: AnyComponent, kind: ComponentKind, effects: E
 function poolEmptyIssues(library: Library, enabledIds: string[], def: BuildingDef): Issue[] {
   const out: Issue[] = []
   const checks: { label: string; size: number }[] = []
-  if (def.reward_pool) checks.push({ label: '奖励池', size: resolveItemPool(library, enabledIds, def.reward_pool).length })
+  // `treasure` 建筑的「空奖励池」要**按实例**判：配了 NPC 就是合法内容物（§5.7）→ 交给 K15
+  if (def.reward_pool && def.encounter !== 'treasure') {
+    checks.push({ label: '奖励池', size: resolveItemPool(library, enabledIds, def.reward_pool).length })
+  }
   if (def.monster_pool) checks.push({ label: '怪物池', size: resolveMonsterPool(library, enabledIds, def.monster_pool).length })
   if (def.stock) checks.push({ label: '上架池', size: resolveItemPool(library, enabledIds, def.stock).length })
   for (const check of checks) {
@@ -259,6 +267,131 @@ function classIssues(library: Library, enabledIds: string[], cls: ClassDef): Iss
   return out
 }
 
+/**
+ * K18 / K19：一棵对话树自己的问题（§4.9.2 / §5.7）——
+ * 空对话 · 根层 `result` · `hit` 无所属 → 标黄；`hit` 覆盖不全 / 重叠 → 标黄；
+ * `hit` 越界 / 非法 → **标红**。全部**只提示、不拦截**导出。
+ */
+function dialogIssues(npc: NpcDef): Issue[] {
+  const out: Issue[] = []
+  const base = {
+    componentId: npc.id,
+    componentKind: 'npc' as ComponentKind,
+    section: componentSection('npc', npc),
+  }
+  const plans = npc.dialogs && typeof npc.dialogs === 'object' ? Object.entries(npc.dialogs) : []
+
+  for (const [plan, roots] of plans) {
+    const where = `「${npc.name}」的对话方案「${plan}」`
+
+    if (!roots || roots.length === 0) {
+      out.push({
+        key: 'K18',
+        severity: 'warn',
+        title: `${where}点开就结束了`,
+        detail: '这个方案一个根节点都没有，玩家什么都看不到。',
+        ...base,
+        dialogPath: plan,
+      })
+      continue
+    }
+
+    const walk = (list: DialogNode[], path: string, atRoot: boolean, parentHasDice: boolean) => {
+      list.forEach((node, i) => {
+        const at = `${path}[${i + 1}]`
+        const emptyMessage = !node.message || node.message.length === 0
+        const hasItems = !!node.items && node.items.length > 0
+
+        /** 空对话：根节点 `message` 与 `items` 都为空 —— 点开就结束 */
+        if (atRoot && emptyMessage && !hasItems) {
+          out.push({
+            key: 'K18',
+            severity: 'warn',
+            title: `${where}第 ${i + 1} 个根节点点开就结束了`,
+            detail: '根节点的 `message` 与 `items` 都为空，玩家什么都看不到（至少写一句台词）。',
+            ...base,
+            dialogPath: at,
+          })
+        }
+        /** 根层写了 `result`：它只在作为上层选项时才有意义，导出时剔除 */
+        if (atRoot && node.result) {
+          out.push({
+            key: 'K18',
+            severity: 'warn',
+            title: `${where}第 ${i + 1} 个根节点写了 result`,
+            detail: '根层的 `result` 不展示（它只在作为上层选项时才有意义），导出时会被剔除。',
+            ...base,
+            dialogPath: at,
+          })
+        }
+        /** `hit` 无所属：这一层没有 `dice`，却没有命中可言 */
+        if (!parentHasDice && node.hit) {
+          out.push({
+            key: 'K18',
+            severity: 'warn',
+            title: `${where}第 ${i + 1} 个元素带了 hit 却没有骰子`,
+            detail: '这一层没有 `dice`（没有掷骰就没有命中），`hit` 会被忽略；导出时自动剔除。',
+            ...base,
+            dialogPath: at,
+          })
+        }
+
+        const kids = node.items ?? []
+        if (kids.length > 0) {
+          const cover = hitCoverage(node.dice, kids)
+          if (cover) {
+            if (cover.missing.length > 0) {
+              out.push({
+                key: 'K18',
+                severity: 'warn',
+                title: `${where}掷到 ${listPoints(cover.missing)} 没有任何选项命中`,
+                detail: `${node.dice} 的点数里 ${listPoints(cover.missing)} 没被任何 \`hit\` 覆盖，运行时会要求重掷（只提示、不拦截）。`,
+                ...base,
+                dialogPath: at,
+              })
+            }
+            if (cover.overlaps.length > 0) {
+              out.push({
+                key: 'K18',
+                severity: 'warn',
+                title: `${where}点数 ${listPoints(cover.overlaps)} 被重复命中`,
+                detail: '同一层里两条 `hit` 盖到了同一个点数，运行时会取先出现的那个 —— 建议改区间。',
+                ...base,
+                dialogPath: at,
+              })
+            }
+            for (const bad of cover.outOfRange) {
+              out.push({
+                key: 'K19',
+                severity: 'error',
+                title: `${where}第 ${bad.index} 个元素的 hit「${bad.hit}」超出 ${node.dice} 的范围`,
+                detail: `改成不超过 ${cover.faces} 的区间（如 1-${cover.faces}）；超出部分永远不会被掷到。`,
+                ...base,
+                dialogPath: at,
+              })
+            }
+            for (const bad of cover.badHit) {
+              out.push({
+                key: 'K19',
+                severity: 'error',
+                title: `${where}第 ${bad.index} 个元素的 hit「${bad.hit}」不是合法区间`,
+                detail: '写成单点数（`6`）或升序区间（`1-2`）都行 —— 这条永远命中不了。',
+                ...base,
+                dialogPath: at,
+              })
+            }
+          }
+        }
+
+        walk(kids, at, false, !!node.dice)
+      })
+    }
+
+    walk(roots, plan, true, false)
+  }
+  return out
+}
+
 /* ------------------------------------------------------------------ */
 /* 总入口                                                              */
 /* ------------------------------------------------------------------ */
@@ -275,10 +408,14 @@ export function validateProject(library: Library, project: Project): Issue[] {
     ...library.monsters.map((d) => ['monster', d] as const),
     ...library.classes.map((d) => ['class', d] as const),
     ...library.skills.map((d) => ['skill', d] as const),
+    ...library.npcs.map((d) => ['npc', d] as const),
     ...library.backgrounds.map((d) => ['background', d] as const),
   ]) {
     exists.set(item[1].id, { kind: item[0], def: item[1] })
   }
+  /** 这一局里真正会出现的 NPC ＝ 被某个建筑实例的 `npcs` 点到（NPC 没有「启用」开关） */
+  const talkingTo = npcIdsOf(project)
+  const npcsById = new Map<string, NpcDef>(library.npcs.map((n) => [n.id, n]))
 
   /** K1 / K2：起终点缺失 —— 图层红点 + 导出前 toast，不阻塞 */
   for (const map of project.maps) {
@@ -344,6 +481,13 @@ export function validateProject(library: Library, project: Project): Issue[] {
     }
   }
 
+  /** K3 / K18 / K19：NPC —— `give` 的道具必须已启用；对话树自身的问题逐条列（§4.9.2 / §5.7） */
+  for (const npc of library.npcs) {
+    if (!talkingTo.includes(npc.id)) continue
+    for (const refId of referenceIdsOf('npc', npc)) reportRef('npc', npc, refId, 'enabled')
+    issues.push(...dialogIssues(npc))
+  }
+
   for (const id of project.rules.class_pool) {
     const found = exists.get(id)
     if (!found || found.kind !== 'class') {
@@ -404,7 +548,100 @@ export function validateProject(library: Library, project: Project): Issue[] {
           componentId: node.ref,
         })
       }
+
+      /* —— NPC（§4.9.3 / §5.7）：挂在建筑实例上，与 `encounter` 正交 —— */
+      if (node.type !== 'building') continue
+      const instanceNpcs = (node.npcs ?? []).filter((id) => npcsById.has(id))
+      const def = node.ref ? (exists.get(node.ref)?.def as BuildingDef | undefined) : undefined
+
+      /** K3：实例 `npcs` 指向的 NPC 必须在库里存在（**无「启用」要求**） */
+      for (const npcId of node.npcs ?? []) {
+        if (npcsById.has(npcId)) continue
+        issues.push({
+          key: 'K3',
+          severity: 'error',
+          title: `(${node.x}, ${node.y}) 引用了不存在的 NPC ${npcId}`,
+          detail: '这位 NPC 被删掉了 —— 换一位，或者把它从实例上摘掉。',
+          mapId: map.id,
+          mapName: map.name,
+          cell: [node.x, node.y],
+          componentId: npcId,
+        })
+      }
+
+      /** K16：实例 `dialog` 的方案名必须在候选 NPC 的 `dialogs` 里（导出**不剔除**，运行时跳过对话） */
+      if (node.dialog) {
+        const hit = instanceNpcs.some((id) => Boolean(npcsById.get(id)?.dialogs?.[node.dialog!]))
+        if (!hit) {
+          issues.push({
+            key: 'K16',
+            severity: 'error',
+            title: `(${node.x}, ${node.y}) 的对话方案「${node.dialog}」不存在`,
+            detail: instanceNpcs.length > 0
+              ? '这些 NPC 都没有这个名字的方案 —— 换一个方案（留空则由骰子抽一套）。导出时不剔除该字段，运行时直接跳过对话、当这个实例没有 NPC。'
+              : '这个实例没配 NPC，写下的 `dialog` 没人能接 —— 先挂上 NPC（留空则由骰子抽一套）。',
+            mapId: map.id,
+            mapName: map.name,
+            cell: [node.x, node.y],
+          })
+        }
+      }
+
+      /** K14：说了要对话，却没配人 */
+      if (def?.encounter === 'talk' && instanceNpcs.length === 0) {
+        issues.push({
+          key: 'K14',
+          severity: 'warn',
+          title: `(${node.x}, ${node.y}) 的「${def.name}」没有对话`,
+          detail: '这个建筑的行为是 `talk`（进去就对话），但实例没配 NPC —— 要么挂一位 NPC，要么把行为改回 `empty`。',
+          mapId: map.id,
+          mapName: map.name,
+          cell: [node.x, node.y],
+          componentId: def.id,
+          componentKind: 'building',
+          section: componentSection('building', def),
+        })
+      }
+
     }
+  }
+
+  /**
+   * K15：空宝箱 —— `treasure` 的奖励池筛不出东西，**且所有实例都没挂 NPC** → **建筑页**标黄
+   * （配了 NPC 就是合法内容物，不报；§5.7 / §4.8.5⑥）。
+   */
+  for (const def of library.buildings) {
+    if (!enabled.has(def.id) || def.encounter !== 'treasure') continue
+    const size = def.reward_pool ? resolveItemPool(library, enabledIds, def.reward_pool).length : 0
+    if (size > 0) continue
+    const hasNpc = project.maps.some((m) =>
+      m.nodes.some((n) => n.type === 'building' && n.ref === def.id && (n.npcs?.length ?? 0) > 0),
+    )
+    if (hasNpc) continue
+    issues.push({
+      key: 'K15',
+      severity: 'warn',
+      title: `「${def.name}」什么都没装`,
+      detail: '这个宝箱的奖励池是空的（没配 / 筛出 0 项），实例也没挂 NPC —— 玩家踩上去会觉得空空如也。配个奖励池，或者给它挂一位 NPC（NPC 就是它的内容物）。',
+      componentId: def.id,
+      componentKind: 'building',
+      section: componentSection('building', def),
+    })
+  }
+
+  /** K17：地图名重复 —— 同名会让建筑实例 key 撞车（导出 / 开局会自动加后缀，§8.3 设定 6） */
+  const nameCount = new Map<string, number>()
+  for (const map of project.maps) nameCount.set(map.name, (nameCount.get(map.name) ?? 0) + 1)
+  for (const map of project.maps) {
+    if ((nameCount.get(map.name) ?? 0) < 2) continue
+    issues.push({
+      key: 'K17',
+      severity: 'warn',
+      title: `「${map.name}」有两张同名地图`,
+      detail: '同名地图会让建筑实例 key 撞车（对话抽取结果 / 进度标记被串用）—— 导出与开局时会自动改成「名字 (2)」，建议直接改名免得存档对不上。',
+      mapId: map.id,
+      mapName: map.name,
+    })
   }
 
   /** K4 / K5：技能 */
@@ -492,6 +729,12 @@ const KEY_LABEL: Record<string, string> = {
   K11: '背包容量不足',
   K12: '道路节点缺引用',
   K13: '非建筑节点带了大小',
+  K14: '说了要对话却没配人',
+  K15: '空宝箱什么都没装',
+  K16: 'dialog 方案名悬空',
+  K17: '地图名重复',
+  K18: '对话树提示',
+  K19: 'hit 越界 / 非法',
 }
 
 export function groupIssues(issues: Issue[]): IssueGroup[] {

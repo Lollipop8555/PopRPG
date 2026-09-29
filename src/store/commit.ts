@@ -21,6 +21,8 @@ function unchanged(a: Snapshot, b: Snapshot): boolean {
     a.library.monsters === b.library.monsters &&
     a.library.classes === b.library.classes &&
     a.library.skills === b.library.skills &&
+    // NPC 也要比：漏了它，模组面板里改对话树会被当成"没变"而不进撤销栈（§5.4 G5 / §5.6.1）
+    a.library.npcs === b.library.npcs &&
     a.library.backgrounds === b.library.backgrounds &&
     a.project.name === b.project.name &&
     a.project.background === b.project.background &&
