@@ -35,10 +35,10 @@
 | 文件 | 形态 | 承载 |
 |---|---|---|
 | `.pmod` 游戏模组 | 单文件 Markdown（散文 ＋ YAML 围栏） | 地图、组件、规则、玩法——**不含任何 UI 定义** |
-| `.pp` 皮肤模组 | zip 容器（`manifest.json` ＋ `resource/`） | 纯渲染：路径 / 建筑 / 背景 / 音频 / 面板 / 提示框 / 角色 |
-| `.pgame` 整体分发 | zip 容器 | `.pmod` ＋ `.pp` 打包，作为整体分发与加载 |
+| `.pp` 皮肤模组 | zip 容器（`manifest.json` ＋ 可选 `preview.png`；**素材目录与命名自由**） | 纯渲染：背景 / 路径 / 角色 / 道具 / 建筑 / 窗体 / 主题 token / 音频（V1 只预留） |
+| `.pgame` 整体分发 | zip 容器（`pack.json` ＋ `game.pmod` ＋ `skin/`） | `.pmod` ＋ 皮肤（`.pp` 内容）打包，作为整体分发与加载 |
 
-三者相互独立：`.pmod` 与 `.pp` 均可单独导出、单独加载；`.pp` 是可选增强，缺失时游戏照常渲染；`.pgame` 只是前两者的容器。加载优先级为「游戏配置 ＞ 用户配置 ＞ 程序绘制」，逐素材节点降级。
+三者相互独立：`.pmod` 与 `.pp` 均可单独导出、单独加载；`.pp` 是可选增强，缺失时游戏照常渲染；`.pgame` 只是前两者的容器。加载优先级为「游戏配置 ＞ 用户配置 ＞ 程序绘制」，逐素材节点降级。包内**强制结构只有 `manifest.json` 与可选 `preview.png`**，素材的目录名与层级自由，位置**一律由描述文件写明、相对包根**（如 `resource/road/x.png`，写法仅为示例）；用户**导入过**的 `.pp` 进本地皮肤库（**游戏自带皮肤不入库**），**运行时只解压当前生效的一套**，切换皮肤即先清空再解压（裁决 15 / 19 / 22）。
 
 **完整定义（容器布局 / 加载入口 / 优先级 / 版本迁移 / 校验项）见 [`design/00a-formats.md`](design/00a-formats.md)。**
 
@@ -71,12 +71,12 @@
 | [design/07-decisions.md](design/07-decisions.md) | §8 | 已确认决策记录 |
 | [design/08-deploy.md](design/08-deploy.md) | §9 | 部署（GitHub Pages） |
 | [design/skin.md](design/skin.md) | 新增 | **素材皮肤规范总纲（索引）**：素材存放 / 旋转镜像九宫格复用 / 贴图渲染器接口 / 三层优先级 / 覆盖边界 / 跨节取舍登记 |
-| [design/skin/00-package.md](design/skin/00-package.md) | 新增 | 皮肤包 `.pp` / `.pgame`（**皮肤包视角**；上位规范见 `design/00a-formats.md`）：包结构 / manifest 顶层键 / 五条加载入口 / 三层优先级 / 版本迁移 |
-| [design/skin/05-canvas.md](design/skin/05-canvas.md) | 新增 | 画布背景 `background`（**数组**，按 `maps` 适配多地图）：`cellSize` / `startX` / `startY` / 图外填充色 / 坐标映射 |
-| [design/skin/06-item-building.md](design/skin/06-item-building.md) | 新增 | 道具 `item` 与建筑 `building` **分节**：图标 / 衬底三元组 `{fill, stroke, img}` / 建筑地图贴图 / 地图文字字体字色 |
-| [design/skin/07-audio.md](design/skin/07-audio.md) | 新增 | 音频 `audio`：3 个 BGM 场景键 / 9 个音效事件键 / 播放约束（整节推算，V1 待裁决） |
-| [design/skin/08-pages.md](design/skin/08-pages.md) | 新增 | 首页与出身选择页 `pages`：封面背景、标题图形、主视觉、出身卡片（可缺省、走降级） |
-| [design/skin/09-creative.md](design/skin/09-creative.md) | 新增 | Creative 模式：新建／打开／编辑／导出 `.pp`，以 `.pmod` 为靶子的命中检查与预览 |
+| [design/skin/00-package.md](design/skin/00-package.md) | 新增 | 皮肤包 `.pp` / `.pgame`（**皮肤包视角**；上位规范见 `design/00a-formats.md`）：包结构与路径规则 / manifest 顶层键（`format`/`preview.png`/`extends`/`theme`）/ 五条加载入口 / 三层优先级 / 皮肤库与单套解压 / 版本迁移 |
+| [design/skin/05-canvas.md](design/skin/05-canvas.md) | 新增 | 画布背景 `background`（**数组下标即地图下标、逐图对应，越界用最后一层，每张地图只渲染一层**）：`cellSize` / `startX` / `startY` / 图外填充色 / 坐标映射 |
+| [design/skin/06-item-building.md](design/skin/06-item-building.md) | 新增 | 道具 `item` 与建筑 `building` **分节**：图标 / 衬底三元组 `{fill, stroke, img}`（**描边为独立设置项，缺省不绘制**）/ 建筑地图贴图 / 地图文字字体字色 |
+| [design/skin/07-audio.md](design/skin/07-audio.md) | 新增 | 音频 `audio`：3 个 BGM 场景键 / 9 个音效事件键 / 播放约束（字段定稿为预留，**V1 只解析不播放**，V1.1 实现） |
+| [design/skin/08-pages.md](design/skin/08-pages.md) | 新增 | 欢迎页与游戏首页 `startup` / `lobby`：封面背景（封面图归皮肤）、标题图形、主视觉、出身卡片（可缺省、走降级） |
+| [design/skin/09-creative.md](design/skin/09-creative.md) | 新增 | Creative 模式：新建／打开／编辑／导出 `.pp`（zip 走 `fflate`），**九宫格切分工具**，以 `.pmod` 为靶子的命中检查与预览 |
 | [design/skin/01-road.md](design/skin/01-road.md) | 新增 | 道路 `road` 分节：位模式（8 位顺时针）与 256 查表 / 15 槽位 / 47 姿态 / 样式标签优先级 |
 | [design/skin/02-role.md](design/skin/02-role.md) | 新增 | 形象 `role` 分节：玩家棋子 / 职业与怪物形象（无朝向） |
 | [design/skin/03-window.md](design/skin/03-window.md) | 新增 | 容器与控件 `window` 分节：四族划分 / 九宫格切片 / V1 底纹策略 |
@@ -127,9 +127,12 @@
 - 新增 [`design/skin.md`](design/skin.md)（总纲索引）与 [`design/skin/01-road.md`](design/skin/01-road.md)（道路分节）：素材是可选增强、缺位回退程序绘制；旋转 / 镜像 / 九宫格复用三件套；贴图渲染器 `drawTexture` 统一接口；道路 15 槽位 / 47 姿态 / 15 张素材；样式标签优先级（空标签通配、非空优先、命中数降序、声明顺序兜底）。
 - 三条用户已确认取舍同步登记到 [`design/07-decisions.md`](design/07-decisions.md) §8.1：素材定位、`tee` 系列定名（`tee_corner_nw` / `tee_corner_ne`）、`n ≤ 3` 忽略外侧角、道路样式优先级。
 - `skin/02-role.md` / `03-window.md` / `04-misc.md` 三节按其覆盖范围补齐（依据为对 `src/play/*` 与 `src/ui/*` 的只读调研），游玩态可见 UI 已在 `design/skin.md`「覆盖清单（游玩态逐屏）」中逐屏对齐；九项待确认汇总于 `design/skin.md` §八 与各分节末节。
-- 按原始需求「主题模式」整理并新增六节：`skin/00-package.md`（`.pp` / `.pgame` 包结构、manifest 顶层、三层优先级「游戏 ＞ 用户 ＞ 缺省」、五条加载入口）、`skin/05-canvas.md`（背景**数组**与多地图适配、坐标映射）、`skin/06-item-building.md`（道具与建筑**分节**、衬底三元组、建筑地图贴图与地图文字）、`skin/07-audio.md`（BGM 与音效事件钩子）、`skin/08-pages.md`（首页与出身选择页）、`skin/09-creative.md`（Creative 模式：构建、命中检查与预览 `.pp`）。
-- 2026-09-29 用户裁决 10 项已全部并入：`tag` 匹配按现有算法、`tee_corner_nw` 正向命名、`dpi → cellSize`、`item` / `building` 拆开、用户配置＝本地全局 pp、`background` 落点为背包与信息视图、衬底升级为 `{fill, stroke, img}`、`background` 升级为数组、build 模式可加载 pp 预览、新增 Creative 模式；原始需求笔误修正留档于 `design/skin.md` §九，未决项汇总于 §八（Q12 / Q17 / Q21–Q26 等）。
+- 按原始需求「主题模式」整理并新增六节：`skin/00-package.md`（`.pp` / `.pgame` 包结构、manifest 顶层、三层优先级「游戏 ＞ 用户 ＞ 缺省」、五条加载入口）、`skin/05-canvas.md`（背景**数组下标即地图下标、逐图对应、单层渲染**与多地图适配、坐标映射）、`skin/06-item-building.md`（道具与建筑**分节**、衬底三元组、建筑地图贴图与地图文字）、`skin/07-audio.md`（BGM 与音效事件钩子，V1 只预留）、`skin/08-pages.md`（欢迎页与游戏首页 `startup` / `lobby`）、`skin/09-creative.md`（Creative 模式：构建、九宫格切分、命中检查与预览 `.pp`）。
+- 2026-09-29 用户裁决 10 项已全部并入：`tag` 匹配按现有算法、`tee_corner_nw` 正向命名、`dpi → cellSize`、`item` / `building` 拆开、用户配置＝本地全局 pp、`background` 落点为背包与信息视图、衬底升级为 `{fill, stroke, img}`、`background` 升级为数组、build 模式可加载 pp 预览、新增 Creative 模式；原始需求笔误修正留档于 `design/skin.md` §九。
+- 2026-09-29 末轮裁决 8 项（14–21）已并入：zip 走 `fflate`；皮肤库只记录导入过的 `.pp`、运行时**一次只解压一套**；`audio` V1 只解析预留（V1.1 实现）；背景~~多层叠加~~（**已由裁决 23 改为按下标一一对应、单层渲染，越界用最后一层**）；描边**缺省不渲染**；包内**路径相对包根**与 `format` / `extends` / `theme`；`pages` 拆为 `startup` / `lobby` 且封面图归皮肤；Creative 提供**九宫格切分工具**、字体不子集化。未决项汇总于 `design/skin.md` §八（余 Q26 / Q28 / Q29 等）。
 - 2026-09-29 追加裁决 3 项（登记于 [`design/07-decisions.md`](design/07-decisions.md) §8.2）：**三件套**定义前置为「基本设计」并新增总纲 [`design/00a-formats.md`](design/00a-formats.md)（`skin/00-package.md` 保留皮肤包视角的具体定义）；物品 / 建筑信息视图的图标按**应用图标式**组合（衬底 ＋ 图标，文字走窗体自身字体字色，不存在交叉配置）；按钮 `hover` / `active` / `disabled` **四态结构定稿、实现顺序可后置**。
+- 2026-09-29 追加裁决 1 项（登记于 [`design/07-decisions.md`](design/07-decisions.md) §8.2）：`.pp` 包内**不设强制目录结构**——强制项只有 `manifest.json` 与可选 `preview.png`，素材的目录名 / 层级 / 文件名自由，位置**一律以描述文件为准**（提高扩展性与兼容性）；草案的 `resource` 键**废除**，新增校验项 `KP-10`。
+- 2026-09-29 追加裁决 1 项（登记于 [`design/07-decisions.md`](design/07-decisions.md) §8.2）：**背景数组改为「逐图清单」**——**下标即 pmod 的地图下标，一一对应、无需匹配 key**（`maps` 字段废除），**每张地图只渲染一层**（不再叠加）；**地图数多于层数时，越界的地图降级为使用最后一层**（皮肤 2 层、地图 4 张 → 下标 2 / 3 都用下标 1 的图）；无可用层／未配置时**再次降级为默认配置**（程序绘制纸面底纹）；`color` **每层各自携带**、随采用层生效，该层漏写即**降级为全局主题色**（**颜色不做层级回退**）（[`design/skin/05-canvas.md`](design/skin/05-canvas.md) §二）。
 - 2026-09-29 本轮的**实现任务**已落地为 [`task/04-skin.md`](../task/04-skin.md)（Phase D：三件套容器 / zip 读取 / 贴图渲染器 / 逐屏素材接入 / Creative 模式 / 皮肤校验，含 D0–D8 与 12 条原子验收），并在 [`TASK.md`](../TASK.md) 里程碑索引与「最新核对决策」登记。
 
 **2026-09-26 · 文档防烂加固**

@@ -31,10 +31,10 @@ Phase B  PLAY      ：游玩页（引擎 + UI）—— 加载 .pmod → 开局 �
    │
 Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿，见末尾）
    │
-Phase D  皮肤      ：素材皮肤（`.pp` / `.pgame`）—— 容器加载 / 贴图渲染器 / 逐屏素材接入 / Creative 模式   ★B 主体完成后做
+Phase D  皮肤      ：素材皮肤（`.pp` / `.pgame`）—— 容器加载（zip 走 `fflate`）/ 贴图渲染器 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）   ★B 主体完成后做
 ```
 
-**顺序约束**：Phase A 不验收不进 Phase B。Phase B 的引擎核心（`resolveSkill`/`tickStates`/`applyEffects` 等纯函数）在 A8 作为"规则结算"实现并单测，但真实 UI 与游玩循环在 Phase B。Phase D 的端到端验证依赖 Phase B 已渲染的游玩态；其类型、取图纯函数与 IO 层（D0–D2）可提前动工。
+**顺序约束**：Phase A 不验收不进 Phase B。Phase B 的引擎核心（`resolveSkill`/`tickStates`/`applyEffects` 等纯函数）在 A8 作为"规则结算"实现并单测，但真实 UI 与游玩循环在 Phase B。Phase D 的端到端验证依赖 Phase B 已渲染的游玩态；其类型、取图纯函数与 IO 层（D0–D2）可提前动工。音频（`audio`）在 V1 **只解析与预留**，播放实现排入 V1.1（裁决 16）。
 
 ---
 
@@ -46,7 +46,7 @@ Phase D  皮肤      ：素材皮肤（`.pp` / `.pgame`）—— 容器加载 / 
 | [task/01-build.md](task/01-build.md) | Phase A BUILD（构建页） | 信息架构/数据模型/布局/图层/组件库/模式/画布/属性编辑/引擎纯函数/校验/预设/导入导出 | **已完成首轮实现**（build + 78 项单测全绿） |
 | [task/02-play.md](task/02-play.md) | Phase B PLAY（游玩页） | 框架加载/开局/移动回合/战斗UI/骰子公示/技能交互/状态/遭遇/商店/装备背包/存档 | 待做（A 后） |
 | [task/03-polish.md](task/03-polish.md) | Phase C 收尾 | 视觉打磨 / GitHub Pages 部署 | 部分已完成 |
-| [task/04-skin.md](task/04-skin.md) | Phase D 皮肤（素材） | 三件套容器 / zip 读取 / 贴图渲染器 / 逐屏素材接入 / Creative 模式 / 皮肤校验 `KP-1`~`KP-6` | 待做（B 后；D0–D2 可提前） |
+| [task/04-skin.md](task/04-skin.md) | Phase D 皮肤（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | 待做（B 后；D0–D2 可提前） |
 
 ---
 
@@ -66,7 +66,7 @@ Phase D  皮肤      ：素材皮肤（`.pp` / `.pgame`）—— 容器加载 / 
 12. **玩家"不防御"= 自杀按钮**：玩家主动选"不防御" → 不掷 `def_roll`，防值走固有数值（属性+装备+职业%+状态mod，无骰浮动，非 0）；怪物作为 AI 始终积极防御（总掷 `def_roll`）。两者不超时。
 
 > 完整决策速查（约 30 条铁律）见 DESIGN §8；上述 12 条是对之前版本的修正/补充，相关任务以这里为准。
-> **2026-09-29 追加两轮共 13 项裁决（素材皮肤 / 三件套）**登记于 [`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.1 / §8.2，未决项汇总于 [`docs/design/skin.md`](docs/design/skin.md) §八；实现任务见 [`task/04-skin.md`](task/04-skin.md)。两轮并列有效，不以上述 12 条覆盖。
+> **2026-09-29 追加三轮共 23 项裁决（素材皮肤 / 三件套）**登记于 [`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.1 / §8.2，未决项汇总于 [`docs/design/skin.md`](docs/design/skin.md) §八；实现任务见 [`task/04-skin.md`](task/04-skin.md)。三轮并列有效，不以上述 12 条覆盖。末轮 8 项（裁决 14–21）的核心结论：zip 走 `fflate`；皮肤库只记导入过的 `.pp` 且运行时只解压一套；音频 V1 只预留；描边缺省不渲染；包内路径相对包根；`pages` 拆为 `startup` / `lobby`；Creative 提供九宫格切分工具、字体不子集化。补充裁决 22：`.pp` 包内**目录结构不设强制**（强制项只有 `manifest.json` 与可选 `preview.png`），素材位置**以描述文件为准**，`resource` 键废除（`KP-10`）。补充裁决 23：**背景数组为「逐图清单」**——**下标即 pmod 的地图下标、一一对应且无需匹配 key**（`maps` 字段废除），**每张地图只渲染一层**（修订裁决 17 的「多层叠加」），地图数多于层数时越界地图**降级为最后一层**，无可用层即降级为默认配置。
 
 ---
 
@@ -84,13 +84,38 @@ Phase D  皮肤      ：素材皮肤（`.pp` / `.pgame`）—— 容器加载 / 
 ## 约束：纯静态，无服务器（GitHub Pages）
 
 - 禁止任何需运行服务器的能力（后端 API/SSR/服务端存储/外部在线接口）
-- 数据只走 `localStorage` + 浏览器文件导入导出（`Blob` 下载 / `<input type="file">`）
-- 依赖只选能打包进 `dist/` 的库
+- 数据走 `localStorage` + 浏览器文件导入导出（`Blob` 下载 / `<input type="file">`）；**二进制资产（皮肤包 `.pp`）走 IndexedDB**——`localStorage` 只存字符串且配额约 5 MB，不适合包体（裁决 15，[`docs/design/skin/00-package.md`](docs/design/skin/00-package.md) §4.4）
+- 依赖只选能打包进 `dist/` 的库；**zip 读写统一用 `fflate`**（裁决 14，[`docs/design/08-deploy.md`](docs/design/08-deploy.md) §9）
 - Vite `base` 按项目页路径配置；优先单页避免深链 404
 
 ---
 
 ## 进度同步
+
+**2026-09-29 · 末轮裁决 14–21（素材皮肤 / 三件套）**
+- `Q12` zip 能力：**引入 `fflate`**（读＋写，约 8 KB gzip，浏览器端零 Node 依赖）——满足 GitHub Pages 纯静态与离线约束，不自实现 deflate（裁决 14；依赖边界登记于 [`docs/design/08-deploy.md`](docs/design/08-deploy.md) §9）。
+- `Q17` 皮肤库与解压：本地只记录**导入过**的 `.pp`（游戏自带皮肤不入库）；**运行时一次只解压一套**，切换皮肤先清空当前解压结果；本地保存 `.pp` 原包体（条目索引进 `localStorage`，**包体进 IndexedDB**）；**不设体积硬上限**；`.psave` **不记录**皮肤名（裁决 15）。
+- `Q20` 音频：**不进 V1**——字段与事件清单定稿为预留参数，V1 只解析与校验，播放整体排 V1.1（裁决 16）。
+- `Q21` 背景：数组**即逐图清单**（**下标即 pmod 的地图下标，无需匹配 key**）——第 `i` 张地图取 `background[i]`，**每张地图只渲染一层**（不叠加）；**地图数多于层数时，越界地图降级为最后一层**（皮肤 2 层、地图 4 张 → 下标 2 / 3 都用下标 1 的图）；无可用层／未配置 → 再次降级为**默认配置**（程序绘制纸面底纹）；画布级 `color` 取**采用层**的值（裁决 17，修订 23）。
+- `Q22` 描边：**独立设置项，缺省不渲染**——不跟随 `fill`、不保留组件色，无第四态（裁决 18）。
+- `Q23` 包内布局：`.pgame` ＝ `pack.json` ＋ `game.pmod` ＋ `skin/`；`.pp` ＝ `manifest.json` ＋ 可选 `preview.png`（素材目录与命名自由，`resource/` 仅为推荐约定）；**路径一律相对包根**且**以描述文件为准**，`resource` 字段废除（`KP-10`）；版本键 `version` 改名 `format`，新增 `extends`（仅包内继承）与 `theme`（禁改布局 token）（裁决 19 / 22）。
+- `Q24` 首页封面图：**归皮肤侧**（`startup.bg` / `lobby.bg`，即原 `pages.home.bg`），`.pmod` 不设封面字段（裁决 20）。
+- `Q25` Creative：**提供九宫格切分工具**（V1 渲染仍按拉伸，产出供 V1.1 消费）；**字体不做子集化**（裁决 21）。
+- 设计侧同步：[`docs/design/00a-formats.md`](docs/design/00a-formats.md)、[`docs/design/skin.md`](docs/design/skin.md) 与 `skin/00-package.md` / `05-canvas.md` / `06-item-building.md` / `07-audio.md` / `08-pages.md`（由 `pages` 改写为 `startup` / `lobby`）/ `09-creative.md`、[`docs/design/02-data-model.md`](docs/design/02-data-model.md)、[`docs/design/08-deploy.md`](docs/design/08-deploy.md)、[`docs/design/07-decisions.md`](docs/design/07-decisions.md) 与 [`docs/DESIGN.md`](docs/DESIGN.md) 入口块；任务侧同步本文件与 [`task/04-skin.md`](task/04-skin.md)。
+- 未决项：`Q26`（BGM 按地图）、`Q28`（跨包 `extends`）、`Q29`（`pack.json.entry` 语义），汇总见 [`docs/design/skin.md`](docs/design/skin.md) §八。
+
+**2026-09-29 · 补充裁决 22（`.pp` 包内目录不设强制结构）**
+- 强制结构收敛为两项：`manifest.json`（必须在包根）与可选 `preview.png`（存在时须在包根）。素材的目录名（含 `resource/`）、层级、文件名与扩展名**一律自由**，按分节命名的 `resource/<节>/` 降为**推荐约定**，加载器不得依赖。
+- **素材位置一律以描述文件内各字段所写的路径为准**（相对包根）：逐条按路径取包内条目，不推断前缀、不假设目录约定——调整目录结构无需改动加载代码（扩展性与兼容性）。
+- 草案的 `resource` 顶层键**废除**，读到即忽略并提示，校验项新增 **`KP-10`**。
+- 设计侧同步：[`docs/DESIGN.md`](docs/DESIGN.md) 基本设计块与进度同步、[`docs/design/00a-formats.md`](docs/design/00a-formats.md) §2.1 / §2.3 / §六、[`docs/design/skin/00-package.md`](docs/design/skin/00-package.md) §2.1 / §2.2 / §三 / §六、[`docs/design/skin.md`](docs/design/skin.md) §二 / §八 / §九、[`docs/design/skin/01-road.md`](docs/design/skin/01-road.md)（`KS-2`）、[`docs/design/skin/07-audio.md`](docs/design/skin/07-audio.md)、[`docs/design/skin/09-creative.md`](docs/design/skin/09-creative.md)、[`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.2；任务侧同步本文件与 [`task/04-skin.md`](task/04-skin.md)。
+
+**2026-09-29 · 补充裁决 23（背景按下标一一对应、单层渲染）**
+- `background` 数组**不是叠加层序，而是与 pmod 地图顺序一一对应的逐图清单**：**下标即地图下标**（第 `i` 张地图取 `background[i]`），**不需要任何匹配 key**——`maps` 字段废除。
+- **越界降级**：地图数多于背景层数时，超出的地图**降级为使用最后一张**（皮肤背景长度 2、pmod 地图 4 张 → 下标 2 / 3 的第三、四张地图都用下标 1 的图）。
+- **每张地图只渲染一层**（每次只取一层，不再叠加）；采用层素材不可用时向更靠前的层回退；`background` 缺失／为空／全部不可用 → 本节未接管，按皮肤优先级降级，全部落空即**再次降级为默认配置**（程序绘制纸面底纹）。
+- 画布级 `color` 只取**实际采用层**的值；校验项 `KB-6`（无可用背景 → 默认配置）/ `KB-7`（层数多于地图数 → 末尾层永不被采用）/ `KB-8`（不会被采用的层写了 `color`）/ `KB-9`（相邻两层基准不一致 → 切图跳变）与取舍 `S-19` 按新语义改写。
+- 设计侧同步：[`docs/design/skin/05-canvas.md`](docs/design/skin/05-canvas.md) §一 / §二（含示例、字段、取值规则、§2.1 / §2.2）/ §四 / §五 / §六 / §七、[`docs/design/skin.md`](docs/design/skin.md) 模块映射 / `S-19` / `Q13` / `Q21` / §九 修正表、[`docs/design/skin/00-package.md`](docs/design/skin/00-package.md) §三 / 状态行、[`docs/design/skin/07-audio.md`](docs/design/skin/07-audio.md) §七、[`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.2（裁决 17 标注修订 ＋ 新增裁决 23）、[`docs/DESIGN.md`](docs/DESIGN.md) 模块映射与进度同步；任务侧同步本文件与 [`task/04-skin.md`](task/04-skin.md)。
 
 **2026-09-29 · 入口结构澄清与设计变更同步义务**
 - [`docs/DESIGN.md`](docs/DESIGN.md) 入口补充说明：索引之前列有若干**入口强制强调块**（铁律零 / 两条铁律 / 基本设计 / 全局基调 / 实现守则），属于给 AI 的开工前提，**结构保持不变**、与索引同页强制强调，不得下沉到 `design/` 分模块内。
@@ -98,8 +123,8 @@ Phase D  皮肤      ：素材皮肤（`.pp` / `.pgame`）—— 容器加载 / 
 - 修正根任务文件名的大小写：`task.md` → `TASK.md`（涉及 `docs/DESIGN.md` 与本文件，以及 `task/` 全部分文件的「上层索引」链接）。
 
 **2026-09-29 · 素材皮肤（skin）轮次落地任务清单**
-- 新增里程碑 [`task/04-skin.md`](task/04-skin.md)（Phase D）：三件套容器 / zip 读取 / 贴图渲染器 `drawTexture` / 逐屏素材接入 / Creative 模式 / 皮肤校验 `KP-1`~`KP-6`，含 D0–D8 与 12 条原子验收项。
-- 本轮设计侧产出：新增 [`docs/design/00a-formats.md`](docs/design/00a-formats.md)（三件套**基本设计**，前置必读）与 [`docs/design/skin.md`](docs/design/skin.md) ＋ `skin/` 十节；13 项裁决登记于 [`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.1 / §8.2。
+- 新增里程碑 [`task/04-skin.md`](task/04-skin.md)（Phase D）：三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 `drawTexture` / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-9`，含 D0–D8 与 18 条原子验收项。
+- 本轮设计侧产出：新增 [`docs/design/00a-formats.md`](docs/design/00a-formats.md)（三件套**基本设计**，前置必读）与 [`docs/design/skin.md`](docs/design/skin.md) ＋ `skin/` 十节；三轮共 21 项裁决登记于 [`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.1 / §8.2。
 - 顺序：Phase B 主体完成后开工，D0–D2（类型 / 取图纯函数 / IO）可提前。
 
 **2026-09-27 · Phase 0 + Phase A 首轮实现（代码从零重写）**
