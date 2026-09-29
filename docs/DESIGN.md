@@ -16,15 +16,31 @@
 >
 > **执行要求：** 任何改动文案 / 注释 / 文档后，必须全量复查确认无口语残留，否则当没改完。本规则优先级高于一切"省事""生动"的冲动。
 
-> **本文件是设计文档的索引**。完整设计已按章节切片到 [`design/`](design/) 下分模块，AI 执行时**按需读取单个模块**，避免一次性读取超大文件。
+> **本文件是设计文档的索引入口**。完整设计已按章节切片到 [`design/`](design/) 下分模块，AI 执行时**按需读取单个模块**，避免一次性读取超大文件。
 > 文中交叉引用（如"见 §4.8"）保留原章节号，下表可查到对应模块文件。
-> 任务清单见根 [`../task.md`](../task.md) 与其 [`task/`](../task/) 分文件。
+> 索引之前另列有若干**入口强制强调块**（铁律零、两条铁律、基本设计、全局基调、实现守则）。这些块**不属于索引用途**，而是给 AI 的开工前提：必须与索引同页、置于入口强制强调，不得因"本文件只是索引"而跳过，也不得只留在 `design/` 分模块内。
+> **设计变更同步义务**：每次设计变更（新增模块、修订裁决、调整入口块）完成后，必须回到本文件同步整理四处——模块映射表、章节映射、入口强调块、最新核对决策——并同步 [`TASK.md`](../TASK.md) 的里程碑索引与「进度同步」；任一处未同步视为变更未完成（流程见 [`design/00c-guidelines.md`](design/00c-guidelines.md) §一）。
+> 任务清单见根 [`TASK.md`](../TASK.md) 与其 [`task/`](../task/) 分文件。
 
 ## 两条铁律
 
 1. **DESIGN 已确认决策不要擅自改**：要改先和用户确认（决策全在 [`design/07-decisions.md`](design/07-decisions.md)）。
 2. **任何交互必须能在 [`design/04-editor.md`](design/04-editor.md) §5.4「操作模式标准表」找到出处**，找不到先改 §5.4 再加代码。
 3. **UI 文案一律书面语（铁律）**：所有界面文字禁用口语 / 调侃 / 感叹 / 方言 / 江湖话 / 网络语；**新建组件 / 控件也不例外**；每次改完文案须全量复查确认无口语残留（见 [`design/00c-guidelines.md`](design/00c-guidelines.md) §六）。
+
+## ⚠️ 基本设计：三件套（`.pmod` / `.pp` / `.pgame`）
+
+**基本设计**指「这份设计最终交付成什么文件形态」，先于一切界面与玩法细节：
+
+| 文件 | 形态 | 承载 |
+|---|---|---|
+| `.pmod` 游戏模组 | 单文件 Markdown（散文 ＋ YAML 围栏） | 地图、组件、规则、玩法——**不含任何 UI 定义** |
+| `.pp` 皮肤模组 | zip 容器（`manifest.json` ＋ `resource/`） | 纯渲染：路径 / 建筑 / 背景 / 音频 / 面板 / 提示框 / 角色 |
+| `.pgame` 整体分发 | zip 容器 | `.pmod` ＋ `.pp` 打包，作为整体分发与加载 |
+
+三者相互独立：`.pmod` 与 `.pp` 均可单独导出、单独加载；`.pp` 是可选增强，缺失时游戏照常渲染；`.pgame` 只是前两者的容器。加载优先级为「游戏配置 ＞ 用户配置 ＞ 程序绘制」，逐素材节点降级。
+
+**完整定义（容器布局 / 加载入口 / 优先级 / 版本迁移 / 校验项）见 [`design/00a-formats.md`](design/00a-formats.md)。**
 
 ## ⚠️ 全局基调：视觉风格（手绘 / 涂鸦）贯穿所有 UI
 
@@ -43,6 +59,7 @@
 | 文件 | 覆盖原章节 | 主题 |
 |------|-----------|------|
 | [design/00-overview.md](design/00-overview.md) | §1–§2 | 产品定位 / 技术栈 / 三条立场 |
+| [design/00a-formats.md](design/00a-formats.md) | 新增（前置） | **三件套（`.pmod` / `.pp` / `.pgame`）基本设计**：分工 / 容器布局 / 加载入口 / 三层优先级 / 版本迁移 |
 | [design/00b-style.md](design/00b-style.md) | §10（前置） | **视觉风格（纸张+手绘+涂鸦）全局基调** |
 | [design/00c-guidelines.md](design/00c-guidelines.md) | 新增 | **AI 实现守则（必读顺序/禁止事项/代码组织）** |
 | [design/01-pmod.md](design/01-pmod.md) | §3 | `.pmod` 文件格式（含完整示例） |
@@ -53,11 +70,23 @@
 | [design/06-future.md](design/06-future.md) | §7 | 后续阶段：游玩/骰子/存档/明确不做 |
 | [design/07-decisions.md](design/07-decisions.md) | §8 | 已确认决策记录 |
 | [design/08-deploy.md](design/08-deploy.md) | §9 | 部署（GitHub Pages） |
+| [design/skin.md](design/skin.md) | 新增 | **素材皮肤规范总纲（索引）**：素材存放 / 旋转镜像九宫格复用 / 贴图渲染器接口 / 三层优先级 / 覆盖边界 / 跨节取舍登记 |
+| [design/skin/00-package.md](design/skin/00-package.md) | 新增 | 皮肤包 `.pp` / `.pgame`（**皮肤包视角**；上位规范见 `design/00a-formats.md`）：包结构 / manifest 顶层键 / 五条加载入口 / 三层优先级 / 版本迁移 |
+| [design/skin/05-canvas.md](design/skin/05-canvas.md) | 新增 | 画布背景 `background`（**数组**，按 `maps` 适配多地图）：`cellSize` / `startX` / `startY` / 图外填充色 / 坐标映射 |
+| [design/skin/06-item-building.md](design/skin/06-item-building.md) | 新增 | 道具 `item` 与建筑 `building` **分节**：图标 / 衬底三元组 `{fill, stroke, img}` / 建筑地图贴图 / 地图文字字体字色 |
+| [design/skin/07-audio.md](design/skin/07-audio.md) | 新增 | 音频 `audio`：3 个 BGM 场景键 / 9 个音效事件键 / 播放约束（整节推算，V1 待裁决） |
+| [design/skin/08-pages.md](design/skin/08-pages.md) | 新增 | 首页与出身选择页 `pages`：封面背景、标题图形、主视觉、出身卡片（可缺省、走降级） |
+| [design/skin/09-creative.md](design/skin/09-creative.md) | 新增 | Creative 模式：新建／打开／编辑／导出 `.pp`，以 `.pmod` 为靶子的命中检查与预览 |
+| [design/skin/01-road.md](design/skin/01-road.md) | 新增 | 道路 `road` 分节：位模式（8 位顺时针）与 256 查表 / 15 槽位 / 47 姿态 / 样式标签优先级 |
+| [design/skin/02-role.md](design/skin/02-role.md) | 新增 | 形象 `role` 分节：玩家棋子 / 职业与怪物形象（无朝向） |
+| [design/skin/03-window.md](design/skin/03-window.md) | 新增 | 容器与控件 `window` 分节：四族划分 / 九宫格切片 / V1 底纹策略 |
+| [design/skin/04-misc.md](design/skin/04-misc.md) | 新增 | 标记与骰子 `misc` 分节：地图标记 / 建筑节点 / 骰子与骰面 / 图标兜底 / 引导线 |
 
 ## 章节 → 模块 快速映射
 
 ```
 §1,§2   → 00-overview
+（三件套 → 00a-formats，基本设计，前置，无原 § 编号，新增）
 §10     → 00b-style（全局基调，前置）
 §3      → 01-pmod
 §4.0–4.7→ 02-data-model
@@ -68,11 +97,12 @@
 §8      → 07-decisions
 §9      → 08-deploy
 （实现守则 → 00c-guidelines，无原 § 编号，新增）
+（素材皮肤 → skin，无原 § 编号，新增；分节在 skin/）
 ```
 
 ## 最新核对决策（2026-09-26 末轮，12 条修正/补充）
 
-完整 30 条铁律见 `design/07-decisions.md`；下列 12 条是对之前版本的修正，相关任务以这里为准（亦见 [`../task.md`](../task.md)「最新核对决策」）：
+完整 30 条铁律见 `design/07-decisions.md`；下列 12 条是对之前版本的修正，相关任务以这里为准（亦见 [`../TASK.md`](../TASK.md)「最新核对决策」）：
 
 1. 路由：默认 `/`=游玩页，`/build`=构建页（§7.0）。
 2. 怪物登场掷骰（反对每回合摇）：每次踩怪格实例化一只新怪时摇选怪骰+属性骰；同一只怪整场不重摇；不同遭遇各自独立摇（§4.8）。
@@ -92,6 +122,15 @@
 禁止后端 API/SSR/服务端存储/外部在线接口；数据只走 `localStorage` + 浏览器文件导入导出；依赖只选可打包进 `dist/` 的库；Vite `base` 按页路径配置，优先单页避免深链 404（详见 `design/08-deploy.md`）。
 
 ## 进度同步
+
+**2026-09-29 · 新增素材皮肤模块（skin）**
+- 新增 [`design/skin.md`](design/skin.md)（总纲索引）与 [`design/skin/01-road.md`](design/skin/01-road.md)（道路分节）：素材是可选增强、缺位回退程序绘制；旋转 / 镜像 / 九宫格复用三件套；贴图渲染器 `drawTexture` 统一接口；道路 15 槽位 / 47 姿态 / 15 张素材；样式标签优先级（空标签通配、非空优先、命中数降序、声明顺序兜底）。
+- 三条用户已确认取舍同步登记到 [`design/07-decisions.md`](design/07-decisions.md) §8.1：素材定位、`tee` 系列定名（`tee_corner_nw` / `tee_corner_ne`）、`n ≤ 3` 忽略外侧角、道路样式优先级。
+- `skin/02-role.md` / `03-window.md` / `04-misc.md` 三节按其覆盖范围补齐（依据为对 `src/play/*` 与 `src/ui/*` 的只读调研），游玩态可见 UI 已在 `design/skin.md`「覆盖清单（游玩态逐屏）」中逐屏对齐；九项待确认汇总于 `design/skin.md` §八 与各分节末节。
+- 按原始需求「主题模式」整理并新增六节：`skin/00-package.md`（`.pp` / `.pgame` 包结构、manifest 顶层、三层优先级「游戏 ＞ 用户 ＞ 缺省」、五条加载入口）、`skin/05-canvas.md`（背景**数组**与多地图适配、坐标映射）、`skin/06-item-building.md`（道具与建筑**分节**、衬底三元组、建筑地图贴图与地图文字）、`skin/07-audio.md`（BGM 与音效事件钩子）、`skin/08-pages.md`（首页与出身选择页）、`skin/09-creative.md`（Creative 模式：构建、命中检查与预览 `.pp`）。
+- 2026-09-29 用户裁决 10 项已全部并入：`tag` 匹配按现有算法、`tee_corner_nw` 正向命名、`dpi → cellSize`、`item` / `building` 拆开、用户配置＝本地全局 pp、`background` 落点为背包与信息视图、衬底升级为 `{fill, stroke, img}`、`background` 升级为数组、build 模式可加载 pp 预览、新增 Creative 模式；原始需求笔误修正留档于 `design/skin.md` §九，未决项汇总于 §八（Q12 / Q17 / Q21–Q26 等）。
+- 2026-09-29 追加裁决 3 项（登记于 [`design/07-decisions.md`](design/07-decisions.md) §8.2）：**三件套**定义前置为「基本设计」并新增总纲 [`design/00a-formats.md`](design/00a-formats.md)（`skin/00-package.md` 保留皮肤包视角的具体定义）；物品 / 建筑信息视图的图标按**应用图标式**组合（衬底 ＋ 图标，文字走窗体自身字体字色，不存在交叉配置）；按钮 `hover` / `active` / `disabled` **四态结构定稿、实现顺序可后置**。
+- 2026-09-29 本轮的**实现任务**已落地为 [`task/04-skin.md`](../task/04-skin.md)（Phase D：三件套容器 / zip 读取 / 贴图渲染器 / 逐屏素材接入 / Creative 模式 / 皮肤校验，含 D0–D8 与 12 条原子验收），并在 [`TASK.md`](../TASK.md) 里程碑索引与「最新核对决策」登记。
 
 **2026-09-26 · 文档防烂加固**
 - 视觉风格从末尾 §10 **前置**为 `design/00b-style.md`（全局基调，开工 UI 前必读）。

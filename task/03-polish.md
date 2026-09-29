@@ -1,7 +1,7 @@
 # Phase C — 收尾（视觉 / 部署）
 
 > **里程碑范围**：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶段，本文件集中收尾项）。
-> **上层索引**：[`../task.md`](../task.md)　**设计依据**：[`../docs/design/08-deploy.md`](../docs/design/08-deploy.md)(§9 部署/§10 视觉)（索引见 [`../docs/DESIGN.md`](../docs/DESIGN.md)）　**前置**：A / B 主体完成。
+> **上层索引**：[`../TASK.md`](../TASK.md)　**设计依据**：[`../docs/design/08-deploy.md`](../docs/design/08-deploy.md)(§9 部署/§10 视觉)（索引见 [`../docs/DESIGN.md`](../docs/DESIGN.md)）　**前置**：A / B 主体完成。
 
 ---
 

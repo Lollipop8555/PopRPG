@@ -1,4 +1,4 @@
-# PopRPG 任务清单 (task.md)
+# PopRPG 任务清单 (TASK.md)
 
 > ## ⛔ 铁律零 · 全程书面语（最高优先级，置于所有规则之前）
 >
@@ -30,9 +30,11 @@ Phase A  BUILD     ：构建页（编辑器）—— 一次性把信息架构 / 
 Phase B  PLAY      ：游玩页（引擎 + UI）—— 加载 .pmod → 开局 → 移动/战斗/状态/遭遇/商店 → 存档         ★build 完成后做
    │
 Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿，见末尾）
+   │
+Phase D  皮肤      ：素材皮肤（`.pp` / `.pgame`）—— 容器加载 / 贴图渲染器 / 逐屏素材接入 / Creative 模式   ★B 主体完成后做
 ```
 
-**顺序约束**：Phase A 不验收不进 Phase B。Phase B 的引擎核心（`resolveSkill`/`tickStates`/`applyEffects` 等纯函数）在 A8 作为"规则结算"实现并单测，但真实 UI 与游玩循环在 Phase B。
+**顺序约束**：Phase A 不验收不进 Phase B。Phase B 的引擎核心（`resolveSkill`/`tickStates`/`applyEffects` 等纯函数）在 A8 作为"规则结算"实现并单测，但真实 UI 与游玩循环在 Phase B。Phase D 的端到端验证依赖 Phase B 已渲染的游玩态；其类型、取图纯函数与 IO 层（D0–D2）可提前动工。
 
 ---
 
@@ -44,6 +46,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿，见�
 | [task/01-build.md](task/01-build.md) | Phase A BUILD（构建页） | 信息架构/数据模型/布局/图层/组件库/模式/画布/属性编辑/引擎纯函数/校验/预设/导入导出 | **已完成首轮实现**（build + 78 项单测全绿） |
 | [task/02-play.md](task/02-play.md) | Phase B PLAY（游玩页） | 框架加载/开局/移动回合/战斗UI/骰子公示/技能交互/状态/遭遇/商店/装备背包/存档 | 待做（A 后） |
 | [task/03-polish.md](task/03-polish.md) | Phase C 收尾 | 视觉打磨 / GitHub Pages 部署 | 部分已完成 |
+| [task/04-skin.md](task/04-skin.md) | Phase D 皮肤（素材） | 三件套容器 / zip 读取 / 贴图渲染器 / 逐屏素材接入 / Creative 模式 / 皮肤校验 `KP-1`~`KP-6` | 待做（B 后；D0–D2 可提前） |
 
 ---
 
@@ -63,6 +66,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿，见�
 12. **玩家"不防御"= 自杀按钮**：玩家主动选"不防御" → 不掷 `def_roll`，防值走固有数值（属性+装备+职业%+状态mod，无骰浮动，非 0）；怪物作为 AI 始终积极防御（总掷 `def_roll`）。两者不超时。
 
 > 完整决策速查（约 30 条铁律）见 DESIGN §8；上述 12 条是对之前版本的修正/补充，相关任务以这里为准。
+> **2026-09-29 追加两轮共 13 项裁决（素材皮肤 / 三件套）**登记于 [`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.1 / §8.2，未决项汇总于 [`docs/design/skin.md`](docs/design/skin.md) §八；实现任务见 [`task/04-skin.md`](task/04-skin.md)。两轮并列有效，不以上述 12 条覆盖。
 
 ---
 
@@ -88,6 +92,16 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿，见�
 
 ## 进度同步
 
+**2026-09-29 · 入口结构澄清与设计变更同步义务**
+- [`docs/DESIGN.md`](docs/DESIGN.md) 入口补充说明：索引之前列有若干**入口强制强调块**（铁律零 / 两条铁律 / 基本设计 / 全局基调 / 实现守则），属于给 AI 的开工前提，**结构保持不变**、与索引同页强制强调，不得下沉到 `design/` 分模块内。
+- 新增**设计变更同步义务**（登记于 [`docs/DESIGN.md`](docs/DESIGN.md) 入口与 [`docs/design/00c-guidelines.md`](docs/design/00c-guidelines.md) §一）：设计变更后须同步模块映射表、章节映射、入口强调块、最新核对决策四处，并同步本文件的里程碑索引与「进度同步」；任一侧缺失视为变更未完成。
+- 修正根任务文件名的大小写：`task.md` → `TASK.md`（涉及 `docs/DESIGN.md` 与本文件，以及 `task/` 全部分文件的「上层索引」链接）。
+
+**2026-09-29 · 素材皮肤（skin）轮次落地任务清单**
+- 新增里程碑 [`task/04-skin.md`](task/04-skin.md)（Phase D）：三件套容器 / zip 读取 / 贴图渲染器 `drawTexture` / 逐屏素材接入 / Creative 模式 / 皮肤校验 `KP-1`~`KP-6`，含 D0–D8 与 12 条原子验收项。
+- 本轮设计侧产出：新增 [`docs/design/00a-formats.md`](docs/design/00a-formats.md)（三件套**基本设计**，前置必读）与 [`docs/design/skin.md`](docs/design/skin.md) ＋ `skin/` 十节；13 项裁决登记于 [`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8.1 / §8.2。
+- 顺序：Phase B 主体完成后开工，D0–D2（类型 / 取图纯函数 / IO）可提前。
+
 **2026-09-27 · Phase 0 + Phase A 首轮实现（代码从零重写）**
 - 旧实现（HY3 产出、不符合文档）已删除，按 `docs/design/` 重新落地：类型全集 → 引擎纯函数 → store 分层 → .pmod → 构建页 UI。
 - 依赖与产物按 **GitHub Pages 纯静态**约束：Vite `base: './'`（不耦合仓库名）、**hash 路由**避免深链 404、官方 Actions 部署、无后端 / 无外部运行时接口。
@@ -95,8 +109,8 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿，见�
 - 已知边界：玩法流程（加点界面、挪格子、交锋、存档）属 Phase B；`npm run dev` 人工手测待执行一次。
 - 详细清单与备注见 `task/00-foundation.md` / `task/01-build.md` 末尾的「进度同步」。
 
-**2026-09-26 · 任务清单拆分：根 task.md 索引化，里程碑分散到 task/**
-- 根 `task.md`：要点 + 里程碑索引 + 12 条最新核对决策 + 明确不做 + 约束
+**2026-09-26 · 任务清单拆分：根 TASK.md 索引化，里程碑分散到 task/**
+- 根 `TASK.md`：要点 + 里程碑索引 + 12 条最新核对决策 + 明确不做 + 约束
 - `task/00-foundation.md`：Phase 0 基座 checklist
 - `task/01-build.md`：Phase A BUILD 完整 checklist（A0–A11 + 12 条验收 + 单测边界）
 - `task/02-play.md`：Phase B PLAY 完整 checklist（B0–B10 + 14 条验收）

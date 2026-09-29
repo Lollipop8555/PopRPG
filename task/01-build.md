@@ -1,7 +1,7 @@
 # Phase A — BUILD（构建页，先做完整）
 
 > **里程碑范围**：信息架构与数据模型 / 布局 / 图层 / 组件库面板 / 操作模式 / 画布 / 属性编辑（组件页·实例页·规则页）/ 各类组件编辑器 / 规则引擎纯函数 / 校验与「清单」按钮 / 预设最小清单 / 导入导出。
-> **上层索引**：[`../task.md`](../task.md)　**设计依据**：[`../docs/design/02-data-model.md`](../docs/design/02-data-model.md)(§4.0) · [`../docs/design/04-editor.md`](../docs/design/04-editor.md)(§5) · [`../docs/design/05-mvp.md`](../docs/design/05-mvp.md)(§6.2) · [`../docs/design/03-engine.md`](../docs/design/03-engine.md)(§4.8 引擎纯函数)（索引见 [`../docs/DESIGN.md`](../docs/DESIGN.md)）
+> **上层索引**：[`../TASK.md`](../TASK.md)　**设计依据**：[`../docs/design/02-data-model.md`](../docs/design/02-data-model.md)(§4.0) · [`../docs/design/04-editor.md`](../docs/design/04-editor.md)(§5) · [`../docs/design/05-mvp.md`](../docs/design/05-mvp.md)(§6.2) · [`../docs/design/03-engine.md`](../docs/design/03-engine.md)(§4.8 引擎纯函数)（索引见 [`../docs/DESIGN.md`](../docs/DESIGN.md)）
 > **前置**：[`task/00-foundation.md`](./00-foundation.md)　**顺序约束**：A 不验收不进 B（PLAY）。
 > **目标**：一个能产出合法 `.pmod` 的完整体检式编辑器。
 

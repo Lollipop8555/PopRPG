@@ -5,15 +5,18 @@
 ## 一、开工前必读顺序（不要跳、不要凭记忆）
 
 1. [`design/00-overview.md`](design/00-overview.md) — 产品定位 / 三条立场 / 明确不做
-2. [`design/00b-style.md`](design/00b-style.md) — **视觉全局基调（纸张+手绘+涂鸦），贯穿所有 UI**
-3. [`design/04-editor.md`](design/04-editor.md) — §5 操作模式标准表（G1–G6），构建态交互铁律
-4. [`design/02-data-model.md`](design/02-data-model.md) — §4.0–§4.7 七大类类型定义
-5. [`design/03-engine.md`](design/03-engine.md) — §4.8 规则引擎纯函数
-6. [`design/05-mvp.md`](design/05-mvp.md) — §6 预设最小清单 + 验收原子项
-7. [`design/07-decisions.md`](design/07-decisions.md) — §8 已确认决策（不可擅自改）
-8. 对应里程碑的 `task/` 分文件 checklist
+2. [`design/00a-formats.md`](design/00a-formats.md) — **基本设计：三件套（`.pmod` / `.pp` / `.pgame`）与容器**（凡涉及文件格式、导入导出、加载的任务必读）
+3. [`design/00b-style.md`](design/00b-style.md) — **视觉全局基调（纸张+手绘+涂鸦），贯穿所有 UI**
+4. [`design/04-editor.md`](design/04-editor.md) — §5 操作模式标准表（G1–G6），构建态交互铁律
+5. [`design/02-data-model.md`](design/02-data-model.md) — §4.0–§4.7 七大类类型定义
+6. [`design/03-engine.md`](design/03-engine.md) — §4.8 规则引擎纯函数
+7. [`design/05-mvp.md`](design/05-mvp.md) — §6 预设最小清单 + 验收原子项
+8. [`design/07-decisions.md`](design/07-decisions.md) — §8 已确认决策（不可擅自改）
+9. 对应里程碑的 `task/` 分文件 checklist
 
 > 没读完 00b-style 和 04-editor 就写界面/交互，等于没看需求就动工。
+> **素材皮肤相关任务另加读**：[`design/skin.md`](skin.md)（总纲）与对应 `skin/` 分节；三件套的完整定义只在 [`design/00a-formats.md`](00a-formats.md) 与 [`design/skin/00-package.md`](skin/00-package.md) 两处，以后者同步前者（不一致时以 `00a-formats.md` 为准，裁决 11）。
+> **设计变更的同步义务**：任何设计变更（新增 / 修订模块、追加裁决、调整入口强制强调块）完成后，必须回到 [`DESIGN.md`](../DESIGN.md) 同步四处——模块映射表、章节映射、入口强调块、最新核对决策——并同步 [`TASK.md`](../TASK.md) 的里程碑索引与「进度同步」。索引入口（`DESIGN.md` 与 `TASK.md`）是只读检索的唯一入口：设计与任务任一侧缺失，均视为变更未完成。
 
 ## 二、禁止事项（红线，违反任一条都是"做烂"的根源）
 
