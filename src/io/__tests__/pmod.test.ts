@@ -62,11 +62,84 @@ describe('round-trip', () => {
     expect(serialized).not.toContain('"preset"')
   })
 
+  it('文件头声明字符集：UTF-8 BOM + charset 注释（§3）', () => {
+    const { text } = exportPmod(library, project)
+    expect(text.charCodeAt(0)).toBe(0xfeff)
+    expect(text).toContain('<!-- charset: utf-8 -->')
+    // BOM 不影响解析
+    expect(parsePmod(text).name).toBe(project.name)
+    expect(parsePmod(text).warnings).toEqual([])
+  })
+
+  it('结构标题只用英文，且能往返（§3）', () => {
+    const { text } = exportPmod(library, project)
+    for (const heading of ['## Background', '## Components', '## Rules', '## Maps', '### Monsters', '### Backgrounds']) {
+      expect(text).toContain(`${heading}\n`)
+    }
+    expect(text).not.toContain('## 设定')
+    expect(text).not.toContain('### 技能')
+  })
+
+  it('结构标题不残留中文：每个 `##` / `###` 都命中英文标题表（地图名除外，§3）', () => {
+    const CJK = /[\u4e00-\u9fff]/
+    const sections = ['Background', 'Components', 'Rules', 'Maps']
+    const groups = ['Monsters', 'Items', 'Buildings', 'Roads', 'Classes', 'Skills', 'NPCs', 'Backgrounds']
+    const seen = { sections: [] as string[], groups: [] as string[] }
+    let section = ''
+
+    for (const line of exportPmod(library, project).text.split('\n')) {
+      const m = /^(#{2,3})\s+(.*)$/.exec(line)
+      if (!m) continue
+      const title = m[2].trim()
+      if (m[1].length === 2) {
+        section = title
+        seen.sections.push(title)
+        expect(sections).toContain(title)
+        expect(CJK.test(title)).toBe(false)
+        // 只有地图名（`### <地图名>`）允许中文，它是内容不是结构
+      } else if (section === 'Components') {
+        seen.groups.push(title)
+        expect(groups).toContain(title)
+        expect(CJK.test(title)).toBe(false)
+      }
+    }
+
+    expect(seen.sections).toEqual(sections)
+    // 出现过的分组必须按 GROUP_ORDER 排（空分组不写），且首尾两个恒在
+    expect(seen.groups).toEqual(groups.filter((g) => seen.groups.includes(g)))
+    expect(seen.groups[0]).toBe('Monsters')
+    expect(seen.groups.at(-1)).toBe('Backgrounds')
+  })
+
+  it('旧中文标题降级兼容：`## 设定` / `### 技能` 仍能读出来（向后兼容）', () => {
+    const legacy = [
+      '# 老档',
+      '',
+      '## 设定',
+      '',
+      '### 技能',
+      '```yaml',
+      '- id: basic_attack',
+      '  name: 普通攻击',
+      '  dim: patk',
+      '  target: opponent',
+      '  vs: auto',
+      '  bonus: 0',
+      '  apply: hp',
+      '  cost: {}',
+      '```',
+      '',
+    ].join('\n')
+    const parsed = parsePmod(legacy)
+    expect(parsed.components.skills.map((s) => s.id)).toEqual(['basic_attack'])
+    expect(parsed.warnings.join()).not.toContain('未知分组')
+  })
+
   it('旧文件缺 rules / 残留 diceConfig → 使用 DEFAULT_RULES 补齐并提示（§0.6 / A7）', () => {
     const legacy = `# 老档\n\n## 背景\n\n一段旧文字\n\n## 地图\n### 老图\n\`\`\`yaml\nnodes:\n  - { x: 0, y: 0, type: start }\n\`\`\`\n`
     const parsed = parsePmod(legacy)
     expect(parsed.rules.move.dice).toBe('1D6')
-    expect(parsed.warnings.join()).toContain('规则配置')
+    expect(parsed.warnings.join()).toContain('Rules')
 
     const withLegacyDice = `# 老档\n\n## 规则配置\n\`\`\`yaml\ndiceConfig:\n  default: 1D6\n\`\`\`\n`
     const parsed2 = parsePmod(withLegacyDice)

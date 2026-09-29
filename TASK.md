@@ -217,6 +217,13 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 - **新增「V1.1 清单（优先级 ③）」**（见上文）：音频播放（裁决 16）/ 贴图 `nine` 策略（裁决 21）/ 九宫格切片消费（裁决 21）/ 对话后续扩展（§7.6）/ 立绘遗留 `Q30` / 未决项 `Q26`·`Q28`·`Q29` / 多项目管理。
 - 任务侧同步：[`task/04-skin.md`](task/04-skin.md) 与 [`task/05-npc.md`](task/05-npc.md) 的「前置」行按新优先级重述。
 
+**2026-09-29 · `.pmod` 字符集声明与结构标题英文化**
+- **文件头声明字符集**：导出在最前面写入 **UTF-8 BOM（`EF BB BF`）＋ `<!-- charset: utf-8 -->`** —— `.pmod` 是纯文本，浏览器／编辑器有时按 **GBK** 猜编码，中文一旦乱码整段就废；解析前先剥 BOM。
+- **结构标题一律英文**：`## Background` / `## Components` / `## Rules` / `## Maps` 与 `### Monsters` / `Items` / `Buildings` / `Roads` / `Classes` / `Skills` / `NPCs` / `Backgrounds`；中文标题同样有乱码匹配失败的风险。**地图名（`### <地图名>`）是内容，照旧中文**。
+- **向后兼容**：导入**先按英文匹配、未命中降级中文**，旧写法 `## 设定` / `### 技能` / `### NPC` 照旧能读。
+- 代码落地 [`src/io/pmod.ts`](src/io/pmod.ts)（`SECTION_TITLE` / `GROUP_TITLE` / `SECTION_ALIASES` / `GROUP_ALIASES` ＋ 解析前剥 BOM；顺带补上此前**漏导出的 NPC 分组**）与 [`src/io/__tests__/pmod.test.ts`](src/io/__tests__/pmod.test.ts)（新增 3 项：BOM+BOM 解析 / 英文标题 / 中文降级）。
+- 设计侧同步：[`docs/design/01-pmod.md`](docs/design/01-pmod.md) §3 / §3.1、[`docs/design/02-data-model.md`](docs/design/02-data-model.md) §4.8 / §4.9、[`docs/design/03-engine.md`](docs/design/03-engine.md) §4.8.6、[`docs/DESIGN.md`](docs/DESIGN.md) 进度同步；任务侧同步 [`task/00-foundation.md`](task/00-foundation.md)。
+
 **2026-09-27 · Phase 0 + Phase A 首轮实现（代码从零重写）**
 - 旧实现（HY3 产出、不符合文档）已删除，按 `docs/design/` 重新落地：类型全集 → 引擎纯函数 → store 分层 → .pmod → 构建页 UI。
 - 依赖与产物按 **GitHub Pages 纯静态**约束：Vite `base: './'`（不耦合仓库名）、**hash 路由**避免深链 404、官方 Actions 部署、无后端 / 无外部运行时接口。

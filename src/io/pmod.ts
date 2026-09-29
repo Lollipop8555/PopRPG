@@ -43,6 +43,76 @@ const KIND_OF_ARRAY: Record<LibraryKey, ComponentKind> = {
 }
 
 /* ------------------------------------------------------------------ */
+/* ⓪ 结构标题与字符集（§3）                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * **结构标题一律用英文**（`## Background` / `### Skills` …）。
+ * 理由：`.pmod` 是纯文本，浏览器/编辑器有时会按 GBK 解码 —— 中文标题一旦乱码就**再也匹配不上**，
+ * 整段组件会被静默丢弃；英文标题不受编码影响。
+ *
+ * 导入时**先按英文标题匹配，未命中再降级中文** —— 旧文件照旧能读（向后兼容）。
+ */
+const SECTION_TITLE = {
+  background: 'Background',
+  components: 'Components',
+  rules: 'Rules',
+  maps: 'Maps',
+} as const
+
+type SectionId = keyof typeof SECTION_TITLE
+
+/** 把「id → 导出标题」翻成「标题 → id」：英文标题**只有一份来源**，导出与解析不会各认一套 */
+function invertTitles<T extends string>(table: Record<string, string>): Record<string, T> {
+  return Object.fromEntries(Object.entries(table).map(([id, title]) => [title, id])) as Record<string, T>
+}
+
+const SECTION_ALIASES: Record<string, SectionId> = {
+  ...invertTitles<SectionId>(SECTION_TITLE),
+  // —— 向后兼容（旧文件的中文标题；**只读不写**，导出永不产生）——
+  背景: 'background',
+  设定: 'components',
+  规则配置: 'rules',
+  地图: 'maps',
+}
+
+/** 分组标题（导出用；顺序见 `GROUP_ORDER`，§3.1） */
+const GROUP_TITLE: Record<LibraryKey, string> = {
+  monsters: 'Monsters',
+  items: 'Items',
+  buildings: 'Buildings',
+  roads: 'Roads',
+  classes: 'Classes',
+  skills: 'Skills',
+  npcs: 'NPCs',
+  backgrounds: 'Backgrounds',
+}
+
+/** 导出时的分组书写顺序（`Backgrounds` 恒在最后，单独一段） */
+const GROUP_ORDER: LibraryKey[] = ['monsters', 'items', 'buildings', 'roads', 'classes', 'skills', 'npcs']
+
+const GROUP_ALIASES: Record<string, LibraryKey> = {
+  ...invertTitles<LibraryKey>(GROUP_TITLE),
+  // —— 向后兼容（旧文件的中文标题；**只读不写**，导出永不产生）——
+  怪物: 'monsters',
+  道具: 'items',
+  建筑: 'buildings',
+  道路: 'roads',
+  职业: 'classes',
+  技能: 'skills',
+  NPC: 'npcs',
+  背景: 'backgrounds',
+}
+
+/** 查标题：**先精确、再忽略大小写**（`NPCs` / `npcs` / `Npc` 都认） */
+function lookupTitle<T>(table: Record<string, T>, title: string): T | undefined {
+  if (title in table) return table[title]
+  const lower = title.toLowerCase()
+  for (const [key, value] of Object.entries(table)) if (key.toLowerCase() === lower) return value
+  return undefined
+}
+
+/* ------------------------------------------------------------------ */
 /* ① 本局用到的组件闭包（§3.3）                                        */
 /* ------------------------------------------------------------------ */
 
@@ -156,38 +226,36 @@ export function exportPmod(
   const { used, missing } = collectUsedComponents(library, project)
   ensureBackground(library, used)
 
-  const parts: string[] = [`# ${project.name}\n\n`]
+  const parts: string[] = []
 
+  // ① 文件头：**UTF-8 BOM** ＋ 显式字符集声明 —— 让浏览器按 UTF-8 解码，不会被 GBK 抢走（§3）
+  parts.push('\uFEFF')
+  parts.push('<!-- charset: utf-8 -->\n')
   // 版本写在 HTML 注释里：不混入 yaml，也不影响人读（§7.3 迁移钩子）
   parts.push(`<!-- poprpg-version: ${PMOD_VERSION} -->\n\n`)
 
-  parts.push('## 背景\n\n')
+  parts.push(`# ${project.name}\n\n`)
+
+  parts.push(`## ${SECTION_TITLE.background}\n\n`)
   parts.push(project.background.trim() ? `${project.background.trim()}\n\n` : '（还没有写背景）\n\n')
 
-  parts.push('## 设定\n\n')
-  const groups: { title: string; list: AnyComponent[] }[] = [
-    { title: '怪物', list: used.monsters },
-    { title: '道具', list: used.items },
-    { title: '建筑', list: used.buildings },
-    { title: '道路', list: used.roads },
-    { title: '职业', list: used.classes },
-    { title: '技能', list: used.skills },
-  ]
-  for (const group of groups) {
-    if (group.list.length === 0) continue
-    parts.push(`### ${group.title}\n\n`)
-    parts.push(yamlBlock(group.list))
+  parts.push(`## ${SECTION_TITLE.components}\n\n`)
+  for (const key of GROUP_ORDER) {
+    const list = used[key] as AnyComponent[]
+    if (list.length === 0) continue
+    parts.push(`### ${GROUP_TITLE[key]}\n\n`)
+    parts.push(yamlBlock(list))
     parts.push('\n')
   }
-  parts.push('### 背景\n\n')
+  parts.push(`### ${GROUP_TITLE.backgrounds}\n\n`)
   parts.push(yamlBlock(used.backgrounds))
   parts.push('\n')
 
-  parts.push('## 规则配置\n\n')
+  parts.push(`## ${SECTION_TITLE.rules}\n\n`)
   parts.push(yamlBlock(project.rules))
   parts.push('\n')
 
-  parts.push('## 地图\n\n')
+  parts.push(`## ${SECTION_TITLE.maps}\n\n`)
   const { names, renamed } = uniqueMapNames(project.maps)
   project.maps.forEach((map, i) => {
     parts.push(`### ${names[i]}\n\n`)
@@ -215,16 +283,6 @@ export interface ParsedPmod {
   warnings: string[]
 }
 
-const GROUP_TO_KEY: Record<string, LibraryKey> = {
-  怪物: 'monsters',
-  道具: 'items',
-  建筑: 'buildings',
-  道路: 'roads',
-  职业: 'classes',
-  技能: 'skills',
-  背景: 'backgrounds',
-}
-
 function pullYaml(lines: string[], startIndex: number, endIndex: number): { value?: string; until: number } {
   let i = startIndex
   while (i < endIndex && !/^```yaml/.test(lines[i].trim())) i++
@@ -248,7 +306,7 @@ function safeLoad<T>(text: string | undefined, fallback: T, warn: (msg: string) 
 /** 缺 rules / 残留 diceConfig 的老文件 → DEFAULT_RULES 兜底（§0.6 / A7） */
 function mergeRules(loaded: Partial<Rules> | null, warn: (msg: string) => void): Rules {
   if (!loaded || typeof loaded !== 'object') {
-    warn('这个文件没有「规则配置」段，已用默认规则补齐')
+    warn(`这个文件没有「${SECTION_TITLE.rules}」段，已用默认规则补齐`)
     return structuredClone(DEFAULT_RULES)
   }
   if ('diceConfig' in (loaded as Record<string, unknown>)) warn('发现旧字段 `diceConfig`（已废弃），已忽略')
@@ -268,7 +326,9 @@ function mergeRules(loaded: Partial<Rules> | null, warn: (msg: string) => void):
   return rules
 }
 
-export function parsePmod(text: string): ParsedPmod {
+export function parsePmod(raw: string): ParsedPmod {
+  // 去掉导出时写在文件头的 BOM（`\uFEFF`），否则首行标题会匹配不上
+  const text = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw
   const warnings: string[] = []
   const warn = (msg: string) => warnings.push(msg)
   const versionMatch = /<!--\s*poprpg-version:\s*(\d+)\s*-->/.exec(text)
@@ -302,12 +362,13 @@ export function parsePmod(text: string): ParsedPmod {
       continue
     }
     if (h.level === 2) {
-      section = h.title
-      if (section === '背景') {
+      // 英文标题优先；未命中降级中文（旧文件，§3）
+      section = lookupTitle(SECTION_ALIASES, h.title) ?? ''
+      if (section === 'background') {
         const end = sectionEnd(2, i)
         background = lines.slice(i + 1, end).join('\n').trim()
       }
-      if (section === '规则配置') {
+      if (section === 'rules') {
         const end = sectionEnd(2, i)
         const { value } = pullYaml(lines, i + 1, end)
         if (value) {
@@ -319,8 +380,8 @@ export function parsePmod(text: string): ParsedPmod {
     }
     if (h.level === 3) {
       const end = sectionEnd(3, i)
-      if (section === '设定') {
-        const key = GROUP_TO_KEY[h.title]
+      if (section === 'components') {
+        const key = lookupTitle(GROUP_ALIASES, h.title)
         if (key) {
           const { value } = pullYaml(lines, i + 1, end)
           const list = safeLoad<AnyComponent[]>(value, [], warn)
@@ -330,9 +391,9 @@ export function parsePmod(text: string): ParsedPmod {
             )
           }
         } else {
-          warn(`「设定」里出现了未知分组：${h.title}（已忽略）`)
+          warn(`「${SECTION_TITLE.components}」里出现了未知分组：${h.title}（已忽略）`)
         }
-      } else if (section === '地图') {
+      } else if (section === 'maps') {
         const { value } = pullYaml(lines, i + 1, end)
         const loaded = safeLoad<{ start?: [number, number]; end?: [number, number]; nodes?: GameMap['nodes'] } | null>(
           value,
@@ -369,7 +430,7 @@ export function parsePmod(text: string): ParsedPmod {
     }
   }
 
-  if (!sawRules) warn('这个文件没有「规则配置」段，已用默认规则补齐')
+  if (!sawRules) warn(`这个文件没有「${SECTION_TITLE.rules}」段，已用默认规则补齐`)
   if (maps.length === 0) warn('没有解析到任何地图')
 
   return { version, name, background, rules, maps, components, warnings }
