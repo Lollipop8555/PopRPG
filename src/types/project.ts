@@ -14,6 +14,14 @@ export interface MapNode {
   /** 建筑宽高（单位：格，默认 1），放在地图节点上（§4.6） */
   w?: number
   h?: number
+  /**
+   * NPC 候选（**只对 building 有意义**，§4.9.3）：
+   * 不写 ＝ 不触发对话（该建筑只跑自己的 `encounter`）；1 位 ＝ 固定；多位 ＝ 掷 `talk.dice` 等权抽一位。
+   * **NPC 不写在建筑定义上**——同一栋建筑铺到多格可以遇到不同的人。
+   */
+  npcs?: string[]
+  /** 指定启用哪一套对话方案（方案名）；不写 ＝ 只有一套就用它、多套则掷骰（§4.9.3） */
+  dialog?: string
 }
 
 export interface GameMap {
@@ -25,8 +33,8 @@ export interface GameMap {
 }
 
 /**
- * 前置配置：每个场景一套算法，**共 13 项，一个不多**（§4.8.6）。
- * move×1 · combat×4 · treasure×2 · loot×2 · state×1 · shop×1 · event×1 · class_pool×1
+ * 前置配置：每个场景一套算法，**共 14 项，一个不多**（§4.8.6）。
+ * move×1 · combat×4 · treasure×2 · loot×2 · state×1 · shop×1 · event×1 · **talk×1** · class_pool×1
  */
 export interface Rules {
   move: {
@@ -47,6 +55,13 @@ export interface Rules {
     price: PriceDef
   }
   event: {
+    dice: string
+  }
+  /**
+   * 建筑内 NPC 对话（§4.9.3）：**选人 / 选方案**两次抽取都用它，掷定后本局锁定不变。
+   * 注意：对话**节点内**的选项抽取骰（节点 `dice` ＋ `hit`）是**内容**，不在这里（§4.9.2）。
+   */
+  talk: {
     dice: string
   }
   class_pool: string[]
@@ -88,6 +103,7 @@ export const DEFAULT_RULES: Rules = {
   state: { max_duration: 10 },
   shop: { price: { currency: 'gold', algo: 'value', dice: '1D6', range: [5, 15] } },
   event: { dice: '2D6' },
+  talk: { dice: '1D6' },
   class_pool: ['knight', 'mage'],
 }
 

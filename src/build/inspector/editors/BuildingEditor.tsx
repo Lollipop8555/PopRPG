@@ -31,6 +31,7 @@ const ENCOUNTER_LABEL: Record<EncounterKind, string> = {
   monster: '怪物房（抽一只开打）',
   event: '事件（门槛 + 判定 + 后果）',
   shop: '商店（用钱换东西）',
+  talk: '对话（建筑事件留空，以 NPC 对话为主体）',
 }
 
 export default function BuildingEditor({

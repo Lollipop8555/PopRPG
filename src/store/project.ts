@@ -39,7 +39,7 @@ export interface ProjectStore extends Project {
  *
  * 地图名是**建筑实例 key**（`<地图名>#<ref>@<锚点>`）的一部分，必须唯一且稳定 ——
  * 删掉「地图 2」后再新建得到「地图 4」，**绝不复用**「地图 2」；
- * 否则新图会继承旧图留在 `.psave` 里的对话抽取结果与 `prop` 终态。
+ * 否则新图会继承旧图留在 `.psave` 里的对话抽取结果与 `give` 交付终态。
  */
 export function nextMapName(maps: GameMap[]): string {
   const nums = maps

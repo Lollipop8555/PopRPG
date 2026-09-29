@@ -15,6 +15,7 @@ const ID_PREFIX: Record<ComponentKind, string> = {
   monster: 'm',
   class: 'c',
   skill: 'k',
+  npc: 'n',
   background: 'g',
 }
 

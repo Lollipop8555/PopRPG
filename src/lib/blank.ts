@@ -12,6 +12,7 @@ import type {
   ItemDef,
   ItemKind,
   MonsterDef,
+  NpcDef,
   SkillDef,
   Stats,
 } from '../types'
@@ -26,6 +27,7 @@ export const DEFAULT_ICON: Record<ComponentKind, string> = {
   monster: '👺',
   class: '🛡️',
   skill: '⚔️',
+  npc: '🧑',
   background: '🏕️',
 }
 
@@ -36,6 +38,7 @@ export const DEFAULT_NAME: Record<ComponentKind, string> = {
   monster: '新建怪物',
   class: '新建职业',
   skill: '新建技能',
+  npc: '新建 NPC',
   background: '新建背景',
 }
 
@@ -90,6 +93,10 @@ export function blankComponent(kind: ComponentKind, itemKind: ItemKind = 'consum
         apply: 'hp',
         cost: {},
       }
+      return def
+    }
+    case 'npc': {
+      const def: NpcDef = { ...base, dialogs: {} }
       return def
     }
     case 'background':

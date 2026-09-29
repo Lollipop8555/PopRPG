@@ -25,7 +25,7 @@ export interface LibraryStore extends Library {
 
 type PersistedLibrary = Pick<
   LibraryStore,
-  'roads' | 'buildings' | 'items' | 'monsters' | 'classes' | 'skills' | 'backgrounds' | 'seeded'
+  'roads' | 'buildings' | 'items' | 'monsters' | 'classes' | 'skills' | 'npcs' | 'backgrounds' | 'seeded'
 >
 
 function replaceInList(list: AnyComponent[], def: AnyComponent): AnyComponent[] {
@@ -104,6 +104,7 @@ export const useLibraryStore = create<LibraryStore>()(
         monsters: s.monsters,
         classes: s.classes,
         skills: s.skills,
+        npcs: s.npcs,
         backgrounds: s.backgrounds,
         seeded: s.seeded,
       }),
@@ -142,6 +143,7 @@ export function librarySnapshot(): Library {
     monsters: s.monsters,
     classes: s.classes,
     skills: s.skills,
+    npcs: s.npcs,
     backgrounds: s.backgrounds,
   }
 }

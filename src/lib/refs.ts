@@ -11,10 +11,13 @@ import type {
   BuildingDef,
   ClassDef,
   ComponentKind,
+  DialogNode,
   EffectOp,
   ItemDef,
   Library,
   MonsterDef,
+  NpcDef,
+  Project,
   SkillDef,
 } from '../types'
 import { LIBRARY_KEY_TO_KIND, LIBRARY_KEYS } from '../types'
@@ -57,6 +60,62 @@ function poolIds(pool: { source: 'ids' | 'filter'; ids?: (string | { id: string;
   return (pool.ids ?? []).map((e) => (typeof e === 'string' ? e : e.id))
 }
 
+/* ------------------------------------------------------------------ */
+/* NPC / 对话树的遍历（§4.9）                                           */
+/* ------------------------------------------------------------------ */
+
+/** 遍历一堆对话记录及其全部子树（§4.9.2：全树同一个结构，`items` 递归指向自己） */
+export function walkDialogItems(nodes: DialogNode[] | undefined, visit: (node: DialogNode) => void): void {
+  for (const node of nodes ?? []) {
+    visit(node)
+    walkDialogItems(node.items, visit)
+  }
+}
+
+/** 一个 NPC 的**全部**对话方案（方案名 → 根节点数组） */
+export function npcDialogs(npc: NpcDef | undefined): [string, NpcDef['dialogs'][string]][] {
+  if (!npc || !npc.dialogs || typeof npc.dialogs !== 'object') return []
+  return Object.entries(npc.dialogs)
+}
+
+/** 对话树里所有 `give` 引用的道具 id（去重）—— 含根层与任意深层 */
+export function dialogGiveIds(npc: NpcDef): string[] {
+  const out = new Set<string>()
+  for (const [, nodes] of npcDialogs(npc)) {
+    walkDialogItems(nodes, (node) => {
+      for (const id of node.give ?? []) out.add(id)
+    })
+  }
+  return [...out]
+}
+
+/**
+ * 项目里被**建筑实例**引用的 NPC id（去重）—— NPC 的入包条件（§4.9.3 / §3.3）：
+ * 只有被某张地图的某个节点的 `npcs` 点到，才算这一局的内容。
+ */
+export function npcIdsOf(project: Project): string[] {
+  const out = new Set<string>()
+  for (const map of project.maps) {
+    for (const node of map.nodes) {
+      if (node.type !== 'building') continue
+      for (const id of node.npcs ?? []) out.add(id)
+    }
+  }
+  return [...out]
+}
+
+/** NPC id → 被建筑实例引用的次数 */
+export function npcReferenceCounts(project: Project): Map<string, number> {
+  const out = new Map<string, number>()
+  for (const map of project.maps) {
+    for (const node of map.nodes) {
+      if (node.type !== 'building') continue
+      for (const id of node.npcs ?? []) out.set(id, (out.get(id) ?? 0) + 1)
+    }
+  }
+  return out
+}
+
 /** 组件 A 引用到的所有组件 id（去重） */
 export function referenceIdsOf(kind: ComponentKind, def: AnyComponent): string[] {
   const out = new Set<string>()
@@ -97,6 +156,10 @@ export function referenceIdsOf(kind: ComponentKind, def: AnyComponent): string[]
       for (const g of b.event?.on_fail?.grant ?? []) out.add(g.id)
       break
     }
+    case 'npc': {
+      for (const id of dialogGiveIds(def as NpcDef)) out.add(id)
+      break
+    }
     default:
       break
   }
@@ -114,20 +177,27 @@ export interface UsageTally {
   placed: Map<string, number>
 }
 
-function bump(map: Map<string, number>, key: string) {
-  map.set(key, (map.get(key) ?? 0) + 1)
+function bump(map: Map<string, number>, key: string, by = 1) {
+  map.set(key, (map.get(key) ?? 0) + by)
 }
 
-/** 只统计「已启用」的组件发出的引用 —— 未启用的世界里不该有那些引用（§5.7） */
-export function tallyUsage(library: Library, enabledIds: string[]): UsageTally {
+/**
+ * 只统计「已启用」的组件发出的引用 —— 未启用的世界里不该有那些引用（§5.7）。
+ *
+ * 例外两处：
+ * - **NPC 没有「启用」开关**——一条 NPC 一旦在库里，它 `give` 引用到的道具就算被引用（§4.9.3）；
+ * - **建筑实例的 `npcs`** 是项目侧引用，统计 `被引用 ×N` 需要传 `project`（§5.3）。
+ */
+export function tallyUsage(library: Library, enabledIds: string[], project?: Project): UsageTally {
   const referenced = new Map<string, number>()
   for (const key of LIBRARY_KEYS) {
     for (const def of library[key] as AnyComponent[]) {
-      if (!enabledIds.includes(def.id)) continue
       const kind = LIBRARY_KEY_TO_KIND[key]
+      if (kind !== 'npc' && !enabledIds.includes(def.id)) continue
       for (const id of referenceIdsOf(kind, def)) bump(referenced, id)
     }
   }
+  if (project) for (const [id, n] of npcReferenceCounts(project)) bump(referenced, id, n)
   return { referenced, placed: new Map<string, number>() }
 }
 

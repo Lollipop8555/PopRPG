@@ -26,6 +26,7 @@ import type {
   ItemDef,
   Library,
   MonsterDef,
+  NpcDef,
   RoadDef,
   SkillDef,
 } from '../types'
@@ -62,6 +63,7 @@ export const PRESET_ITEMS = PRESETS.items as unknown as ItemDef[]
 export const PRESET_MONSTERS = PRESETS.monsters as unknown as MonsterDef[]
 export const PRESET_CLASSES = PRESETS.classes as unknown as ClassDef[]
 export const PRESET_SKILLS = PRESETS.skills as unknown as SkillDef[]
+export const PRESET_NPCS = PRESETS.npcs as unknown as NpcDef[]
 export const PRESET_BACKGROUNDS = PRESETS.backgrounds as unknown as BackgroundDef[]
 
 /** 一份深拷贝的预设库，播种时用（避免把模块常量直接交给 store 去改） */
@@ -73,6 +75,7 @@ export function presetLibrary(): Library {
     monsters: PRESET_MONSTERS,
     classes: PRESET_CLASSES,
     skills: PRESET_SKILLS,
+    npcs: PRESET_NPCS,
     backgrounds: PRESET_BACKGROUNDS,
   })
   // 预设本身不带 color，这里按 id 给一个稳定区分色（不随机，刷新不变）

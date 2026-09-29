@@ -1,9 +1,12 @@
 /**
  * 组件库分区（§5.0.1）—— 顺序即分类：
- * 道路 · 建筑（地图件）｜ 消耗品 · 装备 · 怪物 · 职业 · 技能（道具／内容）｜ 背景（全局）
+ * 道路 · 建筑（地图件）｜ 消耗品 · 装备 · 怪物 · 职业 · 技能 · **NPC**（道具／内容）｜ 背景（全局）
  *
  * 存储上道具是一份数组（`items`，靠 `kind` 区分），
  * 界面上按 §5.0.1 拆成「消耗品」「装备」两区 —— **地图件与道具／内容永远不在同一层混排**。
+ *
+ * **NPC 列于「技能」与「背景」之间**（§5.0.1）；它**没有「启用」开关**——
+ * 生效条件是**被某个建筑实例引用**（节点的 `npcs`，§4.9.3）。
  */
 
 import type { AnyComponent, ComponentKind, ItemKind, Library, LibraryKey } from '../types'
@@ -27,6 +30,7 @@ export const SECTIONS: readonly SectionDef[] = [
   { id: 'monster', label: '怪物', icon: '👺', kind: 'monster', arrayKey: 'monsters' },
   { id: 'class', label: '职业', icon: '🛡️', kind: 'class', arrayKey: 'classes' },
   { id: 'skill', label: '技能', icon: '⚔️', kind: 'skill', arrayKey: 'skills' },
+  { id: 'npc', label: 'NPC', icon: '🧑', kind: 'npc', arrayKey: 'npcs' },
   { id: 'background', label: '背景', icon: '🏕️', kind: 'background', arrayKey: 'backgrounds' },
 ]
 

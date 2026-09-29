@@ -1,6 +1,9 @@
 /**
- * 组件库七大类 + 背景（§4.0 / §4.1~§4.5 / §4.8.3）。
- * 公共字段：id / name / icon / desc / tags —— 七大类完全一致，没有来源字段。
+ * 组件库八类 + 背景（§4.0 / §4.1~§4.5 / §4.8.3 / §4.9）。
+ * 公共字段：id / name / icon / desc / tags —— 各类完全一致，没有来源字段。
+ *
+ * **NPC 是第 8 类结构化组件**（§4.9）：不占地图格、不走 `enabledIds`，
+ * 入包条件 ＝ **被某个建筑实例引用**（节点的 `npcs`，§4.9.3）。
  */
 
 import type { PartialStatValues, RollSet, StatKey, Stats, StatValues } from './common'
@@ -13,9 +16,10 @@ export type ComponentKind =
   | 'monster'
   | 'class'
   | 'skill'
+  | 'npc'
   | 'background'
 
-/** 七大类 + 背景的公共字段，一个不多一个不少 */
+/** 八类 + 背景的公共字段，一个不多一个不少 */
 export interface ComponentBase {
   id: string
   name: string
@@ -126,10 +130,10 @@ export interface RoadDef extends ComponentBase {
 }
 
 /* ------------------------------------------------------------------ */
-/* 建筑 §4.4（五种行为并列，不互相嵌套）                                */
+/* 建筑 §4.4（六种行为并列，不互相嵌套）                                */
 /* ------------------------------------------------------------------ */
 
-export type EncounterKind = 'empty' | 'treasure' | 'monster' | 'event' | 'shop'
+export type EncounterKind = 'empty' | 'treasure' | 'monster' | 'event' | 'shop' | 'talk'
 
 export const ENCOUNTER_KINDS: readonly EncounterKind[] = [
   'empty',
@@ -137,6 +141,7 @@ export const ENCOUNTER_KINDS: readonly EncounterKind[] = [
   'monster',
   'event',
   'shop',
+  'talk',
 ]
 
 export interface MimicDef {
@@ -274,6 +279,58 @@ export interface SkillDef extends ComponentBase {
 }
 
 /* ------------------------------------------------------------------ */
+/* NPC §4.9 —— 第 8 类组件：只出现在建筑里，不走 `enabledIds`            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 对话记录 —— **全树唯一的类型**（§4.9.2「只有一个结构」）。
+ *
+ * **根层数组的元素与任意深层的 `items` 元素都是它**，`items` 递归指向自己；
+ * **没有 `type` 判别**，也**不存在"节点 / 项"两种东西**（`DialogItem` /
+ * `DialogChatItem` / `DialogPropItem` 全部作废；旧包里的 `type` 字段忽略）。
+ *
+ * **必填只有 `message`**，其余五个字段全部可省。
+ */
+export interface DialogNode {
+  /**
+   * **本条作为 `items` 的元素（玩家的一个选项）时才生效**：玩家那一步选择的
+   * **答复文本** ＝ 父层给玩家看的选项按钮文本（也作编辑器卡片标题）。
+   * **根层数组里的元素不写它**（不展示、无意义；导入时忽略并提示）。
+   */
+  result?: string
+  /** **唯一必填**：NPC 台词，按顺序逐条展示，玩家点「继续」推进 */
+  message: string[]
+  /**
+   * **本层 `items` 的命中骰**（如 `'1D6'`；有它 → 本层不给选项列表、改给「掷骰」按钮，
+   * 按各 `items` 元素的 `hit` 命中；**没有 → 玩家直接点选**）。
+   * 写在**内容**里，不是前置配置；**每一层都能写**。
+   */
+  dice?: string
+  /**
+   * 若**父层写了 `dice`**：本条被命中的区间（如 `'1-2'` / `'6'`）。
+   * **非骰子选择时不需要**；父层没 `dice` 却写了 → 忽略并提示。
+   */
+  hit?: string
+  /** **后续选项**（同一结构的数组）；**缺省 / 空数组 ＝ 说完就结束** */
+  items?: DialogNode[]
+  /**
+   * **赠予道具的 id 列表**（不是 `items`，§8.3 设定 8）；**可重复＝多份**
+   * （同一种给 2 份就写 2 次）。**没有赠予时不需要**。
+   * **与 `items` 可并存**：先结算 `give`，再按 `items` 继续或结束（§4.9.2）。
+   */
+  give?: string[]
+}
+
+/**
+ * NPC 定义（§4.9.1）：公共字段 ＋ **多套对话方案**。
+ * 方案名即 key（如 `Mod1` / `Mod2`），值是该方案的**根节点数组**。
+ * 位置一律由**建筑实例**给出（节点的 `npcs` / `dialog`，§4.9.3）。
+ */
+export interface NpcDef extends ComponentBase {
+  dialogs: Record<string, DialogNode[]>
+}
+
+/* ------------------------------------------------------------------ */
 /* 背景 §5.0.1 —— 全局，始终生效                                       */
 /* ------------------------------------------------------------------ */
 
@@ -287,4 +344,5 @@ export type AnyComponent =
   | MonsterDef
   | ClassDef
   | SkillDef
+  | NpcDef
   | BackgroundDef

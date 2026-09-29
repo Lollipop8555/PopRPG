@@ -27,6 +27,7 @@ const ARRAY_OF_KIND: Record<ComponentKind, LibraryKey> = {
   monster: 'monsters',
   class: 'classes',
   skill: 'skills',
+  npc: 'npcs',
   background: 'backgrounds',
 }
 
@@ -37,6 +38,7 @@ const KIND_OF_ARRAY: Record<LibraryKey, ComponentKind> = {
   monsters: 'monster',
   classes: 'class',
   skills: 'skill',
+  npcs: 'npc',
   backgrounds: 'background',
 }
 
@@ -118,7 +120,7 @@ function serializeNodes(map: GameMap): unknown {
 
 /**
  * **地图名去重**（§8.3 设定 6）：地图名是**建筑实例 key**（`<地图名>#<ref>@<锚点>`）的一部分，
- * 两张地图同名会让对话抽取结果 / `prop` 终态在 `.psave` 里撞车。
+ * 两张地图同名会让对话抽取结果 / `give` 交付终态在 `.psave` 里撞车。
  *
  * 规矩：**第一张保持原名**，第 2 张起追加 ` (2)` / ` (3)`…（若后缀名也被占用就继续顺延）。
  * 编辑器里**不改名、只标黄提示**——去重发生在**离开构建页的两个出口**：导出文件、直接开局。

@@ -7,6 +7,7 @@ import type {
   ComponentKind,
   ItemDef,
   MonsterDef,
+  NpcDef,
   RoadDef,
   SkillDef,
 } from './component'
@@ -18,10 +19,11 @@ export interface Library {
   monsters: MonsterDef[]
   classes: ClassDef[]
   skills: SkillDef[]
+  npcs: NpcDef[]
   backgrounds: BackgroundDef[]
 }
 
-/** 八个分区与世界里的 key 一一对应（§5.0.1） */
+/** 八个分区与世界里的 key 一一对应（§5.0.1；NPC 列于「技能」与「背景」之间） */
 export const LIBRARY_KEYS = [
   'roads',
   'buildings',
@@ -29,6 +31,7 @@ export const LIBRARY_KEYS = [
   'monsters',
   'classes',
   'skills',
+  'npcs',
   'backgrounds',
 ] as const
 
@@ -42,6 +45,7 @@ export const LIBRARY_KEY_TO_KIND: Record<LibraryKey, ComponentKind> = {
   monsters: 'monster',
   classes: 'class',
   skills: 'skill',
+  npcs: 'npc',
   backgrounds: 'background',
 }
 
@@ -52,6 +56,7 @@ export const KIND_TO_LIBRARY_KEY: Record<ComponentKind, LibraryKey> = {
   monster: 'monsters',
   class: 'classes',
   skill: 'skills',
+  npc: 'npcs',
   background: 'backgrounds',
 }
 
@@ -70,6 +75,7 @@ export function emptyLibrary(): Library {
     monsters: [],
     classes: [],
     skills: [],
+    npcs: [],
     backgrounds: [],
   }
 }
