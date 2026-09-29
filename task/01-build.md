@@ -4,6 +4,7 @@
 > **上层索引**：[`../TASK.md`](../TASK.md)　**设计依据**：[`../docs/design/02-data-model.md`](../docs/design/02-data-model.md)(§4.0) · [`../docs/design/04-editor.md`](../docs/design/04-editor.md)(§5) · [`../docs/design/05-mvp.md`](../docs/design/05-mvp.md)(§6.2) · [`../docs/design/03-engine.md`](../docs/design/03-engine.md)(§4.8 引擎纯函数)（索引见 [`../docs/DESIGN.md`](../docs/DESIGN.md)）
 > **前置**：[`task/00-foundation.md`](./00-foundation.md)　**顺序约束**：A 不验收不进 B（PLAY）。
 > **目标**：一个能产出合法 `.pmod` 的完整体检式编辑器。
+> **2026-09-29 修订**：**NPC 与对话（第 8 类组件）**为独立里程碑 [`05-npc.md`](./05-npc.md)（Phase E），**不在本文件实现**。本文件内「七类组件 / 13 项配置 / `encounter` 五选一 / 八区组件库」等表述是 Phase A 落地时的口径，已由该里程碑增补为 **八类 / 14 项 / 六选一 / 九区**——阅读时以 [`../docs/design/04-editor.md`](../docs/design/04-editor.md) 与 [`../docs/design/02-data-model.md`](../docs/design/02-data-model.md) §4.9 为准。
 
 ---
 
@@ -18,10 +19,10 @@
   - `RewardPick { pick:{algo:'tiers'|'count', dice, tiers?:{upto,n}[], range?}, copies:{algo:'fixed'|'value'|'multiplier', n?, dice?, range?, steps?} }`
   - `MapCost { step?, hp?, mp? }`；`Gate { tags:string[], mode?:'any'|'all', missing?:'block'|'penalty', penalty?:MapCost }`
   - `RollSet { add_dice?, mult?:{dice, steps} }`（**没有 base_dice**——属性由 `stat_dice` 在登场时摇定）
-  - **第七类 `SkillDef`**：`{ dim:StatKey, target:'opponent'|'self', vs:StatKey|'auto'|'none', bonus:number, apply:'hp'|'mp'|'none', cost?:MapCost, roll?:RollSet, effects?:EffectOp[] }`
+  - **第七类 `SkillDef`**（**第 8 类 NPC 见 Phase E** [`05-npc.md`](./05-npc.md)）：`{ dim:StatKey, target:'opponent'|'self', vs:StatKey|'auto'|'none', bonus:number, apply:'hp'|'mp'|'none', cost?:MapCost, roll?:RollSet, effects?:EffectOp[] }`
   - `AUTO_VS: Record<StatKey,StatKey>`：`patk→pdef` / `matk→mdef` / `pdef→patk` / `mdef→matk`
   - **删掉 `AttackDef` 与 `Rules.combat.attacks`**——攻击方式已升级为技能组件
-  - `Rules { move:{dice}, combat:{stat_dice, pick_dice, atk_roll, def_roll}, treasure:RewardPick, loot:RewardPick, class_pool:string[], state:{max_duration:number}, shop:{price:PriceDef}, event:{dice:Dice} }`（**共 13 项配置，一个不多**，§4.8.6）
+  - `Rules { move:{dice}, combat:{stat_dice, pick_dice, atk_roll, def_roll}, treasure:RewardPick, loot:RewardPick, class_pool:string[], state:{max_duration:number}, shop:{price:PriceDef}, event:{dice:Dice} }`（**共 13 项配置，一个不多**，§4.8.6；**已由 Phase E 增补 `talk.dice` 为 14 项**，见 [`05-npc.md`](./05-npc.md)）
   - `Monster` 加 `attack_weights?` / `atk_roll?` / `def_roll?` / `stat_dice?` / `point_reward?` / `reward_pool?` / `pick?` / `copies?` / `effects?`（命中玩家时施加）
   - `Building` 加 `cost?` / `gate?` / `point_reward?` / `reward_pool?` / `monster_pool?:PoolRef` / `event?:EventBlock` / `stock?:PoolRef` / `price?:PriceDef`；`mimic` 由 `reward` 改成同一 `reward_pool` 结构
   - `Road` 加 `cost?:MapCost` / `gate?:Gate`
@@ -66,7 +67,7 @@
 
 - [x] 公共字段 + 来源徽章 + 恢复默认 + 本局状态（启用/铺设/被引用）
 - [x] **道路**：`cost`(step/hp/mp) + `gate`(tags/mode/missing/penalty)；实时反查带标签的已启用组件；权限死路标黄
-- [x] **建筑 `encounter` 五选一**，按选中行为只显示对应块：
+- [x] **建筑 `encounter` 五选一**（**已由 Phase E 增补 `talk` 为六选一**，见 [`05-npc.md`](./05-npc.md)），按选中行为只显示对应块：
   - `empty`：`cost`/`gate`/`point_reward`/`desc`
   - `treasure`：奖励池(`ids`手选/`filter`筛，可权重) + 覆盖 `pick`/`copies` + `mimic`
   - `monster`：怪物池（同结构）
@@ -84,7 +85,7 @@
 > 同时删掉「硬规则只读展示」那一段：写死的东西不该拿一整块地方自我表彰。
 
 - [x] **实例页**：坐标/类型/引用组件名 + `[编辑该组件定义]` 跳转 + 建筑宽高 + 复制/删除节点；悬空引用标红 + 快捷修复
-- [x] **规则面板**（13 项，一个不多，无 `combat.attacks`；顶栏入口，不进右栏）：
+- [x] **规则面板**（13 项，一个不多，无 `combat.attacks`；顶栏入口，不进右栏；**已由 Phase E 增补 `talk.dice` 为 14 项**，见 [`05-npc.md`](./05-npc.md)）：
   - `move.dice`；`combat` 的 `stat_dice`/`pick_dice`/`atk_roll`/`def_roll`；`treasure`/`loot` 的 `pick`+`copies`；`state.max_duration`；`shop.price`；`event.dice`；`class_pool`
   - **每字段说明预览 + 「模拟10次」按钮**
 - [x] 规则面板 `rules` 导出/导入；旧文件缺 `rules`/残留 `diceConfig` 用 `DEFAULT_RULES` 兜底并提示
@@ -167,7 +168,7 @@
 - [x] 8b. 标签驱动不写死（造 `gate.tags:[飞行]`+装备 `[飞行]` 不改代码走通）
 - [x] 8c. 权限死路可见标黄
 - [x] 9. 自建与预设同库同权；改库对用到它的局立即生效
-- [x] 9b. 规则面板=§4.8.6 13 项，无 `combat.attacks`；每字段说明（无硬规则只读段）
+- [x] 9b. 规则面板=§4.8.6 13 项，无 `combat.attacks`；每字段说明（无硬规则只读段）（**Phase E 后为 14 项**）
 - [x] 10. `.pmod` 导出→导入全一致
 - [x] 11. 刷新不丢数据
 - [x] 11b. 事件跑通（gate+check+on_success/fail+once）；必成/必败实时提示
@@ -175,7 +176,7 @@
 - [x] 11d. 临时通行（御火符火抗3回合过火焰山）
 - [x] 11e. 商店跑通；货币只是一件道具
 - [x] 11f. 背包上限（`inventory_size:1` 第二件不同道具被拒；同种占1格；0=无限）
-- [x] 11g. 五种行为面板分明（切换 encounter 只显对应块）
+- [x] 11g. 五种行为面板分明（切换 encounter 只显对应块）（**Phase E 后为六种**）
 - [x] 11h. 跑团立场可验：编辑器无"难度评估/多结局/条件通关"入口
 - [x] **12. 「清单」按钮一键汇总 K1~Kn，一眼看全图健康度**（决策 11）
 
@@ -189,7 +190,7 @@
 
 | 模块 | 落点 |
 |---|---|
-| 类型全集 / 默认规则 | `src/types/*`（`DEFAULT_RULES` = §4.8.6 的 13 项） |
+| 类型全集 / 默认规则 | `src/types/*`（`DEFAULT_RULES` = §4.8.6 的 13 项；**Phase E 增补 `talk.dice` 后为 14 项**） |
 | 引擎纯函数 | `src/engine/{dice,units,state,skill,pool,event,item}.ts`（**全是纯函数，UI 只调用**） |
 | 内置预设 | `src/presets/*`（七大类 + 背景，`PRESET_INDEX` 供 id 派生来源） |
 | store 分层 | `src/store/{library,project,ui,history,commit,storage}.ts`（库 / 项目 / 界面态分开，各自持久化） |
@@ -200,7 +201,7 @@
 **已验证（`npm run build` + `npx vitest run`，78 项全绿）**：
 - 引擎边界：单值区间 / 掷最大最小 / `|池|<n` 夹紧 / 权重全 0 / mp 恰好够 vs 少 1 / `free_points` 0 与 300 / 事件必成必败 / `check` 省略=必成 / `on_missing` 两分支 / 状态超上限夹 / `remove_tag` 解不存在的 / `inventory_size` 0 与 1 / `price.fixed` 不掷骰 / `target:self` 不对抗仍掷骰 / `apply:none` 只挂效果 / 落空 effects 不执行 / `attack_weights` 空与全 0 → 内建 `basic_attack` / AUTO_VS 四维 / 用道具不 tick / 本回合新挂状态下回合才 tick
 - `.pmod` round-trip：地图顺序 / 节点 / 起终点 / 规则 / 组件定义一致，旧档缺 rules 与残留 `diceConfig` 有兜底提示
-- 构建页冒烟：三栏 + 八区组件库 + 六模式 + 清单弹层 + Esc 退回
+- 构建页冒烟：三栏 + 八区组件库（**Phase E 后为九区**）+ 六模式 + 清单弹层 + Esc 退回
 
 **需要留意的三条（不阻塞，但别当成已做完）**：
 1. **7d / 7e / 11c / 11d / 11e / 11f** 的“玩法流程验证”在引擎层已就绪（`tickStates` 每回合一次、`resolveMonster` 抽完才摇属性、背包/商店/状态都有单测），**但真正在游玩页里跑起来是 Phase B**（加点界面、掷骰公示、移动回合）。
@@ -208,3 +209,7 @@
 3. **本地 `npm run dev` 手测**：本轮没有浏览器可跑，用 jsdom 冒烟用例替代 —— 建议开工 Phase B 前人工点一遍。
 
 **部署形态**：GitHub Pages 纯静态 —— `base: './'`（不耦合仓库名）+ **hash 路由**（`#/build`，无深链 404）+ 官方 Actions 工作流（`.github/workflows/deploy.yml`）。
+
+**2026-09-29 · Phase E（NPC 与对话）改口径登记**
+- 新增独立里程碑 [`05-npc.md`](./05-npc.md)：**第 8 类组件 NPC**、组件库 **八区 → 九区**、规则面板 **13 项 → 14 项**（新增 `talk.dice`）、建筑行为 **五选一 → 六选一**（新增 `talk`）。
+- 本文件内相关条目已就地标注「Phase E 后为 …」；**Phase A 的验收结论不变**（该轮按当时的七类 / 13 项 / 五选一 口径通过），新口径在 E 里程碑内实现与验收。

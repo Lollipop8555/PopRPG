@@ -10,13 +10,16 @@
 |---|---|---|
 | 加载屏 | 页面卡片、导入 / 示例 / 去构建页按钮 | `LoadScreen.tsx:104-131` |
 | 开局屏 | 出身卡网格（列宽 `minmax(210px)`）、加点控件、掷骰按钮 | `StartScreen.tsx`、`play.css:887` |
-| 地图 | 顶栏（标题余宽省略）、底栏、抽屉 `min(440px,100%)` | `GameScreen.tsx:181`、`play.css` |
-| 战斗 | 战斗对话框 `min(560px,100%)`、战况流水区（余宽）、技能格、血蓝条 | `BattleDialog.tsx` |
-| 遭遇 | 对话框 `min(620px,100%)`、提示条、奖励卡网格 | `EncounterView.tsx`、`play.css:369` |
-| 面板 | 状态 / 背包 / 装备抽屉、更换气泡 `minWidth` 160/180/220、部位行 | `StatusPanel` / `BagPanel` / `EquipPanel` |
+| 地图 | 顶栏（标题余宽省略）、底栏（含 **hp/mp 左侧立绘位**）、抽屉 `min(440px,100%)` | `GameScreen.tsx:181`、`play.css` |
+| 战斗 | 战斗对话框 `min(560px,100%)`、**顶部 VS 立绘区**、战况流水区（余宽）、技能格、血蓝条 | `BattleDialog.tsx` |
+| **NPC 对话** | 对话框 `min(560px,100%)`、**顶部 VS 立绘区**、台词区（逐条 + 继续）、选项按钮列表 / **掷骰按钮**（节点带 `dice` 时用它替代选项列表，未命中可再掷——[`../02-data-model.md`](../02-data-model.md) §4.9.2） | `BattleDialog.tsx` 的对话框壳 ＋ 新的对话内容区 |
+| 遭遇 | 对话框 `min(620px,100%)`、提示条、奖励卡网格、**顶部立绘位（V1 仅预留）** | `EncounterView.tsx`、`play.css:369` |
+| 面板 | 状态 / 背包 / 装备抽屉、更换气泡 `minWidth` 160/180/220、部位行、**头部主角立绘位** | `StatusPanel` / `BagPanel` / `EquipPanel` |
 | 全局 | 提示条 `hintbox`（三档 tone）、手绘分隔线 `sketch-line` | `play.css`、`theme.css:392` |
 
 > 物品 / 建筑信息视图在遭遇、商店与战斗的**对话框内弹出**：其容器沿用对话框，**图标组合**规则见 §四.2（裁决 12）。
+
+> **立绘不在本节（裁决 24）**：上表中的立绘位只由本节给出**容器位置**，其取图、尺寸档、`flip` 镜像与「无立绘不占位」规则全归 [`02-role.md`](02-role.md) §四；本节**不设**任何立绘字段，也不在立绘缺位时补 emoji 占位。
 
 ## 二、四族划分（决定拉伸策略）
 

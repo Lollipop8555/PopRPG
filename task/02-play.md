@@ -4,6 +4,7 @@
 > **上层索引**：[`../TASK.md`](../TASK.md)　**设计依据**：[`../docs/design/06-future.md`](../docs/design/06-future.md)(§7.1 游玩态/§7.2 骰子/§7.3 存档) · [`../docs/design/03-engine.md`](../docs/design/03-engine.md)(§4.8 引擎，纯函数已在 A8 实现)（索引见 [`../docs/DESIGN.md`](../docs/DESIGN.md)）
 > **前置**：[`task/01-build.md`](./01-build.md)（A 验收通过后才进 B）　**顺序约束**：先完整 build，再 play。
 > **加载 `.pmod` → 开局 → 移动/战斗/状态/遭遇/商店 → 存档**。
+> **2026-09-29 修订**：**建筑内的 NPC 对话**（第六种行为 `encounter: talk`）为独立里程碑 [`05-npc.md`](./05-npc.md)（Phase E，E4），**不在本文件实现**；本文件 B7 的 `encounter` 是 **Phase B 落地时的五选一**口径，接上对话后为**六选一**（[`../docs/design/02-data-model.md`](../docs/design/02-data-model.md) §4.4 / §4.9）。
 
 ---
 
@@ -61,9 +62,9 @@
 - [ ] 状态 tag 进能力集合（御火符顶火抗、力量祝福顶物攻+2）
 - [ ] 状态 UI：图标/剩余回合/可解毒剂解
 
-## B7 建筑遭遇交互（§4.8.5 / §4.8.9 / §4.8.11）
+## B7 建筑遭遇交互（§4.8.5 / §4.8.9 / §4.8.11；**对话见 Phase E** [`05-npc.md`](./05-npc.md)）
 
-- [ ] 踩 `building`：`treasure`→按 `rules.treasure` 掷定件数/份数揭晓；`monster`→`resolveMonster` 抽怪摇属性再打（决策 2）；`event`→§4.8.9；`shop`→§4.8.11；`mimic`→先按 `chance` 判定伪装
+- [ ] 踩 `building`：`treasure`→按 `rules.treasure` 掷定件数/份数揭晓；`monster`→`resolveMonster` 抽怪摇属性再打（决策 2）；`event`→§4.8.9；`shop`→§4.8.11；`mimic`→先按 `chance` 判定伪装；**（Phase E）`talk`→按实例 `npcs` / `dialog` 两级各掷一次 `talk.dice` 抽人 / 抽方案，进入对话弹层（§4.9，见 [`05-npc.md`](./05-npc.md) E4）**
 - [ ] 战利品：战斗胜利按 `rules.loot` 抽（池取怪物 `reward_pool`，可权重）
 
 ## B8 商店 / 事件 / 战利品 UI（§4.8.9 / §4.8.11）
@@ -105,3 +106,5 @@
 - [ ] 14. 选怪/属性骰：每次遭遇实例化摇一次、同怪整场不重摇、不同遭遇各自独立摇（决策 2）
 
 > 完成后进入 [`task/03-polish.md`](./03-polish.md)（收尾）。
+
+> **2026-09-29 修订**：**建筑内 NPC 对话**（`encounter: talk`）属 Phase E 的 E4，**不在本阶段验收**；B7 的 `encounter` 五选一在接上对话后为**六选一**。本文件其余验收项不受影响。

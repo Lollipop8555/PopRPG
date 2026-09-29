@@ -63,22 +63,22 @@
 | [design/00b-style.md](design/00b-style.md) | §10（前置） | **视觉风格（纸张+手绘+涂鸦）全局基调** |
 | [design/00c-guidelines.md](design/00c-guidelines.md) | 新增 | **AI 实现守则（必读顺序/禁止事项/代码组织）** |
 | [design/01-pmod.md](design/01-pmod.md) | §3 | `.pmod` 文件格式（含完整示例） |
-| [design/02-data-model.md](design/02-data-model.md) | §4.0–§4.7 | 七大类组件 + 项目 + 组件库总纲 |
-| [design/03-engine.md](design/03-engine.md) | §4.8 | 规则引擎 |
+| [design/02-data-model.md](design/02-data-model.md) | §4.0–§4.7 / §4.9 | 八大类组件（含 **NPC 与对话**）+ 项目 + 组件库总纲 |
+| [design/03-engine.md](design/03-engine.md) | §4.8 | 规则引擎（前置配置 **14 项**，含 `talk.dice`） |
 | [design/04-editor.md](design/04-editor.md) | §5 | 编辑器设计（构建态） |
 | [design/05-mvp.md](design/05-mvp.md) | §6 | MVP 范围：预设 + 验收 |
-| [design/06-future.md](design/06-future.md) | §7 | 后续阶段：游玩/骰子/存档/明确不做 |
+| [design/06-future.md](design/06-future.md) | §7 | 后续阶段：游玩/骰子/存档/**NPC 与对话（已落地形态）**/明确不做 |
 | [design/07-decisions.md](design/07-decisions.md) | §8 | 已确认决策记录 |
 | [design/08-deploy.md](design/08-deploy.md) | §9 | 部署（GitHub Pages） |
 | [design/skin.md](design/skin.md) | 新增 | **素材皮肤规范总纲（索引）**：素材存放 / 旋转镜像九宫格复用 / 贴图渲染器接口 / 三层优先级 / 覆盖边界 / 跨节取舍登记 |
 | [design/skin/00-package.md](design/skin/00-package.md) | 新增 | 皮肤包 `.pp` / `.pgame`（**皮肤包视角**；上位规范见 `design/00a-formats.md`）：包结构与路径规则 / manifest 顶层键（`format`/`preview.png`/`extends`/`theme`）/ 五条加载入口 / 三层优先级 / 皮肤库与单套解压 / 版本迁移 |
 | [design/skin/05-canvas.md](design/skin/05-canvas.md) | 新增 | 画布背景 `background`（**数组下标即地图下标、逐图对应，越界用最后一层，每张地图只渲染一层**）：`cellSize` / `startX` / `startY` / 图外填充色 / 坐标映射 |
 | [design/skin/06-item-building.md](design/skin/06-item-building.md) | 新增 | 道具 `item` 与建筑 `building` **分节**：图标 / 衬底三元组 `{fill, stroke, img}`（**描边为独立设置项，缺省不绘制**）/ 建筑地图贴图 / 地图文字字体字色 |
-| [design/skin/07-audio.md](design/skin/07-audio.md) | 新增 | 音频 `audio`：3 个 BGM 场景键 / 9 个音效事件键 / 播放约束（字段定稿为预留，**V1 只解析不播放**，V1.1 实现） |
+| [design/skin/07-audio.md](design/skin/07-audio.md) | 新增 | 音频 `audio`：3 个 BGM 场景键 / 9 个音效事件键 / 播放约束（字段定稿为预留，**V1 只解析不播放**，**V2.2** 实现） |
 | [design/skin/08-pages.md](design/skin/08-pages.md) | 新增 | 欢迎页与游戏首页 `startup` / `lobby`：封面背景（封面图归皮肤）、标题图形、主视觉、出身卡片（可缺省、走降级） |
 | [design/skin/09-creative.md](design/skin/09-creative.md) | 新增 | Creative 模式：新建／打开／编辑／导出 `.pp`（zip 走 `fflate`），**九宫格切分工具**，以 `.pmod` 为靶子的命中检查与预览 |
 | [design/skin/01-road.md](design/skin/01-road.md) | 新增 | 道路 `road` 分节：位模式（8 位顺时针）与 256 查表 / 15 槽位 / 47 姿态 / 样式标签优先级 |
-| [design/skin/02-role.md](design/skin/02-role.md) | 新增 | 形象 `role` 分节：玩家棋子 / 职业与怪物形象（无朝向） |
+| [design/skin/02-role.md](design/skin/02-role.md) | 新增 | 形象 `role` 分节：玩家棋子 / 职业、怪物与 **NPC 形象 `npcs`**（无朝向）／**受击：素材优先、缺了形变**／**尺寸按窗口尺度 `W` 缩放**／**立绘 `portraits`**（纯皮肤元素，`.pmod` 不设字段）
 | [design/skin/03-window.md](design/skin/03-window.md) | 新增 | 容器与控件 `window` 分节：四族划分 / 九宫格切片 / V1 底纹策略 |
 | [design/skin/04-misc.md](design/skin/04-misc.md) | 新增 | 标记与骰子 `misc` 分节：地图标记 / 建筑节点 / 骰子与骰面 / 图标兜底 / 引导线 |
 
@@ -90,6 +90,7 @@
 §10     → 00b-style（全局基调，前置）
 §3      → 01-pmod
 §4.0–4.7→ 02-data-model
+§4.9    → 02-data-model（NPC 与对话，第 8 类组件）
 §4.8    → 03-engine
 §5      → 04-editor
 §6      → 05-mvp
@@ -129,11 +130,17 @@
 - `skin/02-role.md` / `03-window.md` / `04-misc.md` 三节按其覆盖范围补齐（依据为对 `src/play/*` 与 `src/ui/*` 的只读调研），游玩态可见 UI 已在 `design/skin.md`「覆盖清单（游玩态逐屏）」中逐屏对齐；九项待确认汇总于 `design/skin.md` §八 与各分节末节。
 - 按原始需求「主题模式」整理并新增六节：`skin/00-package.md`（`.pp` / `.pgame` 包结构、manifest 顶层、三层优先级「游戏 ＞ 用户 ＞ 缺省」、五条加载入口）、`skin/05-canvas.md`（背景**数组下标即地图下标、逐图对应、单层渲染**与多地图适配、坐标映射）、`skin/06-item-building.md`（道具与建筑**分节**、衬底三元组、建筑地图贴图与地图文字）、`skin/07-audio.md`（BGM 与音效事件钩子，V1 只预留）、`skin/08-pages.md`（欢迎页与游戏首页 `startup` / `lobby`）、`skin/09-creative.md`（Creative 模式：构建、九宫格切分、命中检查与预览 `.pp`）。
 - 2026-09-29 用户裁决 10 项已全部并入：`tag` 匹配按现有算法、`tee_corner_nw` 正向命名、`dpi → cellSize`、`item` / `building` 拆开、用户配置＝本地全局 pp、`background` 落点为背包与信息视图、衬底升级为 `{fill, stroke, img}`、`background` 升级为数组、build 模式可加载 pp 预览、新增 Creative 模式；原始需求笔误修正留档于 `design/skin.md` §九。
-- 2026-09-29 末轮裁决 8 项（14–21）已并入：zip 走 `fflate`；皮肤库只记录导入过的 `.pp`、运行时**一次只解压一套**；`audio` V1 只解析预留（V1.1 实现）；背景~~多层叠加~~（**已由裁决 23 改为按下标一一对应、单层渲染，越界用最后一层**）；描边**缺省不渲染**；包内**路径相对包根**与 `format` / `extends` / `theme`；`pages` 拆为 `startup` / `lobby` 且封面图归皮肤；Creative 提供**九宫格切分工具**、字体不子集化。未决项汇总于 `design/skin.md` §八（余 Q26 / Q28 / Q29 等）。
+- 2026-09-29 末轮裁决 8 项（14–21）已并入：zip 走 `fflate`；皮肤库只记录导入过的 `.pp`、运行时**一次只解压一套**；`audio` V1 只解析预留（**V2.2** 实现）；背景~~多层叠加~~（**已由裁决 23 改为按下标一一对应、单层渲染，越界用最后一层**）；描边**缺省不渲染**；包内**路径相对包根**与 `format` / `extends` / `theme`；`pages` 拆为 `startup` / `lobby` 且封面图归皮肤；Creative 提供**九宫格切分工具**、字体不子集化。未决项汇总于 `design/skin.md` §八（余 Q26 / Q28 / Q29 等）。
 - 2026-09-29 追加裁决 3 项（登记于 [`design/07-decisions.md`](design/07-decisions.md) §8.2）：**三件套**定义前置为「基本设计」并新增总纲 [`design/00a-formats.md`](design/00a-formats.md)（`skin/00-package.md` 保留皮肤包视角的具体定义）；物品 / 建筑信息视图的图标按**应用图标式**组合（衬底 ＋ 图标，文字走窗体自身字体字色，不存在交叉配置）；按钮 `hover` / `active` / `disabled` **四态结构定稿、实现顺序可后置**。
 - 2026-09-29 追加裁决 1 项（登记于 [`design/07-decisions.md`](design/07-decisions.md) §8.2）：`.pp` 包内**不设强制目录结构**——强制项只有 `manifest.json` 与可选 `preview.png`，素材的目录名 / 层级 / 文件名自由，位置**一律以描述文件为准**（提高扩展性与兼容性）；草案的 `resource` 键**废除**，新增校验项 `KP-10`。
 - 2026-09-29 追加裁决 1 项（登记于 [`design/07-decisions.md`](design/07-decisions.md) §8.2）：**背景数组改为「逐图清单」**——**下标即 pmod 的地图下标，一一对应、无需匹配 key**（`maps` 字段废除），**每张地图只渲染一层**（不再叠加）；**地图数多于层数时，越界的地图降级为使用最后一层**（皮肤 2 层、地图 4 张 → 下标 2 / 3 都用下标 1 的图）；无可用层／未配置时**再次降级为默认配置**（程序绘制纸面底纹）；`color` **每层各自携带**、随采用层生效，该层漏写即**降级为全局主题色**（**颜色不做层级回退**）（[`design/skin/05-canvas.md`](design/skin/05-canvas.md) §二）。
 - 2026-09-29 本轮的**实现任务**已落地为 [`task/04-skin.md`](../task/04-skin.md)（Phase D：三件套容器 / zip 读取 / 贴图渲染器 / 逐屏素材接入 / Creative 模式 / 皮肤校验，含 D0–D8 与 12 条原子验收），并在 [`TASK.md`](../TASK.md) 里程碑索引与「最新核对决策」登记。
+- 2026-09-29 追加裁决 1 项（登记于 [`design/07-decisions.md`](design/07-decisions.md) §8.2）：**新增立绘 `portraits`（裁决 24）**——`role` 下的**纯皮肤元素**（`.pmod` 不设任何字段）；**暂不考虑四向**，左右相对仅由**显式 `flip`** 表达；落点为底栏 hp/mp 左侧（**替代 `hud-face`**，缺位不占位）、对战对话框顶部 **VS 区**（任一方有即渲染）、出身卡职业立绘、状态面板头部，遭遇 / 商店弹层**仅预留**（[`design/skin/02-role.md`](design/skin/02-role.md) §四）。
+- 2026-09-29 追加裁决 2 项（登记于 [`design/07-decisions.md`](design/07-decisions.md) §8.2）：**裁决 25**（**单人游戏、唯一主人公**——立绘即唯一形象、无队伍 / 多角色矩阵；**受击两法**＝有素材用 `hurt`、无素材用**形变**；**立绘按窗口短边比例缩放**，废弃固定像素档）；**裁决 26**（**NPC 与对话系统**——素材库新增 `npcs` 分组、NPC **只出现在建筑里**、建筑新增第六种行为 `encounter: talk`、建筑实例的 `npcs` / `dialog` **两级掷骰**、**树状对话**支持多套方案、编辑器新增 `NPC` 分区与**整页「NPC 模组」思维导图面板**、前置配置新增 `talk.dice` 后总账 **14 项**）。
+- 2026-09-29 正文同步：新增 [`design/02-data-model.md`](design/02-data-model.md) **§4.9 NPC 与对话（第 8 类组件）**；[`design/01-pmod.md`](design/01-pmod.md) 加 `### NPC` 段、id 表改**八大类**并增 NPC 启用条件；[`design/04-editor.md`](design/04-editor.md) 分区 ×8 → ×9、新增 **§5.6.1「NPC 模组面板的操作」**与 **G7**、组件库 / 实例页 / 校验项同步；[`design/06-future.md`](design/06-future.md) 新增 **§7.6「NPC 与对话：已落地形态」**并在 §7.4 划清「**对话树在范围内、剧情分支树不做**」；[`design/03-engine.md`](design/03-engine.md) 与 [`design/05-mvp.md`](design/05-mvp.md) 配置项 **13 → 14**；皮肤侧 [`design/skin/02-role.md`](design/skin/02-role.md) / [`design/skin.md`](design/skin.md) / [`design/skin/00-package.md`](design/skin/00-package.md) / [`design/skin/03-window.md`](design/skin/03-window.md) 同步。实现任务见 [`task/05-npc.md`](../task/05-npc.md)。
+- 2026-09-29 对话细化（并入裁决 26 ⑨~⑪）：**方案掷定即锁死**（本局不换人 / 不换方案，锁在建筑实例）；**节点选项抽取**——节点写 `dice` 则本层选项靠**掷骰命中**（各选项带 `hit` 区间，**未命中再掷**），不写 `dice` 则**玩家直接点选**；**`prop` 一次性交付**——交付后该实例进**终态**，再次对话**只回放交付节点的 `message`**、不再给道具。编辑器 **NPC 模组面板**新增节点 `dice` 下拉与选项 `hit` 输入，并做**命中覆盖检查（只提示、不拦截）**。正文同步 [`design/02-data-model.md`](design/02-data-model.md) §4.9.2 / §4.9.3 / §4.9.4、[`design/01-pmod.md`](design/01-pmod.md) `### NPC` 示例、[`design/03-engine.md`](design/03-engine.md) 场景索引（**6 → 7 处骰子**）与 §4.8.6、[`design/04-editor.md`](design/04-editor.md) §5.6.1 / §5.7、[`design/06-future.md`](design/06-future.md) §7.6；任务见 [`task/05-npc.md`](../task/05-npc.md)。
+- 2026-09-29 链路审计（NPC ＞ skin ＞ V1.1）：**补链** —— [`design/03-engine.md`](design/03-engine.md) 新增 **§4.8.12 对话（`encounter: talk`）** 运行时顺序小节，场景索引第 7 行由跨模块引用改为指向本节；[`design/05-mvp.md`](design/05-mvp.md) §6「纳入」补 **NPC 与对话**、`J` 五种行为 → **六种**、§6.2 补 **11i 对话闭环**验收，「暂不纳入」表中已排入 Phase B 的项去向改为显式指回 Phase B。**修正** —— [`design/06-future.md`](design/06-future.md) §7 范围分界：**§7.0–§7.3 属 V1（Phase B 设计依据）**，不再是"非 MVP、仅记录"。**登记** —— [`TASK.md`](../TASK.md) 新增「**V1.1 清单**」一节（音频播放 / 贴图 `nine` / 九宫格切片消费 / 对话后续扩展 / 立绘遗留 / 未决项 / 多项目管理）与执行优先级声明。*(历史登记：其中的「V1.1 清单」已改名「V2.1 / V2.2 清单」，见下条)*
+- 2026-09-29 **版本线（V1 冻结 → V2.x 追加改造）**：**V2.0 ＝ 新增 NPC 结构**（**追加设定**：NPC 触发在**进入建筑之后、建筑事件之前**，`npcs` 与 `encounter` **正交**、旧「挂了 NPC 却不是对话建筑 → 不生效」校验作废，`encounter: talk` ＝ 建筑事件阶段留空、以对话为主体）；**V2.1 ＝ SKIN 基础**；**V2.2 ＝ SKIN 进阶 ＋ 音频**。优先级 **V2.0 ＞ V2.1 ＞ V2.2**（结构改造先做、再做皮肤）。**旧文档里的「V1.1」一律读作 V2.2**（音频播放 / 贴图 `nine` 策略 / 九宫格切片消费）。正文同步：[`design/07-decisions.md`](design/07-decisions.md) **§8.3（新增）**、[`design/02-data-model.md`](design/02-data-model.md) §4.9.3、[`design/03-engine.md`](design/03-engine.md) §4.8.12、[`design/04-editor.md`](design/04-editor.md) §5.6 / §5.7；[`design/06-future.md`](design/06-future.md) 明确为**记录文档**；[`task/00-foundation.md`](../task/00-foundation.md) 恢复 **V1 七大类**口径；[`TASK.md`](../TASK.md) 路线图改为版本线，清单改名「**V2.1 / V2.2 清单**」。**追加设定补完**：NPC 触发**只在「从建筑外踏入」那一次**（**建筑内部移动不触发**）、**首次进入一定进对话**、**重入先弹「选择对话框」**（点已锁定 NPC 名字重看 / 「直接进入」）、**`treasure` 空池 ＋ NPC 不再报"什么也没有"**（`07-decisions.md` §8.3 设定 2–4）。
 
 **2026-09-26 · 文档防烂加固**
 - 视觉风格从末尾 §10 **前置**为 `design/00b-style.md`（全局基调，开工 UI 前必读）。

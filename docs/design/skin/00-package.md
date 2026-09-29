@@ -93,7 +93,7 @@ xxx.pp（zip）
 | `theme` | 全局 token → CSS 变量 | 本节 §3.3 |
 | `background` | 画布背景**数组（逐图清单：下标即地图下标，越界用最后一层，每张地图只渲染一层）**：多地图适配、对齐、`cellSize`、图外填充色 | [`05-canvas.md`](05-canvas.md) |
 | `road` | 路径数组：路位模式 / 姿态 / 样式标签优先级 | [`01-road.md`](01-road.md) |
-| `role` | 角色：玩家棋子、职业形象、怪物形象 | [`02-role.md`](02-role.md) |
+| `role` | 角色：玩家棋子、职业形象、怪物形象、**NPC 形象 `npcs`**，**立绘 `portraits`**（纯皮肤元素，`.pmod` 不设字段——裁决 24 / 26） | [`02-role.md`](02-role.md) |
 | `item` / `building` | 道具 / 建筑：`icon`、衬底三元组；建筑另有地图贴图与地图名称字体 | [`06-item-building.md`](06-item-building.md) |
 | `window` | 窗体：容器、按钮、格子、条、提示框 | [`03-window.md`](03-window.md) |
 | `misc` | 其他：地图标记、建筑节点、骰子、图标、参照线 | [`04-misc.md`](04-misc.md) |

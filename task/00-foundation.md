@@ -37,7 +37,7 @@
 - [x] `RESOURCE_KEYS = ['hp','mp']`（有当前值、可消耗/恢复）
 - [x] `ABILITY_KEYS = ['patk','matk','pdef','mdef']`（只是输入）
 - [x] `Stats = Record<StatKey, [number, number]>`（怪物区间） / `StatValues = Record<StatKey, number>`（结算后具体值）
-- [x] **完整类型全集（七大类 + 规则 + 效果）见 [`task/01-build.md`](./01-build.md) A0**（含 `SkillDef` / `EffectOp` / `Gate` / `PoolRef` / `EventBlock` 等全部字段定义）
+- [x] **完整类型全集（七大类 + 规则 + 效果）见 [`task/01-build.md`](./01-build.md) A0**（含 `SkillDef` / `EffectOp` / `Gate` / `PoolRef` / `EventBlock` 等全部字段定义；**第 8 类 NPC 属 V2.0 追加设定**，不在 V1 口径内，见 [`05-npc.md`](./05-npc.md)）
 
 ## 0.6 `.pmod` 自包含与解析
 
@@ -47,7 +47,7 @@
 
 ## 0.7 来源派生工具
 
-- [x] `isPreset(id)` = `id ∈ 内置预设表`；内置表按**七大类**分别维护
+- [x] `isPreset(id)` = `id ∈ 内置预设表`；内置表按**七大类**分别维护（§3.2 id 形状；**NPC（`n_` 前缀）属 V2.0 追加**，届时同表增补，见 [`05-npc.md`](./05-npc.md)）
 - [x] `resetToPreset(id)` 从内置表取原始定义
 
 ## 0.8 store actions
@@ -66,7 +66,7 @@
 - [x] 刷新页面库与项目数据不丢失
 - [x] 组件库与项目分离：改库定义对用到它的局立即生效；项目文件不含组件定义
 - [x] `.pmod` 导出→导入 round-trip 一致（定义 / 启用 / 铺设 / 地图顺序）
-- [x] 七大类来源判定（预设/自建）由 `id` 派生，无冗余字段
+- [x] 七大类来源判定（预设/自建）由 `id` 派生，无冗余字段（NPC 沿用同一判定）
 
 > 完成后进入 [`task/01-build.md`](./01-build.md)（BUILD 阶段）。
 

@@ -7,8 +7,8 @@
 1. [`design/00-overview.md`](design/00-overview.md) — 产品定位 / 三条立场 / 明确不做
 2. [`design/00a-formats.md`](design/00a-formats.md) — **基本设计：三件套（`.pmod` / `.pp` / `.pgame`）与容器**（凡涉及文件格式、导入导出、加载的任务必读）
 3. [`design/00b-style.md`](design/00b-style.md) — **视觉全局基调（纸张+手绘+涂鸦），贯穿所有 UI**
-4. [`design/04-editor.md`](design/04-editor.md) — §5 操作模式标准表（G1–G6），构建态交互铁律
-5. [`design/02-data-model.md`](design/02-data-model.md) — §4.0–§4.7 七大类类型定义
+4. [`design/04-editor.md`](design/04-editor.md) — §5 操作模式标准表（G1–G7），构建态交互铁律
+5. [`design/02-data-model.md`](design/02-data-model.md) — §4.0–§4.7 / §4.9 八大类类型定义
 6. [`design/03-engine.md`](design/03-engine.md) — §4.8 规则引擎纯函数
 7. [`design/05-mvp.md`](design/05-mvp.md) — §6 预设最小清单 + 验收原子项
 8. [`design/07-decisions.md`](design/07-decisions.md) — §8 已确认决策（不可擅自改）

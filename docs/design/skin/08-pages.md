@@ -1,7 +1,7 @@
 # PopRPG 设计文档 — skin 分节：欢迎页与游戏首页 `startup` / `lobby`
 
 > **上层索引**：[`../skin.md`](../skin.md)　**包结构**：[`00-package.md`](00-package.md)　**窗体**：[`03-window.md`](03-window.md)
-> **设计依据**：2026-09-29 裁决 5（pp 需覆盖首页与角色选择页，允许不设置、走降级）＋ 裁决 20（原 `pages` 拆为 `startup` / `lobby`；首页封面图归皮肤侧）
+> **设计依据**：2026-09-29 裁决 5（pp 需覆盖首页与角色选择页，允许不设置、走降级）＋ 裁决 20（原 `pages` 拆为 `startup` / `lobby`；首页封面图归皮肤侧）＋ 裁决 24（出身卡内的**职业立绘**由 [`02-role.md`](02-role.md) `role.portraits` 接管，本节不设字段）
 > **现状**：`startup` → `src/play/LoadScreen.tsx:71-151`（封面式主页 B0）；`lobby` → `src/play/StartScreen.tsx:44-129`
 > **状态**：新增（含 1 处待确认）
 
@@ -57,7 +57,8 @@
 | `card` | 素材对象 | **出身卡片**底（`.class-card`），按内容高度拉伸 | 现手绘卡片 |
 | `card.selected` | 对象 | 选中态差异：`{ img, slice, stroke }`，`img` 缺省时只改描边 | 现 `.class-card.selected` 描边 |
 
-- 卡片内的**职业图标**（`.class-icon`，取 `cls.icon`）由 [`02-role.md`](02-role.md) §二 `role.classes` 覆盖，**不在本节重复**。
+- 卡片内的**职业图标**（`.class-icon`，取 `cls.icon`）由 [`02-role.md`](02-role.md) §三 `role.classes` 覆盖，**不在本节重复**。
+- 卡片内的**职业立绘**（**裁决 24**）：该职业有 `role.portraits.classes.<id>` 时**放大替代** `.class-icon` 的 emoji 并**居中**，无则回退 `cls.icon`；规则（尺寸、`flip`、缺位不占位）见 [`02-role.md`](02-role.md) §4.1 / §4.2，**本节不重复、也不接管**。
 - 卡片内的属性徽章、家当文字、顶栏场景名：沿用主题与 [`03-window.md`](03-window.md) 的徽章素材；本节不接管字体。
 
 ### 2.3 与降级的关系（逐节点）
