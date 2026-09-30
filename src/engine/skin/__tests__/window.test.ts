@@ -1,10 +1,11 @@
 /**
- * 容器与按钮取值（`skin/03-window.md` §四）：`surfaceOf()` / `buttonOf()` 的确定性——
+ * 容器与按钮取值（`skin/03-window.md` §四）：`surfaceOf()` / `buttonOf()` / `buttonStatesOf()` 的确定性——
  * 每个键各查自己的键，**不跨键借用**（对话框没配就用不回抽屉的图），整个 `window` 节缺位也不抛。
+ * 按钮四态里 `normal` 唯一必填（`buttonOf()` 就是 `buttonStatesOf()` 的 `normal` 那一项）。
  */
 
 import { describe, expect, it } from 'vitest'
-import { BUTTON_KINDS, SLOT_KINDS, buttonOf, slotOf, surfaceOf } from '../lookup'
+import { BUTTON_KINDS, BUTTON_STATES, SLOT_KINDS, buttonOf, buttonStatesOf, slotOf, surfaceOf } from '../lookup'
 import type { SkinButton, SkinWindow } from '../../../types'
 
 const DIALOG = 'art/window/paper.png'
@@ -39,7 +40,7 @@ describe('window.buttons 取值（§四）', () => {
     buttons: {
       primary: PRIMARY,
       danger: 'art/window/btn-danger.png',
-      // 四态对象：`normal` 是唯一必填项，其余三态 V1 不读取
+      // 四态对象：`normal` 是唯一必填项，其余三态各查自己的态
       small: { normal: 'art/window/btn-small.png', hover: 'art/window/btn-small-hover.png' },
       // 老包 / 手写配置可能漏掉 `normal`，此时整颗按钮算没配
       ghost: { hover: 'art/window/btn-ghost-hover.png' } as unknown as SkinButton,
@@ -68,6 +69,59 @@ describe('window.buttons 取值（§四）', () => {
 
   it('键集合是固定的七个（清单与遍历用），键名不随实现漂移', () => {
     expect([...BUTTON_KINDS]).toEqual(['plain', 'primary', 'danger', 'ghost', 'small', 'icon', 'close'])
+  })
+})
+
+describe('window.buttons 四态取值（§4.1）', () => {
+  const win: SkinWindow = {
+    buttons: {
+      primary: PRIMARY,
+      small: {
+        normal: 'art/window/btn-small.png',
+        hover: 'art/window/btn-small-hover.png',
+        active: 'art/window/btn-small-active.png',
+      },
+      danger: { normal: 'art/window/btn-danger.png', disabled: 'art/window/btn-danger-off.png' },
+      // 缺 `normal`：整颗按钮算没配，`hover` 写了也一并作废
+      ghost: { hover: 'art/window/btn-ghost-hover.png' } as unknown as SkinButton,
+    },
+  }
+
+  it('字符串写法只交出 `normal` 一项，不凭空补三态', () => {
+    expect(buttonStatesOf(win, 'primary')).toEqual({ normal: PRIMARY })
+  })
+
+  it('真写了的态才在表里：没写的 `disabled` 不占位（交给渲染侧回落 `normal`）', () => {
+    expect(buttonStatesOf(win, 'small')).toEqual({
+      normal: 'art/window/btn-small.png',
+      hover: 'art/window/btn-small-hover.png',
+      active: 'art/window/btn-small-active.png',
+    })
+    expect(buttonStatesOf(win, 'danger')).toEqual({
+      normal: 'art/window/btn-danger.png',
+      disabled: 'art/window/btn-danger-off.png',
+    })
+  })
+
+  it('四态各查自己的态：`hover` 不会拿 `normal` 顶上，也不跨键借用', () => {
+    expect(buttonStatesOf(win, 'small')?.hover).toBe('art/window/btn-small-hover.png')
+    expect(buttonStatesOf(win, 'primary')?.hover).toBeUndefined()
+    expect(buttonStatesOf(win, 'plain')).toBeUndefined()
+  })
+
+  it('缺 `normal` 即整块取不到，`buttonOf()` 与它一致', () => {
+    expect(buttonStatesOf(win, 'ghost')).toBeUndefined()
+    expect(buttonOf(win, 'ghost')).toBeUndefined()
+    expect(buttonStatesOf(win, 'primary')?.normal).toBe(buttonOf(win, 'primary'))
+  })
+
+  it('整个 window 节缺位、或该键没配，都取不到且不抛', () => {
+    expect(buttonStatesOf(undefined, 'primary')).toBeUndefined()
+    expect(buttonStatesOf({ surfaces: {} }, 'primary')).toBeUndefined()
+  })
+
+  it('四态定序固定（清单与遍历用）：常态在前，其余按「悬停 → 按下 → 不可用」', () => {
+    expect([...BUTTON_STATES]).toEqual(['normal', 'hover', 'active', 'disabled'])
   })
 })
 

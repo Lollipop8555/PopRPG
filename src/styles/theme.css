@@ -276,6 +276,35 @@ textarea {
   border-radius: 12px 9px 13px 8px / 9px 13px 8px 12px;
 }
 
+/* ---------- 按钮四态素材（皮肤接线，`skin/03-window.md` §4.1） ----------
+   `normal` 那份是行内样式（`ui/useButtonStyle.ts`，与容器 / 格子同一条落法），行内写不出
+   伪类；于是其余三态只能由这里按状态取用，行内只负责把每态那张图放进变量
+   （`--sk-<态>-bg` 整图拉伸 / `--sk-<态>-bi` 九宫格简写，变量名与 `ui/Texture.tsx`
+   的 `BUTTON_VARS` 逐字对应，改名要两处一起改）。
+
+   缺省链与 §4.1 一致：**该态没配、或该态的图不在包里，就不写那对变量**，
+   下面的 `var(--sk-hover-*, var(--sk-normal-*))` 自然回落 `normal` ＋ 纸面 CSS；
+   `normal` 缺位时一对变量都不会有，整颗按钮照旧由纸面 CSS 表现。
+
+   `!important` 是为了压过 `normal` 那份**行内**样式——正常声明里的行内样式优先级最高，
+   伪类规则想按状态换图只能走 `!important`（本文件仅此三处用它）。变量一个都没设时
+   （构建页 / 未启用皮肤 / 没配该键）上式一律取 `none`，与 `.btn` 纸面底纹等价。 */
+
+.btn:hover {
+  background-image: var(--sk-hover-bg, var(--sk-normal-bg, none)) !important;
+  border-image: var(--sk-hover-bi, var(--sk-normal-bi, none)) !important;
+}
+
+.btn:active {
+  background-image: var(--sk-active-bg, var(--sk-normal-bg, none)) !important;
+  border-image: var(--sk-active-bi, var(--sk-normal-bi, none)) !important;
+}
+
+.btn:disabled {
+  background-image: var(--sk-disabled-bg, var(--sk-normal-bg, none)) !important;
+  border-image: var(--sk-disabled-bi, var(--sk-normal-bi, none)) !important;
+}
+
 /* ---------------- 表单 ---------------- */
 
 .field {

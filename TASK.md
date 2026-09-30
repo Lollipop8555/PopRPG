@@ -131,13 +131,20 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 
 ## 进度同步
 
+**2026-09-30 · D3 第十四屏（按钮 `hover` / `active` / `disabled` 三态接入）**
+- **四态各查自己的态**：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `ButtonState` / `BUTTON_STATES` 与 `buttonStatesOf(win, kind)`——**只交出真写了的态**（缺 `normal` 即整块作废，只写 `hover` 不会凭空多出一张底图），`buttonOf()` 退化成它取 `normal` 那一项，老调用点一行不动。
+- **两种落法**：`normal` 仍是**行内**属性（与容器 / 格子同档）；另三态落成行内写下的**一对 CSS 变量**（`--sk-<态>-bg` 整图拉伸 / `--sk-<态>-bi` 九宫格简写，后者由新增的 `nineShorthand()` 出、与 `nineStyle()` 的长写同义）——[`src/ui/Texture.tsx`](src/ui/Texture.tsx) 新增 `buttonStyle(states, assets)`，接线 [`src/ui/useButtonStyle.ts`](src/ui/useButtonStyle.ts) 的 `useButtonStyle(kind)`，**调用方一行不动**（变量与 `normal` 那份行内属性在同一个 `style` 对象里）。
+- **为什么走变量**：行内样式写不出伪类，而 `.btn:hover` / `:active` / `:disabled` 是 CSS 的原生状态——[`src/styles/theme.css`](src/styles/theme.css) 新增三条规则按状态取用（`!important` 用于压过 `normal` 那份行内样式，**全文件仅此三处**），缺省链就写成 `var(--sk-hover-*, var(--sk-normal-*))`：**该态没配、或该态的图不在包里都自然回落 `normal`**；未启用皮肤 / 没配该键 / 缺 `normal` 时三条规则一律取到 `none`，与纸面 `.btn` 等价（构建页同样一处不受影响）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **53 个文件 / 643 项**全绿（[`src/play/__tests__/windowButtons.test.tsx`](src/play/__tests__/windowButtons.test.tsx) 补 5 项落点、[`src/ui/__tests__/texture.test.tsx`](src/ui/__tests__/texture.test.tsx) 补 5 项 `buttonStyle`、[`src/engine/skin/__tests__/window.test.ts`](src/engine/skin/__tests__/window.test.ts) 补 6 项 `buttonStatesOf`）。设计侧同步 [`docs/design/skin/03-window.md`](docs/design/skin/03-window.md) §4.1 / §六 / §七 / §八（`KW-6` 作废）；任务侧 [`task/04-skin.md`](task/04-skin.md) 的 `window` 条拆出「按钮三态」并勾选。
+- 同屏结论：`window` 这一节的**可接项至此全部接完**，只余 `tile` 平铺（待 §七.2 裁决）与 `KW-*` 校验层（D6 汇总批）。
+
 **2026-09-30 · D3 第十三屏（条 / 提示条 / 分隔线接入 ＋ 九宫格提前落地）**
 - 三节六键接入 `window`：`bars`（`hp` / `mp`，各两张）、`hints`（`ok` / `warn` / `error`）、`rules.line`。三族原本因「必须九宫格」整批留 V2.2，本批**九宫格一并提前落地** → 六键在 V2.1 内收口。
 - **九宫格无新字段**：素材自带 `slice` 即走九宫格。新增 [`src/engine/skin/texture.ts`](src/engine/skin/texture.ts) 的 `surfaceMode(ref)`（带 `slice` → `nine`）＋ `effectiveMode` 的「策略 ＋ 切片齐备」把关；[`src/ui/Texture.tsx`](src/ui/Texture.tsx) 的 `surfaceStyle()` 内部改出 `border-image`（`Slice` 语序 `[上,右,下,左]`、末带 `fill`、**不写 `borderWidth`**）。**容器 / 按钮 / 格子 / 条 / 提示条 / 分隔线六处一次升级，调用方一行不动**；SVG 层本批不动；`tile` 待裁决。
 - 取值 [`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `barOf(win, tone)` / `hintOf(win, tone)` / `ruleOf(win)`（不跨键不跨档）；接线 [`src/ui/useBarStyle.ts`](src/ui/useBarStyle.ts)（返回 `{ track?, fill? }`，两张各自独立）/ [`src/ui/useHintStyle.ts`](src/ui/useHintStyle.ts) / [`src/ui/useRuleStyle.ts`](src/ui/useRuleStyle.ts)。
 - 落点：属性面板与交锋弹层的血条、`GainNoteView` 的「没拿下」、`EncounterView` 的事件判定框（同一元素按 `verdict` 换 `ok` / `warn` / `error`，三档全部先取再挑）、`LoadScreen` / `StartScreen` 的警告条与分隔线、`BagPanel` 的分隔线。**中性 `.hintbox` 不设键也不借用**，构建页不接。
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **53 个文件 / 627 项**全绿。设计侧同步 [`docs/design/skin/03-window.md`](docs/design/skin/03-window.md) 新增 §4.4 与 §八两小节、[`docs/design/skin.md`](docs/design/skin.md) §3.3 / §四 / `S-1`；任务侧 [`task/04-skin.md`](task/04-skin.md) 勾掉「`window` 其余」条。
-- 同屏遗留：**按钮 `hover` / `active` / `disabled` 三态**（九宫格已落地，该条现为独立的一批）。
+- 同屏遗留：**按钮 `hover` / `active` / `disabled` 三态**（九宫格已落地，该条现为独立的一批）——**已由 D3 第十四屏收口**。
 
 **2026-09-30 · D3 第十二屏（固定族格子 `window.slots` 接入）**
 - 四个**固定族格子**键接入 `window.slots`：技能格 / 奖励卡 / 背包格 / 部位标签。固定族尺寸写死（技能格 54 / 奖励卡 92 / 部位标签 44），V1 走**整图等比拉伸**，不需要九宫格 → 该条能在 V2.1 内收口。

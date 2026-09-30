@@ -10,7 +10,8 @@
  * - 立绘：职业缺位**先回退 `role.portraits.player`**；怪物与 NPC 缺位即不渲染，**不跨条借用**。
  * - 衬底：字符串写法等价于只写 `fill`；`stroke` 独立设置，未给即不绘制描边。
  * - 容器：对话框 / 抽屉 / 气泡三种容器各查 `window.surfaces` 一个键，**互不借用**。
- * - 按钮：七个键各查 `window.buttons` 自己的键，**互不借用**；V1 只取 `normal` 态。
+ * - 按钮：七个键各查 `window.buttons` 自己的键，**互不借用**；四态各查自己的态，
+ *   缺 `normal` 即整颗按钮算没配，其余三态缺位交给渲染侧的「回落 `normal`」。
  * - 地图标记：起点 / 终点 / 脚印三键各查 `misc.marks` 自己的键，**互不借用**（缺了照旧画程序图形）。
  * - 骰子：本体与骰面各一张；骰面 1–6 取点阵 `d1`–`d6`、其余点数取数字面 `numeric`。
  * - 图标：按 **lucide 图标名**查 `misc.icons`，缺位即该处照旧用 lucide 元件。
@@ -170,15 +171,41 @@ export const BUTTON_KINDS: readonly ButtonKind[] = [
   'close',
 ]
 
+/** 按钮四态（`skin/03-window.md` §4.1）：`normal` 唯一必填，其余三态缺位回落到 `normal` ＋ CSS 表现 */
+export type ButtonState = 'normal' | 'hover' | 'active' | 'disabled'
+
+/** 四态的固定顺序（遍历 / 清单用）：常态在前，其余按「悬停 → 按下 → 不可用」 */
+export const BUTTON_STATES: readonly ButtonState[] = ['normal', 'hover', 'active', 'disabled']
+
 /**
- * 取按钮素材的 **`normal` 态**（`skin/03-window.md` §四）：`normal` 是四态对象里的唯一必填项，
- * 字符串写法等价于只写 `normal`；四态对象缺 `normal` 即 `undefined`（整颗按钮走 CSS）。
- * 其余三态（`hover` / `active` / `disabled`）V1 不读取，仍由 CSS 表现（`KW-6`）。
+ * 取一颗按钮的**四态**（`skin/03-window.md` §四.1）：字符串写法等价于只写 `normal`；
+ * 四态对象**缺 `normal` 即整颗按钮算没配**（返回 `undefined`——只写 `hover` 不会凭空多出一张底图）。
+ *
+ * 返回值**只含真写了的态**：缺位的态不在这张表里，交给渲染侧落成「回落 `normal`」（CSS 那份缺省链），
+ * 而不是在这里预先补一份 `normal` 的值——否则「写了 `hover` 却缺图」与「根本没写 `hover`」就没法区分了。
  */
-export function buttonOf(win: SkinWindow | undefined, kind: ButtonKind): SkinTexture | undefined {
+export function buttonStatesOf(
+  win: SkinWindow | undefined,
+  kind: ButtonKind,
+): Partial<Record<ButtonState, SkinTexture>> | undefined {
   const button = win?.buttons?.[kind]
   if (button === undefined) return undefined
-  return typeof button === 'string' || 'img' in button ? button : button.normal
+  if (typeof button === 'string' || 'img' in button) return { normal: button }
+  if (button.normal === undefined) return undefined
+
+  const states: Partial<Record<ButtonState, SkinTexture>> = { normal: button.normal }
+  if (button.hover !== undefined) states.hover = button.hover
+  if (button.active !== undefined) states.active = button.active
+  if (button.disabled !== undefined) states.disabled = button.disabled
+  return states
+}
+
+/**
+ * 取按钮素材的 **`normal` 态**（`skin/03-window.md` §四）：即四态里的必填那一张，
+ * 缺 `normal`（或整颗按钮没配）即 `undefined`——整颗按钮走 CSS 纸面。
+ */
+export function buttonOf(win: SkinWindow | undefined, kind: ButtonKind): SkinTexture | undefined {
+  return buttonStatesOf(win, kind)?.normal
 }
 
 /**

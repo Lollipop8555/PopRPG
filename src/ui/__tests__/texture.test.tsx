@@ -2,7 +2,8 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render } from '@testing-library/react'
-import { DomTexture, InlineTexture, SvgTexture, surfaceStyle, textureProps } from '../Texture'
+import type { CSSProperties } from 'react'
+import { DomTexture, InlineTexture, SvgTexture, buttonStyle, surfaceStyle, textureProps } from '../Texture'
 import type { TextureRef } from '../../engine/skin/texture'
 import type { SkinAssets } from '../../io/skin-assets'
 
@@ -78,6 +79,60 @@ describe('背景铺法 surfaceStyle：九宫格走 border-image（§3.3）', () 
   it('没配 / 包里缺这张图一律 `undefined`（调用方不传 `style`，CSS 纸面照旧）', () => {
     expect(surfaceStyle(undefined, withTile())).toBeUndefined()
     expect(surfaceStyle(ref({ slice: [6, 6, 6, 6] }), assets())).toBeUndefined()
+  })
+})
+
+describe('按钮四态 buttonStyle：normal 行内 ＋ 三态变量（§4.1）', () => {
+  const HOVER = 'art/window/btn-hover.png'
+  const pack = assets({ [TILE]: 'blob:1', [HOVER]: 'blob:2' })
+  /** 变量读法：`--sk-*` 是 CSS 自定义属性，React 的 `CSSProperties` 型上没有它们 */
+  const vars = (style: CSSProperties | undefined) => (style ?? {}) as Record<string, string>
+
+  it('只写 `normal`：行内属性照旧，另外三态一对变量都不写（交给 CSS 回落）', () => {
+    const style = buttonStyle({ normal: TILE }, withTile())!
+
+    // `normal` 那份与容器同一条落法：行内四值照旧
+    expect(style.backgroundImage).toBe('url("blob:1")')
+    expect(style.backgroundSize).toBe('100% 100%')
+    expect(style.backgroundRepeat).toBe('no-repeat')
+    expect(style.borderImageSource).toBeUndefined()
+    expect(vars(style)['--sk-normal-bg']).toBe('url("blob:1")')
+    expect(vars(style)['--sk-normal-bi']).toBe('none')
+    expect(vars(style)['--sk-hover-bg']).toBeUndefined()
+    expect(vars(style)['--sk-active-bg']).toBeUndefined()
+    expect(vars(style)['--sk-disabled-bg']).toBeUndefined()
+  })
+
+  it('写了哪一态就写哪一对变量：三态各写各的，没写的不占位', () => {
+    const style = buttonStyle({ normal: TILE, hover: HOVER, disabled: HOVER }, pack)!
+
+    expect(vars(style)['--sk-hover-bg']).toBe('url("blob:2")')
+    expect(vars(style)['--sk-hover-bi']).toBe('none')
+    expect(vars(style)['--sk-disabled-bg']).toBe('url("blob:2")')
+    expect(vars(style)['--sk-active-bg']).toBeUndefined()
+  })
+
+  it('某一态自己交了切片就走九宫格：背景图那半给 `none`，`border-image` 写成简写', () => {
+    const style = buttonStyle({ normal: TILE, hover: { img: HOVER, slice: [6, 12, 18, 24] } }, pack)!
+
+    expect(vars(style)['--sk-hover-bg']).toBe('none')
+    expect(vars(style)['--sk-hover-bi']).toBe('url("blob:2") 6 12 18 24 fill / 6px 12px 18px 24px stretch')
+    // 与九宫格长写同义（同一份切片、同一份四值）
+    expect(surfaceStyle(ref({ src: HOVER, slice: [6, 12, 18, 24] }), pack)!.borderImageSlice).toBe('6 12 18 24 fill')
+    // `normal` 那一态不受兄弟态铺法影响
+    expect(vars(style)['--sk-normal-bg']).toBe('url("blob:1")')
+  })
+
+  it('该态的图不在包里：当没配——不写那对变量，`theme.css` 自然回落 `normal`', () => {
+    const style = buttonStyle({ normal: TILE, hover: HOVER }, withTile())!
+
+    expect(vars(style)['--sk-normal-bg']).toBe('url("blob:1")')
+    expect(vars(style)['--sk-hover-bg']).toBeUndefined()
+  })
+
+  it('缺 `normal`（或包里缺 `normal` 那张图）即整块 `undefined`：三态写了也一并作废', () => {
+    expect(buttonStyle({ hover: HOVER }, pack)).toBeUndefined()
+    expect(buttonStyle({ normal: TILE, hover: HOVER }, assets())).toBeUndefined()
   })
 })
 

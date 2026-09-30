@@ -15,11 +15,14 @@
 
 import type { CSSProperties } from 'react'
 import type { GroundPaint } from '../engine/skin'
-import type { SkinFit, SkinSlice } from '../types'
+import type { ButtonState } from '../engine/skin/lookup'
+import { BUTTON_STATES } from '../engine/skin/lookup'
+import type { SkinFit, SkinSlice, SkinTexture } from '../types'
 import {
   effectiveMode,
   placeTexture,
   surfaceMode,
+  textureRef,
   type TextureBox,
   type TextureMode,
   type TexturePlacement,
@@ -113,7 +116,60 @@ export function surfaceStyle(
 }
 
 /**
- * **九宫格 → CSS `border-image`**（`skin.md` §3.3、`03-window.md` §二）。
+ * **按钮四态 → CSS 自定义属性**（`skin/03-window.md` §4.1）：与 `theme.css` 里
+ * `.btn:hover` / `.btn:active` / `.btn:disabled` 三条规则**逐字对应**，改名要两处一起改。
+ *
+ * 为什么要走变量：`normal` 那份是**行内**样式（与容器 / 格子同一条落法），而行内写不出伪类；
+ * 于是其余三态只能由样式表按状态取用，行内只负责**把每态那张图带进来**。
+ */
+const BUTTON_VARS: Record<ButtonState, { bg: string; bi: string }> = {
+  normal: { bg: '--sk-normal-bg', bi: '--sk-normal-bi' },
+  hover: { bg: '--sk-hover-bg', bi: '--sk-hover-bi' },
+  active: { bg: '--sk-active-bg', bi: '--sk-active-bi' },
+  disabled: { bg: '--sk-disabled-bg', bi: '--sk-disabled-bi' },
+}
+
+/**
+ * **按钮落图**（`skin/03-window.md` §4.1 / §八「按钮」）：`normal` 与容器同档（行内属性），
+ * 另外三态写成 CSS 变量，交给 `theme.css` 的伪类规则按状态取用。
+ *
+ * - **缺 `normal`、或包里缺 `normal` 那张图**：整块 `undefined`，调用方不传 `style`
+ *   （`normal` 是唯一必填项，§4.1）——此时三态写了也一并作废；
+ * - **某态没写、或该态的图不在包里**：**不写**那对变量，`theme.css` 的
+ *   `var(--sk-hover-*, var(--sk-normal-*))` 自然回落到 `normal`（§4.1「回落 `normal` ＋ CSS 表现」）；
+ * - **配了该态就按该态自己的铺法**（带 `slice` 走九宫格 / 否则整图拉伸），与 `normal` 无关。
+ */
+export function buttonStyle(
+  states: Partial<Record<ButtonState, SkinTexture>> | undefined,
+  assets: SkinAssets,
+): CSSProperties | undefined {
+  const style = surfaceStyle(textureRef(states?.normal), assets)
+  if (style === undefined) return undefined
+
+  const out: Record<string, string | number> = { ...style }
+  for (const state of BUTTON_STATES) {
+    const ref = textureRef(states?.[state])
+    const src = ref === undefined ? undefined : assets.urlOf(ref.src)
+    if (ref === undefined || src === undefined) continue
+    const { bg, bi } = stateVars(ref, src)
+    out[BUTTON_VARS[state].bg] = bg
+    out[BUTTON_VARS[state].bi] = bi
+  }
+  return out as CSSProperties
+}
+
+/**
+ * **一态 → 一对变量值**：`bg` 给 `background-image`（整图拉伸那档用它，九宫格那档给 `none`），
+ * `bi` 给 `border-image`（九宫格那档直接写成简写——变量里只能放一条声明值）。
+ */
+function stateVars(ref: TextureRef, src: string): { bg: string; bi: string } {
+  if (surfaceMode(ref) === 'nine' && ref.slice !== undefined) {
+    return { bg: 'none', bi: nineShorthand(src, ref.slice) }
+  }
+  return { bg: `url("${src}")`, bi: 'none' }
+}
+
+/** **九宫格 → CSS `border-image`**（`skin.md` §3.3、`03-window.md` §二）。
  *
  * `slice` 是**图片像素**的 `[上, 右, 下, 左]`，与 `border-image-slice` 的语义逐字对应：
  * 四角原样、四边单向拉伸、中心双向拉伸；末尾的 `fill` 让**中心区也画出来**（纸面底纹正在中心）。
@@ -124,13 +180,29 @@ export function surfaceStyle(
  * - **不写 `background-color`**——九宫格的 `fill` 只画中心区的**图**，纸面底色照旧由 CSS 兜着。
  */
 function nineStyle(src: string, slice: SkinSlice): CSSProperties {
-  const [t, r, b, l] = slice
+  const { edges, widths } = sliceSides(slice)
   return {
     borderImageSource: `url("${src}")`,
-    borderImageSlice: `${num(t)} ${num(r)} ${num(b)} ${num(l)} fill`,
-    borderImageWidth: `${num(t)}px ${num(r)}px ${num(b)}px ${num(l)}px`,
+    borderImageSlice: `${edges} fill`,
+    borderImageWidth: widths,
     borderImageRepeat: 'stretch',
   }
+}
+
+/**
+ * 同一份九宫格切片 → **`border-image` 简写**（按钮三态走变量，而变量里只能放一条声明值）。
+ *
+ * 与 `nineStyle()` 的四条长写**同义**：源 ＋ 切片（带 `fill`）`/` 边框宽 ＋ 拉伸。
+ */
+function nineShorthand(src: string, slice: SkinSlice): string {
+  const { edges, widths } = sliceSides(slice)
+  return `url("${src}") ${edges} fill / ${widths} stretch`
+}
+
+/** `slice` 的两个串：无单位的四边值（配 `fill`）与带 `px` 的四边值——长写与简写共用这一份 */
+function sliceSides(slice: SkinSlice): { edges: string; widths: string } {
+  const sides = slice.map(num)
+  return { edges: sides.join(' '), widths: sides.map((side) => `${side}px`).join(' ') }
 }
 
 /**
