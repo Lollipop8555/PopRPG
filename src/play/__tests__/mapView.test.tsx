@@ -10,7 +10,7 @@ import { fixtureMap, fixtureProject } from '../../test/fixtures'
 import { useSkinStore } from '../../store/skin'
 import type { SkinAssets } from '../../io/skin-assets'
 import type { LoadedSkin } from '../../io/pp'
-import type { SkinBackground, SkinBackgroundLayer, SkinRoad } from '../../types'
+import type { SkinBackground, SkinBackgroundLayer, SkinRoad, SkinRole, SkinSprite } from '../../types'
 import type { Session } from '../../types/session'
 
 const scenario = scenarioFromProject(presetLibrary(), fixtureProject())
@@ -34,17 +34,34 @@ afterEach(() => {
   useSkinStore.getState().release()
 })
 
+/** 一份素材的三写法（字符串 / 对象 / 数组）都摊成路径 */
+function spritePaths(sprite: SkinSprite): string[] {
+  if (typeof sprite === 'string') return [sprite]
+  if (Array.isArray(sprite)) return sprite.flatMap(spritePaths)
+  return [sprite.img]
+}
+
+/** `role` 节里会用到的全部路径（棋子 / 职业 / 怪物 / NPC 形象） */
+function rolePaths(role?: SkinRole): string[] {
+  if (!role) return []
+  return [
+    ...(role.player ? spritePaths(role.player) : []),
+    ...Object.values(role.classes ?? {}).flatMap(spritePaths),
+    ...Object.values(role.monsters ?? {}).flatMap(spritePaths),
+    ...Object.values(role.npcs ?? {}).flatMap(spritePaths),
+  ]
+}
+
 /**
  * 装上一套皮肤：素材按文件名直接给地址，不碰真包。
  *
  * @param unpacked 故意**不放进包**的路径（试 `KB-2` 的路径取不到）
  */
-function paint(road?: SkinRoad, background?: SkinBackground, unpacked: string[] = []) {
+function paint(road?: SkinRoad, background?: SkinBackground, unpacked: string[] = [], role?: SkinRole) {
   const files = [
-    ...Object.values(road?.tiles ?? {}).flatMap((v) =>
-      typeof v === 'string' ? [v] : Array.isArray(v) ? v : [v.img],
-    ),
+    ...Object.values(road?.tiles ?? {}).flatMap(spritePaths),
     ...(Array.isArray(background) ? background : background ? [background] : []).map((l) => l.img),
+    ...rolePaths(role),
   ].filter((path): path is string => typeof path === 'string' && !unpacked.includes(path))
   const set = new Set(files)
   const assets: SkinAssets = {
@@ -55,7 +72,10 @@ function paint(road?: SkinRoad, background?: SkinBackground, unpacked: string[] 
   }
 
   useSkinStore.setState({
-    skin: road || background ? ({ name: '测试皮', manifest: { road, background } } as unknown as LoadedSkin) : undefined,
+    skin:
+      road || background || role
+        ? ({ name: '测试皮', manifest: { road, background, role } } as unknown as LoadedSkin)
+        : undefined,
     assets,
   })
 }
@@ -175,5 +195,45 @@ describe('接管画布背景', () => {
     expect(all.length).toBe(ROAD_CELLS + 1)
     expect(g.querySelectorAll('image').length).toBe(1)
     expect(all.filter((img) => !g.contains(img))).toHaveLength(ROAD_CELLS)
+  })
+})
+
+/** 主角棋子：单格、锚点格中心（`skin/02-role.md` §三 / §五） */
+const HERO = 'art/role/hero.png'
+
+describe('接管主角棋子', () => {
+  it('player 有素材即在主角那一格出图：整格大小、左上角＝格左上角（即锚点格中心），方框与 emoji 一并让位', () => {
+    paint(undefined, undefined, [], { player: HERO })
+    const { container } = draw()
+    const pawn = container.querySelector('g[data-role-pawn]')!
+    const [px, py] = session.pos
+    const image = pawn.querySelector('image')!
+
+    expect(image.getAttribute('href')).toBe('blob:art/role/hero.png')
+    expect(image.getAttribute('x')).toBe(String(px * CELL))
+    expect(image.getAttribute('y')).toBe(String(py * CELL))
+    expect(image.getAttribute('width')).toBe(String(CELL))
+    expect(image.getAttribute('height')).toBe(String(CELL))
+    // 棋子形象没有朝向，故不带姿态角
+    expect(image.getAttribute('transform')).toBeNull()
+    expect(pawn.querySelector('text')).toBeNull()
+    // 定位环与棋子形象无关，照旧画
+    expect(pawn.querySelector('circle')).not.toBeNull()
+  })
+
+  it('棋子只认 player：只给了 classes 时照旧画职业 emoji（不跨组借用）', () => {
+    paint(undefined, undefined, [], { classes: { knight: 'art/role/knight.png' } })
+    const pawn = draw().container.querySelector('g[data-role-pawn]')!
+
+    expect(pawn.querySelector('image')).toBeNull()
+    expect(pawn.querySelector('text')?.textContent).toBe(session.player.cls?.icon)
+  })
+
+  it('player 那张没配进包（路径取不到）同样回退 emoji', () => {
+    paint(undefined, undefined, [HERO], { player: HERO })
+    const pawn = draw().container.querySelector('g[data-role-pawn]')!
+
+    expect(pawn.querySelector('image')).toBeNull()
+    expect(pawn.querySelector('text')?.textContent).toBe(session.player.cls?.icon)
   })
 })

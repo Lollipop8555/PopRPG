@@ -124,6 +124,14 @@
 
 ## 进度同步
 
+**2026-09-30 · D3 第三屏：棋子形象 `role` 接入（[`design/skin/02-role.md`](design/skin/02-role.md) §十一）**
+- 取图：`roleSprite(role, kind, id)`（[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts)）按 §三 四组各查各表、**不跨组借用**（职业 / 怪物 / NPC 缺位即回退该组自己的 `icon` emoji）；`spriteRef()` 承担三写法归一，两者都只出形状、不碰 IO。
+- 地图棋子：[`src/play/MapView.tsx`](../src/play/MapView.tsx) 的 `role.player` 按**整格大小 ＋ 锚点格中心**出图（`x/y = 格 × CELL`、`w/h = CELL`，四周留白由素材自画）→ SVG 层 `SvgTexture`；**取不到图才回到方框 ＋ 职业 `icon` emoji**。绿色定位环是「你在这儿」的标记、与棋子形象无关，故照旧画。
+- 三处文字落点（外加底栏共四处）新增**行内层**：[`src/ui/Texture.tsx`](../src/ui/Texture.tsx) 的 `InlineTexture`（跟文字同排，尺寸由所在处 CSS 的 `1em` 决定）＋ [`src/ui/RoleGlyph.tsx`](../src/ui/RoleGlyph.tsx)，接在出身卡职业图标与状态面板标题、底栏（`role.classes.<职业 id>`）、对战弹层标题（`role.monsters.<怪物 id>`）、对话弹层标题（`role.npcs.<NPC id>`）；非正方形素材按 `object-fit: contain` 等比内缩（`KR-1` 只提示、不改行为）。渲染层由**两层**变**三层**，同吃一份 `TextureProps`（[`design/skin.md`](design/skin.md) §四 已改）。
+- **`player` 与 `classes` 是两条独立的链**：地图棋子只认 `player`，不借 `classes.<职业>` 的图（§三 回退表的字面执行）；要做「按职业出棋子」需先改规范（§十 待确认 2）。
+- 未落地：立绘（§四，含 §4.1 四落点、`W` 比例缩放与 25% 宽度上限）与受击表现（§4.4 的 `hurt` 与形变），排在 D3 后续批次。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **35 个文件 / 406 项**全绿（新增 8 项）。
+
 **2026-09-30 · D3 第二屏：画布 `background` 接入（[`design/skin/05-canvas.md`](design/skin/05-canvas.md) §八）**
 - 取层与落位：[`src/engine/skin/canvas.ts`](../src/engine/skin/canvas.ts) 的 `backgroundUsable()`（`img` ＋ 正的 `cellSize` 齐备）、`backgroundOf(bg, mapIndex, available?)`（下标越界 clamp 到最后一层；采用层不可用即向前回退；`available` 由调用方传入以判掉「路径在包内取不到」，只问「有没有」不建地址）、`backgroundPlacement()`（倍率 ＝ 屏幕每格像素 ÷ `cellSize`；图点 `(startX,startY)` ≡ 格 `[0,0]` 中心）。
 - 渲染：[`src/play/MapView.tsx`](../src/play/MapView.tsx) 按 §四 顺序——底纹 `<rect>` 的 `fill` 取**采用层**的 `color`（漏写即 `var(--paper-card)`）→ 背景图放在 `translate(x y) scale(s)` 的 `<g>` 里 → 参照线 / 道路；未取到可用层则一字不改，照旧纸面底纹。

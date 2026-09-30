@@ -25,6 +25,9 @@ import EncounterView from './EncounterView'
 import TalkDialog from './TalkDialog'
 import HeroNotice from './HeroNotice'
 import Overlay from '../ui/Overlay'
+import { useSkinStore } from '../store/skin'
+import { roleSprite } from '../engine/skin'
+import { RoleGlyph } from '../ui/RoleGlyph'
 import { navigate } from '../app/router'
 
 type Drawer = 'status' | 'bag' | 'log' | 'equip' | null
@@ -60,6 +63,9 @@ export default function GameScreen({ session }: { session: Session }) {
   }, [talkHit, play])
 
   const finished = session.phase === 'won' || session.phase === 'dead'
+  // 职业形象（`skin/02-role.md` §三）：底栏那一格与状态面板同源同图（立绘是另一回事，§4.1）
+  const assets = useSkinStore((s) => s.assets)
+  const role = useSkinStore((s) => s.skin?.manifest.role)
   const { player } = session
   const env = currentNodeInfo(session)
   const gate = env.gate
@@ -170,7 +176,8 @@ export default function GameScreen({ session }: { session: Session }) {
           <div className="hud-bar panel">
             <div className="hud-vitals">
               <div className="hud-face">
-                {player.cls?.icon} {player.cls?.name ?? '无职业'}
+                <RoleGlyph sprite={roleSprite(role, 'class', player.cls?.id)} assets={assets} icon={player.cls?.icon} />{' '}
+                {player.cls?.name ?? '无职业'}
               </div>
               <Bar label="hp" value={player.resources.hp} max={player.stats.hp} tone="hp" />
               <Bar label="mp" value={player.resources.mp} max={player.stats.mp} tone="mp" />

@@ -28,8 +28,11 @@ import { useEffect, useRef, useState } from 'react'
 import type { Session } from '../types/session'
 import type { TalkMenuAction } from './talk'
 import { talkView } from './talk'
+import { roleSprite } from '../engine/skin'
+import { useSkinStore } from '../store/skin'
 import { DieFace } from './DiceLog'
 import Overlay from '../ui/Overlay'
+import { RoleGlyph } from '../ui/RoleGlyph'
 
 /** 骰子转多久才停（比底栏那枚略短：这里是玩家自己点的，手感要脆） */
 const SPIN_MS = 520
@@ -72,6 +75,9 @@ export default function TalkDialog({
     }
   }, [rolling])
 
+  const assets = useSkinStore((s) => s.assets)
+  const role = useSkinStore((s) => s.skin?.manifest.role)
+
   const view = talkView(session)
   if (!view) return null
 
@@ -94,7 +100,8 @@ export default function TalkDialog({
         <div className="modal talk-modal">
           <div className="panel-head">
             <span className="hand" style={{ fontSize: 16 }}>
-              {npc?.icon} {npc?.name ?? talk.npc}
+              <RoleGlyph sprite={roleSprite(role, 'npc', talk.npc)} assets={assets} icon={npc?.icon} />{' '}
+              {npc?.name ?? talk.npc}
             </span>
           </div>
           <div className="row" style={{ gap: 6, marginTop: 4 }}>

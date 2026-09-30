@@ -12,7 +12,10 @@ import { useEffect, useRef, useState } from 'react'
 import type { LogLine, Session } from '../types/session'
 import { canUseSkill, costText } from '../engine/skill'
 import { usePlayStore } from '../store/play'
+import { useSkinStore } from '../store/skin'
+import { roleSprite } from '../engine/skin'
 import Overlay from '../ui/Overlay'
+import { RoleGlyph } from '../ui/RoleGlyph'
 import { DieFace } from './DiceLog'
 import { Bar } from './StatusPanel'
 
@@ -58,6 +61,9 @@ export default function BattleDialog({ session }: { session: Session }) {
   const [spin, setSpin] = useState<number | null>(null)
   const logRef = useRef<HTMLDivElement | null>(null)
 
+  const assets = useSkinStore((s) => s.assets)
+  const role = useSkinStore((s) => s.skin?.manifest.role)
+
   const monster = session.monster
   if (!monster) return null
 
@@ -97,7 +103,8 @@ export default function BattleDialog({ session }: { session: Session }) {
       <div className="modal battle">
         <div className="panel-head" style={{ justifyContent: 'space-between' }}>
           <span className="hand" style={{ fontSize: 16 }}>
-            {monster.icon} {monster.name}
+            <RoleGlyph sprite={roleSprite(role, 'monster', monster.id)} assets={assets} icon={monster.icon} />{' '}
+            {monster.name}
           </span>
           <span className="badge err">交锋中</span>
         </div>

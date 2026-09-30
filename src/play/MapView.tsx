@@ -11,7 +11,7 @@ import type { SkinAssets } from '../io/skin-assets'
 import { currentMap, neighbors } from './kit'
 import { canStep } from './flow'
 import { roadPickAt } from './road'
-import { backgroundOf, backgroundPlacement, backgroundUsable } from '../engine/skin'
+import { backgroundOf, backgroundPlacement, backgroundUsable, roleSprite, spriteRef } from '../engine/skin'
 import { centerCamera } from '../lib/map'
 import { MapMarker } from '../ui/Marker'
 import { Footprint } from '../ui/Footprint'
@@ -32,6 +32,7 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
   const assets = useSkinStore((s) => s.assets)
   const road = useSkinStore((s) => s.skin?.manifest.road)
   const background = useSkinStore((s) => s.skin?.manifest.background)
+  const role = useSkinStore((s) => s.skin?.manifest.role)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [size, setSize] = useState({ w: 800, h: 600 })
   const [cam, setCam] = useState<[number, number] | null>(null)
@@ -68,6 +69,15 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
     bgPlace && bgLayer?.img
       ? textureProps({ src: bgLayer.img, rotate: 0, flip: false }, assets, { x: 0, y: 0, w: 'auto', h: 'auto' })
       : undefined
+
+  // 主角棋子形象（`skin/02-role.md` §三 / §五）：单格、锚点格中心、**四周留白 10%** 由素材自己画。
+  // 取不到图即原样画方框 ＋ 职业 emoji（`closes` 那条链：`player` → 职业 `icon` → 中性兜底）。
+  const [px, py] = session.pos
+  const pawn = textureProps(
+    spriteRef(roleSprite(role, 'player')),
+    assets,
+    { x: px * CELL, y: py * CELL, w: CELL, h: CELL },
+  )
 
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
     movedRef.current = false
@@ -165,8 +175,8 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
           <NodeShape key={`${node.x},${node.y}`} node={node} session={session} map={map} road={road} assets={assets} />
         ))}
 
-        {/* 主角 */}
-        <g>
+        {/* 主角：绿色虚线环只是「你在这儿」的定位标记，与棋子形象无关，故一直画 */}
+        <g data-role-pawn>
           <circle
             cx={session.pos[0] * CELL + CELL / 2}
             cy={session.pos[1] * CELL + CELL / 2}
@@ -177,20 +187,26 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
             strokeDasharray="3 3"
             opacity={0.7}
           />
-          <rect
-            x={session.pos[0] * CELL + 7}
-            y={session.pos[1] * CELL + 7}
-            width={CELL - 14}
-            height={CELL - 14}
-            rx={11}
-            fill="rgba(140,190,150,.55)"
-            stroke="var(--ink)"
-            strokeWidth={2}
-          />
-          {/* 主角的图标 = 当前职业的 icon（无职业时给个中性兜底） */}
-          <text x={session.pos[0] * CELL + CELL / 2} y={session.pos[1] * CELL + CELL / 2 + 7} fontSize={20} textAnchor="middle">
-            {session.player.cls?.icon ?? '🙂'}
-          </text>
+          {pawn ? (
+            <SvgTexture {...pawn} />
+          ) : (
+            <>
+              <rect
+                x={session.pos[0] * CELL + 7}
+                y={session.pos[1] * CELL + 7}
+                width={CELL - 14}
+                height={CELL - 14}
+                rx={11}
+                fill="rgba(140,190,150,.55)"
+                stroke="var(--ink)"
+                strokeWidth={2}
+              />
+              {/* 图标 = 当前职业的 icon（无职业时给个中性兜底） */}
+              <text x={px * CELL + CELL / 2} y={py * CELL + CELL / 2 + 7} fontSize={20} textAnchor="middle">
+                {session.player.cls?.icon ?? '🙂'}
+              </text>
+            </>
+          )}
         </g>
       </g>
 

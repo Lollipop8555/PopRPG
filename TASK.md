@@ -28,7 +28,7 @@
 |---|---|---|---|
 | **V1** | Phase 0 基座 / Phase A BUILD / Phase B PLAY | **已冻结口径**：七大类 · 13 项配置 · `encounter` 五选一 | **已完成**（A 首轮 ＋ B 全部 58 项勾选；全量 197 项单测绿） |
 | **V2.0** | **新增 NPC 与对话**（第 8 类组件 ＋ **进入建筑后的 NPC 触发节点**） | **追加设定 / 结构改造**（不属于 V1 的阶段性设计） | **已完成**（编辑器侧 E0–E3 ＋ 运行时 E4 ＋ 19 项原子验收；E5 皮肤落点并入 **V2.1**） |
-| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` 已接，余下各屏待做） |
+| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ 棋子形象（`role` 的 `player` / `classes` / `monsters` / `npcs`）已接，立绘与受击表现、余下各屏待做） |
 | **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 九宫格切片消费 / 皮肤校验 / 音频播放 | 叠加层 | V2.1 之后 |
 
 > **V1 口径冻结、不改写**：`task/00-foundation.md` / `task/01-build.md` 里的「七大类 / 13 项 / 五选一」是 **V1 史实**；
@@ -130,6 +130,13 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 ---
 
 ## 进度同步
+
+**2026-09-30 · D3 第三屏（棋子形象 `role` 接入）**
+- 取图：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 的 `roleSprite(role, kind, id)` 按 `02-role.md` §三 四组各查各表（**不跨组借用**），`spriteRef()` 归一三写法、只出形状不碰 IO。
+- 地图棋子：[`src/play/MapView.tsx`](src/play/MapView.tsx) 的 `role.player` 按**整格 ＋ 锚点格中心**出图（`x/y = 格 × CELL`、`w/h = CELL`）；**路径取不到图才回到方框 ＋ 职业 `icon` emoji**，绿色定位环与形象无关、照旧画。
+- 四处文字落点：新增**行内层** [`src/ui/Texture.tsx`](src/ui/Texture.tsx) `InlineTexture`（跟文字同排，尺寸交给 CSS 的 `1em`）＋ [`src/ui/RoleGlyph.tsx`](src/ui/RoleGlyph.tsx)，接在出身卡职业图标与状态面板标题、底栏、对战弹层标题（`role.monsters.<id>`）、对话弹层标题（`role.npcs.<id>`）；非正方形素材按 `object-fit: contain` 等比内缩（`KR-1` 只提示）。
+- **`player` 与 `classes` 是两条独立的链**：地图棋子只认 `player`，不借 `classes.<职业>` 的图（`02-role.md` §三 回退表的字面执行）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **35 个文件 / 406 项**全绿（新增 8 项）。设计侧同步 [`docs/design/skin/02-role.md`](docs/design/skin/02-role.md) §十一、[`docs/design/skin.md`](docs/design/skin.md) §四（三层渲染器）、[`docs/DESIGN.md`](docs/DESIGN.md)；任务侧 [`task/04-skin.md`](task/04-skin.md) 的 `role` 条补落点。**立绘（§四）与受击表现（§4.4）未接**，排在 D3 后续批次。
 
 **2026-09-30 · D3 第二屏（画布 `background` 接入）**
 - 取层与落位：[`src/engine/skin/canvas.ts`](src/engine/skin/canvas.ts) 的 `backgroundUsable()`（`img` ＋ 正的 `cellSize` 齐备，`KB-1`）、`backgroundOf(bg, mapIndex, available?)`（越界 clamp 到最后一层、采用层不可用向前回退、`available` 判掉 `KB-2`）、`backgroundPlacement()`（倍率 ＝ `屏幕每格 ÷ cellSize`，图点 `(startX,startY)` ≡ 格 `[0,0]` 中心）。

@@ -3,13 +3,15 @@
  *
  * - **单一入口**：`textureProps()` 把「取图 → 落位 → 换地址」收成一份 props；调用方拿到
  *   `undefined` 就画程序图形（素材缺失、包没启用、环境不支持地址），**不判断素材类型**
- * - **两层同接口**：同一份 `TextureProps`，SVG 层用 `SvgTexture`（`<image>`），
- *   DOM 层用 `DomTexture`（`<img>`，要求父元素 `position: relative`）
+ * - **三层同接口**：同一份 `TextureProps`，SVG 层用 `SvgTexture`（`<image>`），
+ *   DOM 层用 `DomTexture`（`<img>`，绝对定位，要求父元素 `position: relative`），
+ *   行内层用 `InlineTexture`（`<img>`，跟文字同排，尺寸交给 CSS）
  * - **位图不套手绘滤镜**（S-6）：素材节点一律不带 `filter`，手绘滤镜只加在程序绘制的图形上；
  *   素材自身也**不参与点击命中**（`pointerEvents: none`），命中判定仍归所在层的业务元素
  * - V1 只有拉伸；`nine` / `tile` 由 `effectiveMode` 回落（D6 落地）
  */
 
+import type { CSSProperties } from 'react'
 import {
   effectiveMode,
   placeTexture,
@@ -107,11 +109,17 @@ function sizeCss(size: TextureSize): string {
   return isAuto(size) ? 'auto' : `${num(size)}px`
 }
 
-/** DOM 层：画在面板 / 弹窗里（父元素需 `position: relative`） */
-export function DomTexture({ src, x, y, w, h, rotate, flip, opacity, className, alt }: TextureProps) {
+/** DOM 层的绕心变换（`rotate` / `flip` 都绕元素中心；层内两处 DOM 元素共用这一份） */
+function cssTransform({ rotate, flip }: Pick<TexturePlacement, 'rotate' | 'flip'>): string | undefined {
   const transforms: string[] = []
   if (rotate) transforms.push(`rotate(${num(rotate)}deg)`)
   if (flip) transforms.push('scaleX(-1)')
+  return transforms.length ? transforms.join(' ') : undefined
+}
+
+/** DOM 层：画在面板 / 弹窗里（父元素需 `position: relative`） */
+export function DomTexture({ src, x, y, w, h, rotate, flip, opacity, className, alt }: TextureProps) {
+  const transform = cssTransform({ rotate: rotate ?? 0, flip: flip === true })
 
   return (
     <img
@@ -125,12 +133,32 @@ export function DomTexture({ src, x, y, w, h, rotate, flip, opacity, className, 
         top: `${num(y)}px`,
         width: sizeCss(w),
         height: sizeCss(h),
-        transform: transforms.length ? transforms.join(' ') : undefined,
+        transform,
         transformOrigin: 'center',
         opacity,
         pointerEvents: 'none',
         userSelect: 'none',
       }}
+    />
+  )
+}
+
+/**
+ * 行内层：**跟文字同排**的形象格（职业 / 怪物 / NPC 形象，`skin/02-role.md` §三）。
+ *
+ * 与另两层同吃一份 `TextureProps`，差别只在「盒从哪来」：本层**不摆到绝对坐标**，
+ * 尺寸由**所在处 CSS** 决定（`.inline-texture` 是 `1em` 方框，跟着字号走、与它换掉的 emoji 同高）；
+ * `rotate` / `flip` 照旧生效（`02-role.md` §二：立绘用 `flip` 表达左右）。
+ * 非正方形素材靠 `object-fit: contain` 等比内缩，**绝不拉伸**（`KR-1` 只提示、不改行为）。
+ */
+export function InlineTexture({ src, rotate, flip, opacity, className, alt, style }: TextureProps & { style?: CSSProperties }) {
+  return (
+    <img
+      src={src}
+      alt={alt ?? ''}
+      className={className ? `inline-texture ${className}` : 'inline-texture'}
+      draggable={false}
+      style={{ transform: cssTransform({ rotate: rotate ?? 0, flip: flip === true }), opacity, ...style }}
     />
   )
 }

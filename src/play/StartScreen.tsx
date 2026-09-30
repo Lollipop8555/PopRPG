@@ -12,6 +12,9 @@
 import { useState } from 'react'
 import type { Scenario } from '../types/session'
 import { rollClass } from './flow'
+import { roleSprite } from '../engine/skin'
+import { useSkinStore } from '../store/skin'
+import { RoleGlyph } from '../ui/RoleGlyph'
 
 export default function StartScreen({
   scenario,
@@ -31,6 +34,9 @@ export default function StartScreen({
   const [selectedId, setSelectedId] = useState<string | undefined>(list.length === 1 ? list[0]?.id : undefined)
   const [rolling, setRolling] = useState(false)
   const selected = list.find((c) => c.id === selectedId)
+  // 职业形象（`skin/02-role.md` §三）：卡片头上那一格按职业查表，缺位即 `cls.icon` emoji
+  const assets = useSkinStore((s) => s.assets)
+  const role = useSkinStore((s) => s.skin?.manifest.role)
 
   // 玩家自己掷骰决定出身（带一个短暂的摇骰过程）
   const roll = () => {
@@ -91,7 +97,9 @@ export default function StartScreen({
                 onClick={() => setSelectedId(cls.id)}
               >
                 <div className="class-card-head">
-                  <span className="class-icon">{cls.icon}</span>
+                  <span className="class-icon">
+                    <RoleGlyph sprite={roleSprite(role, 'class', cls.id)} assets={assets} icon={cls.icon} />
+                  </span>
                   <span className="class-name">{cls.name}</span>
                 </div>
                 {cls.desc && <div className="muted">{cls.desc}</div>}

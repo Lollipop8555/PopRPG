@@ -133,7 +133,7 @@ drawTexture(target, src, box, opts)
 
 - 唯一入口 `src/ui/Texture.tsx` 的 `textureProps(ref, assets, box, extra)`：取图 → 落位 → 换地址，一次给全一份 props；
   **画不出来（该节点未被接管 / 包里缺这张图 / 环境给不出地址）返回 `undefined`**，调用方据此改画程序图形。
-- 拿到 props 后：**SVG 层用 `SvgTexture`（`<image>`）、DOM 层用 `DomTexture`（`<img>`）**，两者 props 完全相同；
+- 拿到 props 后，按「素材要画进什么」选渲染层，**三层吃同一份 props**：**SVG 层 `SvgTexture`**（`<image>`，画进既有 `<svg>`）、**DOM 层 `DomTexture`**（`<img>`，绝对定位填盒，要求父元素 `position: relative`）、**行内层 `InlineTexture`**（`<img>`，跟文字同排的形象格，尺寸交给所在处 CSS 的 `1em`）；
   `rotate` / `flip` 由落位结果给出（都绕盒心），**业务代码不参与变换计算**，素材节点也不带手绘滤镜、不吃点击（`S-6`）。
 - 几何与取图归纯函数 `src/engine/skin/texture.ts`（三写法归一 / 绕心旋转镜像 / `mode` 回落）；
   素材地址归 `src/io/skin-assets.ts`（按需建、`release()` 一次撤，裁决 15）。

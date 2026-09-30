@@ -72,6 +72,17 @@ textarea {
   letter-spacing: 0.02em;
 }
 
+/* 形象格：素材替掉 emoji 时占的那一格（职业 / 怪物 / NPC 形象）。方框跟着所在处字号走，
+   非正方形素材按 `contain` 等比内缩、绝不拉伸；素材一律不参与点击命中（`skin.md` §四） */
+.inline-texture {
+  width: 1em;
+  height: 1em;
+  object-fit: contain;
+  vertical-align: -0.12em;
+  pointer-events: none;
+  user-select: none;
+}
+
 /* ---------------- 纸张卡片 / 面板 ---------------- */
 
 .panel {

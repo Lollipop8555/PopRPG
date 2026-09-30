@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render } from '@testing-library/react'
-import { DomTexture, SvgTexture, textureProps } from '../Texture'
+import { DomTexture, InlineTexture, SvgTexture, textureProps } from '../Texture'
 import type { TextureRef } from '../../engine/skin/texture'
 import type { SkinAssets } from '../../io/skin-assets'
 
@@ -124,5 +124,33 @@ describe('DOM 层 DomTexture', () => {
 
     expect(svg.container.querySelector('image')).toBeTruthy()
     expect(dom.container.querySelector('img')).toBeTruthy()
+  })
+})
+
+describe('行内层 InlineTexture', () => {
+  it('尺寸交给 CSS（`.inline-texture` 跟字号走），故不摆坐标、但镜像 / 纠偏角照旧生效', () => {
+    const props = textureProps(ref({ rotate: 90, flip: true }), withTile(), BOX)!
+    const { container } = render(<InlineTexture {...props} alt="骑士" />)
+    const img = container.querySelector('img')!
+
+    expect(img.getAttribute('src')).toBe('blob:1')
+    expect(img.getAttribute('alt')).toBe('骑士')
+    expect(img.className).toBe('inline-texture')
+    expect(img.style.position).toBe('')
+    expect(img.style.transform).toBe('rotate(90deg) scaleX(-1)')
+    expect(img.getAttribute('draggable')).toBe('false')
+  })
+
+  it('同一份 props 三层都能画（接口一致）', () => {
+    const props = textureProps(ref(), withTile(), BOX)!
+    const svg = render(
+      <svg>
+        <SvgTexture {...props} />
+      </svg>,
+    )
+    const inline = render(<InlineTexture {...props} />)
+
+    expect(svg.container.querySelector('image')).toBeTruthy()
+    expect(inline.container.querySelector('img')).toBeTruthy()
   })
 })
