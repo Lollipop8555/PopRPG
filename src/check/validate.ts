@@ -569,14 +569,15 @@ export function validateProject(library: Library, project: Project): Issue[] {
         })
       }
 
-      /** K16：实例 `dialog` 的方案名必须在候选 NPC 的 `dialogs` 里（导出**不剔除**，运行时跳过对话） */
-      if (node.dialog) {
-        const hit = instanceNpcs.some((id) => Boolean(npcsById.get(id)?.dialogs?.[node.dialog!]))
+      /** K16：实例 `dialog.mod` 的方案名必须在候选 NPC 的 `dialogs` 里（导出**不剔除**，运行时跳过对话） */
+      const plan = node.dialog?.mod
+      if (plan) {
+        const hit = instanceNpcs.some((id) => Boolean(npcsById.get(id)?.dialogs?.[plan]))
         if (!hit) {
           issues.push({
             key: 'K16',
             severity: 'error',
-            title: `(${node.x}, ${node.y}) 的对话方案「${node.dialog}」不存在`,
+            title: `(${node.x}, ${node.y}) 的对话方案「${plan}」不存在`,
             detail: instanceNpcs.length > 0
               ? '这些 NPC 都没有这个名字的方案 —— 换一个方案（留空则由骰子抽一套）。导出时不剔除该字段，运行时直接跳过对话、当这个实例没有 NPC。'
               : '这个实例没配 NPC，写下的 `dialog` 没人能接 —— 先挂上 NPC（留空则由骰子抽一套）。',

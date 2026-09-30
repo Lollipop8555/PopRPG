@@ -124,6 +124,14 @@
 
 ## 进度同步
 
+**2026-09-30 · 建筑实例加「允许重新对话」开关，`dialog` 收成一个对象（[`design/07-decisions.md`](design/07-decisions.md) §8.3 设定 10）**
+- **问题**：反复进入同一栋建筑，玩家总能选择【重新对话】——对"只说一次"的剧情（遗言 / 警告 / 一次性交代）是破坏性的，作者需要一种**不收走内容、只收走"重播"**的手段。
+- **载体合并**：地图节点上的 `dialog` 从**裸方案名**改成**对象 `{ mod?, retalk? }`**（[`src/types/project.ts`](../src/types/project.ts) 新增 `NodeDialog`）——"写死哪套方案"与"是否允许重新对话"说的都是同一个实例的对话，分成两个并列字段会让人以为可以只留一半。**旧包的裸方案名照旧能读**（导入即升级成 `{ mod }`）；`{}` / `{ retalk: true }` 视同没写。归一逻辑 `normalizeNodeDialog()` 在**导入与导出两侧共用同一份**（[`src/io/pmod.ts`](../src/io/pmod.ts) ＋ [`src/lib/dialog.ts`](../src/lib/dialog.ts)），**导出只在关闭（`retalk: false`）时写出**。
+- **运行时**：`retalkAllowed()`（[`src/lib/dialog.ts`](../src/lib/dialog.ts)）是唯一判定口 —— 关掉后 `talkView().canRestart` 为假、[`src/play/TalkDialog.tsx`](../src/play/TalkDialog.tsx) 的选择对话框**不渲染**【重新对话】；**未走完**的实例此时菜单只剩【继续】一项 → `openTalk()` **不弹"仅一个按钮"的空框，直接从 `cursor` 续上**（已走完的另有【路过】，仍照旧弹框）；`talkMenu('restart')` 对直接传入的请求**一律按【继续】处理**（兜底旧 UI / 手改存档）。抽出来的 `continuePath()` 让"直接续上"与点【继续对话】走同一条路。
+- **编辑器**：实例页「NPC / 对话」块里、方案下拉**下方**新增 **「允许重新对话」开关**（`[`src/build/inspector/InstancePage.tsx`](../src/build/inspector/InstancePage.tsx)`，复用 `Toggle`），默认开；改方案与改开关都通过同一个 `setDialog(mod, retalk)` 写回，**两个字段都没内容时整个 `dialog` 不写**。校验 `K16` 改看 `dialog.mod`（[`src/check/validate.ts`](../src/check/validate.ts)）。
+- **不是为了防刷**：`give` 的交付终态本来就不受【重新】影响（设定 3 / 8）——这是**叙事开关**。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **38 个文件 / 442 项**全绿（新增 5 项：`talk.test.ts` 3、`talkDialog.test.tsx` 1、`pmod.test.ts` 1，另改 5 处旧断言）。
+
 **2026-09-30 · D3 `role` 收口：受击表现（[`design/skin/02-role.md`](design/skin/02-role.md) §4.4 / §十一）**
 - **「受击瞬间」怎么判**：结算全在纯函数里、会话里没有「正在挨打」字段，故信号取自 **`hp` 掉下来的那一帧**——新增 [`src/ui/useHitPulse.ts`](../src/ui/useHitPulse.ts)（`useHitPulse(anchor, key?)`，`HIT_MS = 120`）：回血 / 原地不动不发作，`key`（怪物 id 之类）一变只挪基准，**换怪物不算挨打**。
 - **两条路在渲染件里收口**：[`src/ui/Portrait.tsx`](../src/ui/Portrait.tsx) 的 `Portrait` 收 `hurt` ＋ `hit`——有 `hurt` 素材（`portraitHurtTile()`，只认对象写法、`flip` 跟主图）且正挨打就**改显示那张图**，没有才挂 `.portrait-hit` 走**形变**；棋子形象没有 `hurt` 字段（§三 写法里没有这一项），故**恒走形变**。一次受击动作 ＝ 这一拍 `HIT_MS`。

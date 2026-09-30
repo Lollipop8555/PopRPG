@@ -159,7 +159,7 @@ export default function RulesPage() {
         onChange={(dice) => patch({ talk: { dice: dice ?? '1D6' } })}
         label="对话骰 talk.dice"
         allowEmpty={false}
-        hint="建筑里的 NPC 是随机遇到的：候选多位时掷这颗骰等权抽一位，某位 NPC 有多套对话方案时也用它抽一套；踩到时抽定，整场不再变"
+        hint="建筑里的 NPC 是随机遇到的：候选多位时掷该骰子等权抽一位，某位 NPC 有多套对话方案时也用它抽一套；进入建筑时抽定，整场不再变"
       />
 
       <div className="sketch-line" style={{ margin: '10px 0' }} />

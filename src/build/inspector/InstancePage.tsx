@@ -7,12 +7,12 @@
 import type { MapNode, NodeType, NpcDef } from '../../types'
 import { nodeAt } from '../../lib/map'
 import { findComponent } from '../../lib/refs'
-import { diceFaces } from '../../lib/dialog'
+import { diceFaces, retalkAllowed } from '../../lib/dialog'
 import { useLibraryStore } from '../../store/library'
 import { useProjectStore } from '../../store/project'
 import { commit } from '../../store/commit'
 import { useUiStore } from '../../store/ui'
-import { Badge, Field, NumberBox, SelectBox } from '../../ui/primitives'
+import { Badge, Field, NumberBox, SelectBox, Toggle } from '../../ui/primitives'
 
 const TYPE_LABEL: Record<NodeType, string> = {
   start: '起点',
@@ -146,21 +146,32 @@ function NpcBlock({ node, patch }: { node: MapNode; patch: (part: Partial<MapNod
 
   /** `dialog` 下拉的候选 ＝ 所选 NPC 的**全部方案**（去重，保持书写顺序） */
   const plans = [...new Set(alive.flatMap((n) => Object.keys(n.dialogs ?? {})))]
-  const dangling = !!node.dialog && !plans.includes(node.dialog)
+  const plan = node.dialog?.mod
+  const dangling = !!plan && !plans.includes(plan)
+  const canRetalk = retalkAllowed(node.dialog)
   const faces = diceFaces(talkDice)
 
   const setIds = (next: string[]) => patch({ npcs: next.length > 0 ? next : undefined })
 
+  /**
+   * 写 `dialog`（§4.9.3）：**方案名与「允许重新对话」写在同一个对象里**，改变其中一项须整体写回，
+   * 因此这里接收整份而非 `Partial`。两项都为空 → 整个字段不写（与「这个实例没配对话」同义）。
+   */
+  const setDialog = (mod: string, retalk: boolean) =>
+    patch({
+      dialog: mod || !retalk ? { ...(mod ? { mod } : {}), ...(retalk ? {} : { retalk: false }) } : undefined,
+    })
+
   const note =
     ids.length === 0
-      ? '这个建筑不触发对话（只跑自己的建筑事件）。'
+      ? '这个建筑不触发对话，只运行自身的建筑事件。'
       : ids.length === 1
-        ? '玩家踩到一定遇到他。'
+        ? '只有一位候选，不掷骰，必定遇到该 NPC。'
         : faces === null
-          ? `掷 ${talkDice} 等权抽一位（对话骰写法看不懂，请在规则面板改成如 1D6）。`
+          ? `掷 ${talkDice} 等权抽一位（对话骰写法有误，请在规则面板改为如 1D6）。`
           : faces < ids.length
-            ? `掷 ${talkDice} 等权抽一位 —— 骰子只有 ${faces} 个点数却有 ${ids.length} 位候选，会有候选抽不到；建议换更大的对话骰。`
-            : `掷 ${talkDice} 等权抽一位 —— 现在是 ${talkDice}，${ids.length} 位 → 各占 ${Math.floor(faces / ids.length)} 面${
+            ? `掷 ${talkDice} 等权抽一位 —— 骰子只有 ${faces} 个点数，候选却有 ${ids.length} 位，会有候选抽不到；建议改用更大的对话骰。`
+            : `掷 ${talkDice} 等权抽一位 —— 当前是 ${talkDice}，${ids.length} 位候选各占 ${Math.floor(faces / ids.length)} 面${
                 faces % ids.length > 0 ? `（余 ${faces % ids.length} 面）` : ''
               }。`
 
@@ -217,30 +228,45 @@ function NpcBlock({ node, patch }: { node: MapNode; patch: (part: Partial<MapNod
         }
       >
         <SelectBox
-          value={node.dialog ?? ''}
+          value={plan ?? ''}
           options={[
             { value: '', label: '（留空：由骰子抽一套）' },
             ...plans.map((p) => ({ value: p, label: p })),
           ]}
-          onChange={(v) => patch({ dialog: v || undefined })}
+          onChange={(v) => setDialog(v, canRetalk)}
         />
       </Field>
 
       {dangling && (
         <div className="hintbox error">
-          「{node.dialog}」这个方案不存在 —— 换一个，或者留空由骰子抽。导出时**不会**剔除这个字段，运行时直接跳过对话、当这个实例没有 NPC。
+          「{plan}」这个方案不存在 —— 换一个，或者留空由骰子抽。导出时**不会**剔除这个字段，运行时直接跳过对话、当这个实例没有 NPC。
         </div>
       )}
 
-      {!dangling && !node.dialog && plans.length > 1 && (
+      {!dangling && !plan && plans.length > 1 && (
         <div className="hintbox">将由骰子抽一套（{talkDice}）；想要固定就写下一个方案名。</div>
       )}
+
+      <Field
+        label="允许重新对话"
+        hint={
+          canRetalk
+            ? '重新进入该实例时给出【重新对话】—— 从第 1 条重新播放（已赠予的道具不重复赠予）。'
+            : '重新进入该实例时不给出【重新对话】—— 未走完的只有【继续对话】，已走完的另有【路过】。'
+        }
+      >
+        <Toggle
+          checked={canRetalk}
+          onChange={(on) => setDialog(plan ?? '', on)}
+          label={canRetalk ? '允许【重新对话】' : '不允许【重新对话】'}
+        />
+      </Field>
 
       <div className="faint">
         先抽人、再抽方案，两次各掷一次骰子；<b>进入建筑时</b>抽定，整场不变。
       </div>
       <div className="faint">
-        只在<b>从建筑外踏入</b>时触发一次；在建筑内部走动不再触发。首次进入一定进对话（不弹框）；已触发过的实例再入会先弹选择对话框 —— 未走完给【继续对话】【重新对话】，走完过再加【路过】。
+        只在<b>从建筑外踏入</b>时触发一次，在建筑内部走动不再触发。首次进入直接开始对话（不弹选项框）；已触发过的实例再次进入时先弹选项框 —— 未走完的给【继续对话】【重新对话】，已走完的另有【路过】；<b>关闭「允许重新对话」</b>后不再给出【重新对话】。
       </div>
     </div>
   )

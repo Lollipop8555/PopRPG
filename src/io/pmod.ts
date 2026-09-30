@@ -19,7 +19,7 @@ import {
 } from '../types'
 import { emptyLibrary } from '../types'
 import { npcIdsOf, referenceIdsOf } from '../lib/refs'
-import { normalizeNpc } from '../lib/dialog'
+import { normalizeNpc, normalizeNodeDialog } from '../lib/dialog'
 import { newMapId } from '../lib/ids'
 
 const ARRAY_OF_KIND: Record<ComponentKind, LibraryKey> = {
@@ -190,7 +190,9 @@ function serializeNodes(map: GameMap): unknown {
       // NPC 只挂在**建筑实例**上（§4.9.3）：同一栋建筑铺到多格可以遇到不同的人
       if (n.type === 'building') {
         if (n.npcs && n.npcs.length > 0) row.npcs = n.npcs
-        if (n.dialog) row.dialog = n.dialog
+        // `dialog` 是对象 `{ mod, retalk }`：两边都空就不写；`retalk` 只在**关闭**时写出（缺省 ＝ 允许）
+        const dialog = normalizeNodeDialog(n.dialog)
+        if (dialog) row.dialog = dialog
       }
       return row
     }),
@@ -436,9 +438,10 @@ export function parsePmod(raw: string): ParsedPmod {
                   return { x: n.x, y: n.y, type: n.type, ref: n.ref }
                 }
                 // NPC 只挂在建筑实例上（§4.9.3）：挂在别处的一律剔除并提示
+                // `dialog` 是对象 `{ mod, retalk }`；旧包写的是**裸方案名**，在这里升级成对象
                 let npcs = n.npcs
-                let dialog = n.dialog
-                if (n.type !== 'building' && ((n.npcs?.length ?? 0) > 0 || n.dialog)) {
+                let dialog = normalizeNodeDialog(n.dialog)
+                if (n.type !== 'building' && ((n.npcs?.length ?? 0) > 0 || dialog)) {
                   warn(`(${n.x}, ${n.y}) 的 ${n.type} 不该带 NPC —— NPC 只挂在建筑实例上，已忽略`)
                   npcs = undefined
                   dialog = undefined
@@ -452,7 +455,7 @@ export function parsePmod(raw: string): ParsedPmod {
                   w: n.type === 'building' ? size(n.w) : undefined,
                   h: n.type === 'building' ? size(n.h) : undefined,
                   npcs: npcs && npcs.length > 0 ? npcs.map((id) => String(id)) : undefined,
-                  dialog: dialog ? String(dialog) : undefined,
+                  dialog,
                 }
               }),
           })

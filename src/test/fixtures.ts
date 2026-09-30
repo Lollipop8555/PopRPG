@@ -30,7 +30,7 @@ const NODES: MapNode[] = [
   { x: 10, y: 0, type: 'end' },
   { x: 5, y: 1, type: 'road', ref: 'river' },
   { x: 5, y: 2, type: 'building', ref: 'chest_room' },
-  { x: 7, y: 1, type: 'building', ref: 'stone_door', npcs: ['lost_child'], dialog: 'Mod1' },
+  { x: 7, y: 1, type: 'building', ref: 'stone_door', npcs: ['lost_child'], dialog: { mod: 'Mod1' } },
 ]
 
 export function fixtureMap(): GameMap {

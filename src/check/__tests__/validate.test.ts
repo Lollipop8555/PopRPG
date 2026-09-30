@@ -38,7 +38,7 @@ const keys = (issues: ReturnType<typeof validateProject>): string[] => issues.ma
 describe('K16 `dialog` 方案名悬空', () => {
   it('方案名不在候选 NPC 的 dialogs 里 → 标红，但**导出不剔除**（§8.3 设定 5）', () => {
     const library = lib({ buildings: [TALK], npcs: [npc()] })
-    const project = proj([{ x: 1, y: 0, type: 'building', ref: 'hut', npcs: ['keeper'], dialog: 'Mod9' }])
+    const project = proj([{ x: 1, y: 0, type: 'building', ref: 'hut', npcs: ['keeper'], dialog: { mod: 'Mod9' } }])
 
     const issues = validateProject(library, project)
     const found = issues.filter((i) => i.key === 'K16')
@@ -47,18 +47,20 @@ describe('K16 `dialog` 方案名悬空', () => {
     expect(found[0].cell).toEqual([1, 0])
 
     // 剔除会把它变成「留空 → 骰子抽一套」，语义正好相反 → 字段必须留在 .pmod 里
-    expect(exportPmod(library, project).text).toContain('dialog: Mod9')
+    const text = exportPmod(library, project).text
+    expect(text).toContain('dialog:')
+    expect(text).toContain('mod: Mod9')
   })
 
   it('方案名存在 → 不报', () => {
     const library = lib({ buildings: [TALK], npcs: [npc()] })
-    const project = proj([{ x: 1, y: 0, type: 'building', ref: 'hut', npcs: ['keeper'], dialog: 'Mod1' }])
+    const project = proj([{ x: 1, y: 0, type: 'building', ref: 'hut', npcs: ['keeper'], dialog: { mod: 'Mod1' } }])
     expect(keys(validateProject(library, project))).not.toContain('K16')
   })
 
   it('写了 dialog 却没配 NPC → 也报（没人能接这个名字）', () => {
     const library = lib({ buildings: [TALK], npcs: [npc()] })
-    const project = proj([{ x: 1, y: 0, type: 'building', ref: 'hut', dialog: 'Mod1' }])
+    const project = proj([{ x: 1, y: 0, type: 'building', ref: 'hut', dialog: { mod: 'Mod1' } }])
     expect(keys(validateProject(library, project))).toContain('K16')
   })
 })

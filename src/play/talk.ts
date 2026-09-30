@@ -14,7 +14,7 @@
 import type { BuildingDef, DialogNode } from '../types'
 import type { Rng } from '../engine/dice'
 import { rollRangeAt, rollSum } from '../engine/dice'
-import { hitLabel, parseHit } from '../lib/dialog'
+import { hitLabel, parseHit, retalkAllowed } from '../lib/dialog'
 import { nodeAtPath } from '../lib/dialogTree'
 import type { Session, TalkRecord, TalkState } from '../types/session'
 import { buildingKey, log, nodeAtCell, recordRoll } from './kit'
@@ -93,6 +93,11 @@ export function openTalk(s: Session, building: BuildingDef, cell: [number, numbe
 
   // 重入：不换人、不重掷 —— 先弹选择对话框（§4.9.2「重复进入」）
   if (existing) {
+    // 关闭【重新对话】的实例（`dialog.retalk: false`）：菜单只有【继续对话】一项 —— **不弹"仅一个按钮"的空框**，
+    // 直接续上（§4.9.3）。已走完的实例另有【路过】可选，仍照旧弹框。
+    if (!retalkAllowed(node?.dialog) && !existing.talkDone) {
+      return enterNode(s, key, building.id, cell, existing.npc, existing.dialog, continuePath(existing))
+    }
     return {
       ...s,
       phase: 'encounter',
@@ -111,7 +116,7 @@ export function openTalk(s: Session, building: BuildingDef, cell: [number, numbe
   const plans = npc?.dialogs && typeof npc.dialogs === 'object' ? Object.keys(npc.dialogs) : []
 
   // ② 抽方案：写死则跳过该步；留空且多套 → 掷 talk.dice 等权抽一套
-  const fixed = node?.dialog
+  const fixed = node?.dialog?.mod
   let plan: string | undefined
   if (fixed) {
     // `dialog` 悬空（方案名不在所抽到 NPC 的方案里）→ **跳过对话、当该实例没有 NPC**（§4.9.3 设定 5）
@@ -132,6 +137,16 @@ export function openTalk(s: Session, building: BuildingDef, cell: [number, numbe
 
   // 从方案根节点开始（根层数组按顺序展示，起点是第 1 条）
   return enterNode(session, key, building.id, cell, npcId, plan, [0])
+}
+
+/**
+ * 重入时【继续对话】的落点（§4.9.2）：
+ * **已交付**的记录只回放交付的那条（`deliveredNode`，`enterNode` 据此判 replay），
+ * 否则回到 `cursor` 接着走（没有 `cursor` 就从根节点开始）。
+ */
+function continuePath(rec: TalkRecord | undefined): number[] {
+  if (rec?.deliveredNode && rec.deliveredNode.length > 0) return rec.deliveredNode
+  return rec?.cursor && rec.cursor.length > 0 ? rec.cursor : [0]
 }
 
 /**
@@ -289,7 +304,9 @@ export type TalkMenuAction = 'continue' | 'restart' | 'pass'
 /**
  * 重入的**选择对话框**（§4.9.2「重复进入」）：
  * - `continue`：回到 `cursor` 节点接着走（没有 `cursor` 就从根节点开始）；**已交付**时只回放 `deliveredNode`
- * - `restart`：从根节点完整重播（`cursor` 拉回根节点，**不动** `talkDone` / `deliveredNode` → 不会重复发道具）
+ * - `restart`：从根节点完整重播（`cursor` 拉回根节点，**不动** `talkDone` / `deliveredNode` → 不会重复发道具）。
+ *   实例关闭【重新对话】（`dialog.retalk: false`）时**一律按【继续】处理** —— 菜单中不给出该按钮，
+ *   这一层是给"旧 UI / 手改存档"兜底（§4.9.3）
  * - `pass`：【路过】＝ 跳过对话，直接跑该建筑的建筑事件
  */
 export function talkMenu(s: Session, action: TalkMenuAction): Session {
@@ -298,11 +315,10 @@ export function talkMenu(s: Session, action: TalkMenuAction): Session {
   if (action === 'pass') return closeTalk(s)
 
   const rec = s.talks?.[talk.key]
-  if (action === 'restart') return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [0])
-
-  if (rec?.deliveredNode) return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, rec.deliveredNode)
-  const path = rec?.cursor && rec.cursor.length > 0 ? rec.cursor : [0]
-  return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, path)
+  if (action === 'restart' && retalkAllowed(nodeAtCell(s, talk.cell)?.dialog)) {
+    return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [0])
+  }
+  return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, continuePath(rec))
 }
 
 /** 关闭对话弹层、回到地图（是否接着跑建筑事件由 `encounter.afterTalk` 衔接） */
@@ -335,6 +351,8 @@ export interface TalkView {
   options: { index: number; label: string; hit?: string; hitLabel: string }[]
   /** 能否从「选择对话框」里选【路过】（走完过才有） */
   canPass: boolean
+  /** 能否从「选择对话框」里选【重新对话】（实例写了 `dialog.retalk: false` 即不给出，§4.9.3） */
+  canRestart: boolean
   /** 已交付（用于菜单文案） */
   delivered: boolean
 }
@@ -398,6 +416,7 @@ export function talkView(s: Session): TalkView | undefined {
   const rec = s.talks?.[talk.key]
   const nodes = dialogPlan(s, talk.npc, talk.dialog) ?? []
   const node = nodeAtPath(nodes, talk.path)
+  const cellNode = nodeAtCell(s, talk.cell)
   const log = node ? transcript(nodes, talk.path, talk.line) : []
   const needsRoll = talk.stage === 'choose' && !!node?.dice
   const options =
@@ -416,6 +435,7 @@ export function talkView(s: Session): TalkView | undefined {
     needsRoll,
     options,
     canPass: !!rec?.talkDone,
+    canRestart: retalkAllowed(cellNode?.dialog),
     delivered: !!rec?.deliveredNode,
   }
 }

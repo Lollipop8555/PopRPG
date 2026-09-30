@@ -5,6 +5,20 @@ import type { PriceDef, RewardPick } from './component'
 
 export type NodeType = 'start' | 'end' | 'road' | 'building'
 
+/**
+ * 建筑**实例**上的对话配置（§4.9.3）——「这一套方案」与「是否允许重新对话」两件事装在一起，
+ * 因为它们描述的是**同一个实例的对话**（写成两个并列字段会让人以为可以只留一半）。
+ */
+export interface NodeDialog {
+  /** 指定启用哪一套对话方案（方案名）；不写 ＝ 只有一套就用它、多套则掷骰（§4.9.3） */
+  mod?: string
+  /**
+   * 是否允许**重新对话**（§4.9.2「重复进入」）：不写 ＝ 允许；`false` ＝ 重入时不再给出【重新对话】
+   * （菜单里只有【继续对话】；已走完的实例另有【路过】）。
+   */
+  retalk?: boolean
+}
+
 export interface MapNode {
   x: number
   y: number
@@ -20,8 +34,11 @@ export interface MapNode {
    * **NPC 不写在建筑定义上**——同一栋建筑铺到多格可以遇到不同的人。
    */
   npcs?: string[]
-  /** 指定启用哪一套对话方案（方案名）；不写 ＝ 只有一套就用它、多套则掷骰（§4.9.3） */
-  dialog?: string
+  /**
+   * 这一实例的对话配置（§4.9.3）：`mod` 写死方案名（不写 ＝ 只有一套就用它、多套则掷骰），
+   * `retalk` 决定重入时是否给出【重新对话】（不写 ＝ 允许）。
+   */
+  dialog?: NodeDialog
 }
 
 export interface GameMap {

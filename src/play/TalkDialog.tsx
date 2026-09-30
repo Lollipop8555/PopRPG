@@ -2,7 +2,8 @@
  * 对话弹层（§4.9.2 / §4.8.12）。
  *
  * 一个弹层吃三种状态：
- * - `menu`：重入的**选择对话框**（继续 / 重新 / 走完过才有的路过）
+ * - `menu`：重入的**选择对话框**（继续 / 重新 / 已走完才出现的路过）——
+ *   【重新对话】由实例的 `dialog.retalk` 决定是否给出（关闭时只有【继续】，已走完的另有【路过】，§4.9.3）
  * - `line`：**逐条展示台词**，点「继续」推进（台词是**聊天记录**：一路说过的都留在上面，只往后追加）
  * - `choose`：台词播完 —— 本层没 `dice` 就列**选项按钮**（文本取子记录的 `result`）；
  *   **有 `dice`（掷骰层）就先把这层所有答复一次摆出来**，每条前面标出它的**命中区间**，
@@ -81,7 +82,7 @@ export default function TalkDialog({
   const view = talkView(session)
   if (!view) return null
 
-  const { talk, node, log, needsRoll, options, canPass } = view
+  const { talk, node, log, needsRoll, options, canPass, canRestart } = view
   const npc = session.scenario.library.npcs.find((n) => n.id === talk.npc)
   // "正在说的那一句" ＝ 记录里最后一条 NPC 台词（下面跟着的玩家答复已经答完了）
   const nowIdx = log.reduce((acc, e, i) => (e.who === 'npc' ? i : acc), -1)
@@ -108,9 +109,11 @@ export default function TalkDialog({
             <button className="btn primary talk-choice" onClick={() => onMenu('continue')}>
               继续对话
             </button>
-            <button className="btn talk-choice" onClick={() => onMenu('restart')}>
-              重新对话
-            </button>
+            {canRestart && (
+              <button className="btn talk-choice" onClick={() => onMenu('restart')}>
+                重新对话
+              </button>
+            )}
             {canPass && (
               <button className="btn talk-choice" onClick={() => onMenu('pass')}>
                 路过

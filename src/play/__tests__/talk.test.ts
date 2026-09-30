@@ -100,17 +100,19 @@ function talkScenario(): Scenario {
     // ① 多位候选 ＋ 都有多套方案 → 抽人 / 抽方案两级各掷一次
     { x: 1, y: 0, type: 'building', ref: CHAT.id, npcs: [NPC_A.id, NPC_B.id] },
     // ② 单 NPC ＋ 写死方案 → 零抽取
-    { x: 2, y: 0, type: 'building', ref: CHAT.id, npcs: [NPC_A.id], dialog: 'Mod1' },
+    { x: 2, y: 0, type: 'building', ref: CHAT.id, npcs: [NPC_A.id], dialog: { mod: 'Mod1' } },
     // ③ 方案名悬空 → 跳过对话
-    { x: 3, y: 0, type: 'building', ref: CHAT.id, npcs: [NPC_A.id], dialog: 'Nope' },
+    { x: 3, y: 0, type: 'building', ref: CHAT.id, npcs: [NPC_A.id], dialog: { mod: 'Nope' } },
     // ④ 带掷骰分支
-    { x: 4, y: 0, type: 'building', ref: DICE.id, npcs: [NPC_C.id], dialog: 'Roll' },
+    { x: 4, y: 0, type: 'building', ref: DICE.id, npcs: [NPC_C.id], dialog: { mod: 'Roll' } },
     // ⑤ 空宝箱 ＋ NPC（NPC 即内容物）
-    { x: 5, y: 0, type: 'building', ref: EMPTY_CHEST.id, npcs: [NPC_A.id], dialog: 'Mod1' },
+    { x: 5, y: 0, type: 'building', ref: EMPTY_CHEST.id, npcs: [NPC_A.id], dialog: { mod: 'Mod1' } },
     // ⑥ 空宝箱 ＋ 无 NPC（对照：照常报「箱内无物品」）
     { x: 6, y: 0, type: 'building', ref: EMPTY_CHEST.id },
     // ⑦ encounter=talk 但没写 npcs → 等同 empty
     { x: 7, y: 0, type: 'building', ref: TALK_ONLY.id },
+    // ⑧ 关掉【重新对话】的实例（§4.9.3）：重入不再给【重新】
+    { x: 8, y: 0, type: 'building', ref: CHAT.id, npcs: [NPC_A.id], dialog: { mod: 'Mod1', retalk: false } },
   ]
   return { ...base, library, maps: [{ ...base.maps[0], start: [0, 0], end: [0, 0], nodes }] }
 }
@@ -170,6 +172,43 @@ describe('E4 抽取：抽人 / 抽方案两级各掷一次，掷定即锁死', (
     expect(after.talk).toBeUndefined()
     expect(after.talks?.[buildingKey(after, [3, 0])]).toBeUndefined()
     expect(after.log.at(-1)!.text).toContain('什么也没有发生')
+  })
+})
+
+describe('E4 关闭【重新对话】（§4.9.3「允许重新对话」）', () => {
+  /** ⑧ 号格：`dialog: { mod, retalk: false }` */
+  const OFF = 8 as const
+  const enter = (s: Session) => beginBuilding(s, house(s, CHAT.id), [OFF, 0], fixed(0.5))
+
+  it('未走完重入 → 不弹"只有一个按钮"的空框，直接从 cursor 续上', () => {
+    let t = talkAdvance(enter(sess())) // 台词播完 → 停在选项，**没选就走人**
+    expect(t.talk!.stage).toBe('choose')
+
+    const again = enter(leave(t))
+    expect(talkView(again)!.canRestart).toBe(false)
+    expect(again.talk!.stage).toBe('line') // 直接续上
+    expect(again.talk!.path).toEqual([0])
+  })
+
+  it('已走完重入 → 照旧弹框（继续 ＋ 路过），菜单里没有【重新对话】', () => {
+    let t = talkAdvance(enter(sess()))
+    t = talkAdvance(talkChoose(t, 1)) // 选 B（不给东西）→ 走完、弹层收起
+    expect(t.talk).toBeUndefined()
+
+    const again = enter(t)
+    expect(again.talk!.stage).toBe('menu')
+    expect(talkView(again)!.canRestart).toBe(false)
+    expect(talkView(again)!.canPass).toBe(true) // 走完过 → 仍有【路过】
+
+    // 兜底：即便有调用方硬递 `restart`，也一律照【继续】处理 —— 不回根节点
+    const forced = talkMenu(again, 'restart')
+    expect(forced.talk!.path).toEqual(t.talks![buildingKey(t, [OFF, 0])]!.cursor)
+  })
+
+  it('没写 retalk 的实例照旧给【重新对话】（老内容行为不变）', () => {
+    const s = sess()
+    const t = beginBuilding(s, house(s, CHAT.id), [2, 0], fixed(0.5))
+    expect(talkView(t)!.canRestart).toBe(true)
   })
 })
 

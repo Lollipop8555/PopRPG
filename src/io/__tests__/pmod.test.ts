@@ -190,7 +190,7 @@ describe('NPC 与对话（§4.9 / §3.3）', () => {
 
     const door = parsed.maps[0].nodes.find((n) => n.x === 7 && n.y === 1)
     expect(door?.npcs).toEqual(['lost_child'])
-    expect(door?.dialog).toBe('Mod1')
+    expect(door?.dialog).toEqual({ mod: 'Mod1' })
 
     // 对话树原样带出：掷骰层 / 命中区间 / 赠予道具（同种两次＝两份）
     const keeper = parsed.components.npcs.find((n) => n.id === 'grave_keeper')
@@ -199,6 +199,45 @@ describe('NPC 与对话（§4.9 / §3.3）', () => {
     expect(mod1[0].items?.map((i) => i.hit)).toEqual(['1-2', '3-4', '5-6'])
     expect(mod1[0].items?.[2].give).toEqual(['red_potion', 'red_potion', 'blue_potion'])
     expect(Object.keys(keeper?.dialogs ?? {})).toEqual(['Mod1', 'Mod2'])
+  })
+
+  it('节点 `dialog` 是 `{ mod, retalk }` 对象：`retalk` 只在关闭时写；旧包的裸方案名升级（§4.9.3）', () => {
+    const doorAt = (p: ReturnType<typeof parsePmod>) => p.maps[0].nodes.find((n) => n.x === 7 && n.y === 1)
+    const off: Project = {
+      ...project,
+      maps: [
+        {
+          ...project.maps[0],
+          nodes: project.maps[0].nodes.map((n) =>
+            n.x === 7 && n.y === 1 ? { ...n, dialog: { mod: 'Mod1', retalk: false } } : n,
+          ),
+        },
+      ],
+    }
+
+    const text = exportPmod(library, off).text
+    expect(text).toContain('retalk: false')
+    expect(doorAt(parsePmod(text))?.dialog).toEqual({ mod: 'Mod1', retalk: false })
+
+    // 没写 retalk ＝ 允许（缺省不写出，文件不留噪声）
+    const plain = exportPmod(library, project).text
+    expect(plain).not.toContain('retalk')
+    expect(doorAt(parsePmod(plain))?.dialog).toEqual({ mod: 'Mod1' })
+
+    // 旧包：**裸方案名**照旧读得进来，导入即升级成对象
+    const legacy = [
+      '# 老档',
+      '',
+      '## Maps',
+      '',
+      '### 测试地穴',
+      '```yaml',
+      'nodes:',
+      '  - { x: 0, y: 0, type: building, ref: hut, dialog: Mod1 }',
+      '```',
+      '',
+    ].join('\n')
+    expect(parsePmod(legacy).maps[0].nodes[0].dialog).toEqual({ mod: 'Mod1' })
   })
 
   it('对话骰 `rules.talk.dice` 往返（§4.8.6 第 14 项）', () => {

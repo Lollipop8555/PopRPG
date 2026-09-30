@@ -419,15 +419,13 @@ textarea {
   font-size: 10px;
   cursor: help;
   flex: 0 0 auto;
-  position: relative;
 }
-.helpdot:hover::after,
-.helpdot:focus::after {
-  content: attr(data-tip);
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 6px);
-  transform: translateX(-50%);
+/* 气泡本体：由 `HelpDot` 挂到 body（见 primitives.tsx）—— 就地绝对定位会被面板的
+   `overflow: auto` 裁掉，挂出去之后位置由 JS 算（fixed，不随滚动容器裁切） */
+.helpdot-tip {
+  position: fixed;
+  z-index: 80;
+  pointer-events: none;
   width: max-content;
   max-width: 240px;
   padding: 6px 8px;
@@ -441,8 +439,6 @@ textarea {
   text-align: left;
   border-radius: 6px;
   box-shadow: var(--shadow);
-  z-index: 80;
-  pointer-events: none;
 }
 
 .tagchip {

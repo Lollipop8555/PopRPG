@@ -19,6 +19,16 @@ const scenario = scenarioFromProject(presetLibrary(), fixtureProject())
 const base = nextRound(startSession(scenario, 'knight'), () => 0.5)
 const door = base.scenario.library.buildings.find((b) => b.id === 'stone_door')!
 
+/** 同一张图，但门房那一格**关掉了【重新对话】**（`dialog: { mod, retalk: false }`，§4.9.3） */
+const noRetalk: Session = (() => {
+  const sc = scenarioFromProject(presetLibrary(), fixtureProject())
+  const maps = sc.maps.map((m) => ({
+    ...m,
+    nodes: m.nodes.map((n) => (n.x === 7 && n.y === 1 ? { ...n, dialog: { mod: 'Mod1', retalk: false } } : n)),
+  }))
+  return nextRound(startSession({ ...sc, maps }, 'knight'), () => 0.5)
+})()
+
 /** 跟真实页面一样：从 store 取会话（点按钮 → store 更新 → 重渲染） */
 function Harness() {
   const session = usePlayStore((s) => s.session)!
@@ -65,7 +75,7 @@ function diceScenario(): Scenario {
         end: [0, 0],
         nodes: [
           { x: 0, y: 0, type: 'start' },
-          { x: 1, y: 0, type: 'building', ref: 'stone_door', npcs: [ROLLER.id], dialog: 'Roll' },
+          { x: 1, y: 0, type: 'building', ref: 'stone_door', npcs: [ROLLER.id], dialog: { mod: 'Roll' } },
         ],
       },
     ],
@@ -155,6 +165,29 @@ describe('对话弹层', () => {
     expect(screen.getByText('继续对话')).toBeTruthy()
     expect(screen.getByText('重新对话')).toBeTruthy()
     expect(screen.queryByText('路过')).toBeNull()
+  })
+
+  it('关掉【重新对话】：未走完重入不弹框；走完过重入，菜单里也没有【重新对话】', () => {
+    // 停在选项层就走人 —— 未走完。菜单只剩【继续对话】一项 → **不弹"只有一个按钮"的空框**，直接续上
+    const mid = through(beginBuilding(noRetalk, door, [7, 1], () => 0.5))
+    expect(mid.talk!.stage).toBe('choose')
+    const again = beginBuilding({ ...mid, talk: undefined, phase: 'explore' }, door, [7, 1], () => 0.5)
+    expect(again.talk!.stage).toBe('line')
+    expect(talkView(again)!.canRestart).toBe(false)
+
+    // 走完过 → 还有【路过】可挑，照旧弹框；但**没有**【重新对话】
+    const menu = beginBuilding(
+      { ...through(talkChoose(mid, 1)), talk: undefined, phase: 'explore' },
+      door,
+      [7, 1],
+      () => 0.5,
+    )
+    expect(menu.talk!.stage).toBe('menu')
+    usePlayStore.setState({ session: menu })
+    render(<Harness />)
+    expect(screen.getByText('继续对话')).toBeTruthy()
+    expect(screen.getByText('路过')).toBeTruthy()
+    expect(screen.queryByText('重新对话')).toBeNull()
   })
 
   it('走完过之后，选择对话框里多一个【路过】', () => {
