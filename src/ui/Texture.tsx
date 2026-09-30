@@ -1,0 +1,115 @@
+/**
+ * **贴图渲染器**（`skin.md` §四）：素材画到屏上的唯一落点。
+ *
+ * - **单一入口**：`textureProps()` 把「取图 → 落位 → 换地址」收成一份 props；调用方拿到
+ *   `undefined` 就画程序图形（素材缺失、包没启用、环境不支持地址），**不判断素材类型**
+ * - **两层同接口**：同一份 `TextureProps`，SVG 层用 `SvgTexture`（`<image>`），
+ *   DOM 层用 `DomTexture`（`<img>`，要求父元素 `position: relative`）
+ * - **位图不套手绘滤镜**（S-6）：素材节点一律不带 `filter`，手绘滤镜只加在程序绘制的图形上；
+ *   素材自身也**不参与点击命中**（`pointerEvents: none`），命中判定仍归所在层的业务元素
+ * - V1 只有拉伸；`nine` / `tile` 由 `effectiveMode` 回落（D6 落地）
+ */
+
+import { effectiveMode, placeTexture, type TextureBox, type TextureMode, type TexturePlacement, type TextureRef } from '../engine/skin/texture'
+import type { SkinAssets } from '../io/skin-assets'
+
+/** 两层共用的调用接口 */
+export interface TextureProps extends TexturePlacement {
+  /** 已建好的可用地址（`textureProps()` 从素材源取好） */
+  src: string
+  /** 填充方式；V1 只认 `stretch` */
+  mode?: TextureMode
+  /** 0–1，缺省 1 */
+  opacity?: number
+  /** 额外类名（两层都透传） */
+  className?: string
+  /** 说明文字；给了即视为内容图，不给按装饰图对无障碍隐藏 */
+  alt?: string
+}
+
+/**
+ * 单一入口：把取图结果落到盒里，并换成可用地址。
+ *
+ * 返回 `undefined` 的三种情形都走同一条退路（调用方改画程序图形）：
+ * 该节点未被皮肤接管、包里缺这张图、环境给不出地址。
+ */
+export function textureProps(
+  ref: TextureRef | undefined,
+  assets: SkinAssets,
+  box: TextureBox,
+  extra: Pick<TextureProps, 'mode' | 'opacity' | 'className' | 'alt'> = {},
+): TextureProps | undefined {
+  const placement = placeTexture(box, ref)
+  if (placement === undefined || ref === undefined) return undefined
+
+  const src = assets.urlOf(ref.src)
+  if (src === undefined) return undefined
+
+  return { ...placement, src, ...extra }
+}
+
+/** 千分位取整：贴图坐标不必带浮点尾巴，免得每次渲染都换属性值 */
+function num(value: number): number {
+  return Math.round(value * 1000) / 1000
+}
+
+/** SVG 的绕心变换；无旋转也无镜像时不写 `transform` */
+function svgTransform({ x, y, w, h, rotate, flip }: TexturePlacement): string | undefined {
+  const ops: string[] = []
+  if (flip) ops.push('scale(-1 1)')
+  if (rotate) ops.push(`rotate(${num(rotate)})`)
+  if (ops.length === 0) return undefined
+
+  const cx = num(x + w / 2)
+  const cy = num(y + h / 2)
+  return `translate(${cx} ${cy}) ${ops.join(' ')} translate(${-cx} ${-cy})`
+}
+
+/** SVG 层：画在既有 `<svg>` 里（地图 / 画布 / 棋子） */
+export function SvgTexture({ src, x, y, w, h, rotate, flip, mode, opacity, className, alt }: TextureProps) {
+  const placement: TexturePlacement = { x, y, w, h, rotate: rotate ?? 0, flip: flip === true }
+  return (
+    <image
+      href={src}
+      x={x}
+      y={y}
+      width={w}
+      height={h}
+      preserveAspectRatio={effectiveMode(mode) === 'stretch' ? 'none' : 'xMidYMid meet'}
+      transform={svgTransform(placement)}
+      opacity={opacity}
+      className={className}
+      style={{ pointerEvents: 'none' }}
+      aria-hidden={alt ? undefined : true}
+      aria-label={alt}
+    />
+  )
+}
+
+/** DOM 层：画在面板 / 弹窗里（父元素需 `position: relative`） */
+export function DomTexture({ src, x, y, w, h, rotate, flip, opacity, className, alt }: TextureProps) {
+  const transforms: string[] = []
+  if (rotate) transforms.push(`rotate(${num(rotate)}deg)`)
+  if (flip) transforms.push('scaleX(-1)')
+
+  return (
+    <img
+      src={src}
+      alt={alt ?? ''}
+      className={className}
+      draggable={false}
+      style={{
+        position: 'absolute',
+        left: `${num(x)}px`,
+        top: `${num(y)}px`,
+        width: `${num(w)}px`,
+        height: `${num(h)}px`,
+        transform: transforms.length ? transforms.join(' ') : undefined,
+        transformOrigin: 'center',
+        opacity,
+        pointerEvents: 'none',
+        userSelect: 'none',
+      }}
+    />
+  )
+}

@@ -124,6 +124,11 @@
 
 ## 进度同步
 
+**2026-09-30 · D2 落地（贴图渲染器，[`design/skin.md`](design/skin.md) §四）**
+- `skin.md` §四 补「**实现落点（React）**」：`drawTexture(target, src, box, opts)` 在本工程里由 [`src/ui/Texture.tsx`](../src/ui/Texture.tsx) 的 `textureProps(ref, assets, box, extra)` 承担唯一入口（取图 → 落位 → 换地址，**画不出来返回 `undefined`**，调用方据此改画程序图形），`target` 体现为**选用哪个渲染器**（`SvgTexture` / `DomTexture`，props 完全相同）而非运行期分支；几何归纯函数 [`src/engine/skin/texture.ts`](../src/engine/skin/texture.ts)，素材地址归 [`src/io/skin-assets.ts`](../src/io/skin-assets.ts)（按需建、`release()` 一次撤）；`nine` / `tile` 在 `effectiveMode()` 统一回落 `stretch`，V2.2 落地时只改这一处。
+- 同节表内版本线 `V1.1` 更正为 **V2.2**（与 2026-09-29 版本线定义一致；`S-1` 的取舍描述不受影响）。
+- 里程碑状态：[`TASK.md`](../TASK.md) V2.1 行与 [`task/04-skin.md`](../task/04-skin.md) 索引改为「D0 / D1 / D2 已落地，D3 待做」；D2 五项勾选。验收：`npx tsc --noEmit` 无错，`npx vitest run` **31 个文件 / 364 项**全绿。
+
 **2026-09-30 · NPC 预设到达老库 ＋ NPC 模组面板直接新建（§6.1 ① / §5.6.1）**
 - **新增预设的到达机制**：`ensureSeeded` 原先只在**首次播种**时补入预设（`seeded` 为真即跳过），
   致使 V2.0 才加入的 NPC 预设**永远不会出现在老用户的组件库中**（NPC 面板始终为空，现象近似"预设 JSON 没有被读取"）。

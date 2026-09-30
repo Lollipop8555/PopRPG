@@ -42,11 +42,11 @@
 
 ## D2 贴图渲染器
 
-- [ ] `drawTexture(target, src, box, opts)` 单一抽象；`opts = { mode: 'stretch' | 'nine' | 'tile', slice?, rotate?, flip? }`（[`skin.md`](../docs/design/skin.md) §四）
-- [ ] V1 只实现 `stretch`（`<image preserveAspectRatio="none">`）；`nine` / `tile` 仅预留参数位，V1 不解析九宫格（取舍 `S-1`；**切分工具**在 D4，但 V1 渲染不变，裁决 21）
-- [ ] 渲染器为**纯函数 + 单一入口**：业务代码内**禁止**判断素材类型（不写 `if (is9Patch)`）
-- [ ] DOM 层（面板 / 弹窗）与 SVG 层共用同一调用接口（两侧实现可不同）
-- [ ] 位图素材**不套手绘滤镜**（`S-6`）；纸纹与手绘分隔线仍由 CSS 承担，素材接管时不得双层叠加（[`skin.md`](../docs/design/skin.md) §3.4）
+- [x] `drawTexture(target, src, box, opts)` 单一抽象；`opts = { mode: 'stretch' | 'nine' | 'tile', slice?, rotate?, flip? }`（[`skin.md`](../docs/design/skin.md) §四）——**落点**：`src/ui/Texture.tsx` 的 `textureProps(ref, assets, box, extra)` 为唯一入口（取图 → 落位 → 换地址，画不出来返回 `undefined`）；`target` 在 React 里体现为**选用哪个渲染器**，不做运行期分支
+- [x] V1 只实现 `stretch`（`<image preserveAspectRatio="none">`）；`nine` / `tile` 仅预留参数位，V1 不解析九宫格（取舍 `S-1`；**切分工具**在 D4，但 V1 渲染不变，裁决 21）——**落点**：`src/engine/skin/texture.ts` 的 `effectiveMode()` 统一回落为 `stretch`（V2.2 落地九宫格时只改这一处），`slice` 随取图结果带出但不解析
+- [x] 渲染器为**纯函数 + 单一入口**：业务代码内**禁止**判断素材类型（不写 `if (is9Patch)`）——**落点**：几何与取图归纯函数 `src/engine/skin/texture.ts`（三写法归一 `spriteRef` / 单张 `textureRef`、绕心旋转镜像 `placeTexture`、角度归一），地址归 `src/io/skin-assets.ts`（按需建、`release()` 一次撤，裁决 15）；业务侧只拿 `TextureProps`
+- [x] DOM 层（面板 / 弹窗）与 SVG 层共用同一调用接口（两侧实现可不同）——**落点**：同一份 `TextureProps` 两个实现——`SvgTexture`（`<image>`，绕盒心 `transform`）与 `DomTexture`（`<img>` 绝对定位，`rotate` / `scaleX(-1)` ＋ `transform-origin: center`，要求父元素 `position: relative`）
+- [x] 位图素材**不套手绘滤镜**（`S-6`）；纸纹与手绘分隔线仍由 CSS 承担，素材接管时不得双层叠加（[`skin.md`](../docs/design/skin.md) §3.4）——**落点**：素材节点一律不写 `filter`（手绘滤镜只由程序绘制的图形显式加 `url(#poprpg-sketch)`），并统一 `pointerEvents: none`（素材不参与点击命中）
 
 ## D3 逐屏素材接入
 
@@ -173,3 +173,12 @@
 - **`cross_*` 基准角位确认**：**西北角起、顺时针**（回执确认「左上角开始顺时针」即西北起始），`cross_three_corners` 以缺西南角为基准；文件内的「推算待校正」标注已移除。
 - **`base` 与 `tiles` 定义重申**：`styles[].base` 是**目录前缀**，`tiles` 的值是**相对文件名**，拼接即相对包根的路径；仅当样式集缺省 `base` 时，值才按相对包根的完整路径处理。§七 示例的 `tiles` 值已全部改为相对文件名，§十 待确认第 4 条（`base` 是否保留）随之删除。
 - 验证：`src/engine/skin/__tests__/road.test.ts` 补夹角用例（`corner` / `tee_corner_nw` / `tee_corner_ne` / `tee_full` 与外侧角忽略），皮肤测试 **35 项**全绿。
+
+**2026-09-30 · D2 落地（贴图渲染器）**
+- 三层落点：纯函数 [`../src/engine/skin/texture.ts`](../src/engine/skin/texture.ts)（`textureRef` / `spriteRef` 三写法归一、`placeTexture` 落位、`normalizeAngle`、`effectiveMode`）、素材源 [`../src/io/skin-assets.ts`](../src/io/skin-assets.ts)（`createSkinAssets`：按需建地址、`mimeOf` 认扩展名、`release()` 一次撤，裁决 15）、渲染器 [`../src/ui/Texture.tsx`](../src/ui/Texture.tsx)（`textureProps()` 唯一入口 ＋ `SvgTexture` / `DomTexture` 两层同接口）。
+- **取图归一**：数组写法按姿态下标取图且**不旋转**（缺中间项即该向降级、回退程序绘制）；字符串 / 对象写法按 `index × 90` 摆正，对象写法的纠偏角与之相加；`base` 前缀对三写法一律生效；`slice` 随取图结果带出但 V1 不解析。
+- **单一入口的退路**：`textureProps()` 在「该节点未被接管 / 包里缺这张图 / 环境给不出地址」三种情形都返回 `undefined`——业务代码只判断「有没有 props」，**不判断素材类型**（§四）。
+- **两层同接口**：`rotate` / `flip` 由落位结果给出（都绕盒心）；SVG 层编译成 `translate(cx cy) rotate(a) scale(-1 1) translate(-cx -cy)`，DOM 层编译成 `rotate(a deg) scaleX(-1)` ＋ `transform-origin: center`；素材节点不写 `filter`（`S-6`）并统一 `pointerEvents: none`。
+- **参数位**：`nine` / `tile` 在 `effectiveMode()` 统一回落 `stretch`——V2.2 落地九宫格时只改这一处。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **31 个文件 / 364 项**全绿（新增 `src/engine/skin/__tests__/texture.test.ts` 14 项、`src/io/__tests__/skin-assets.test.ts` 8 项、`src/ui/__tests__/texture.test.tsx` 6 项）。
+- 设计侧同步：[`../docs/design/skin.md`](../docs/design/skin.md) §四 补「实现落点」并把表内版本线 `V1.1` 更正为 **V2.2**、[`../docs/DESIGN.md`](../docs/DESIGN.md) 进度同步、[`../TASK.md`](../TASK.md) 里程碑索引与进度同步。

@@ -124,10 +124,20 @@ drawTexture(target, src, box, opts)
 | 版本 | 策略 | 实现 |
 |------|------|------|
 | V1 | `stretch` | `<image preserveAspectRatio="none">` 直接拉伸 |
-| V1.1 | `nine` | 按 `slice` 切成九块拼装：四角原样、四边单向拉伸、中心双向拉伸 |
+| V2.2 | `nine` | 按 `slice` 切成九块拼装：四角原样、四边单向拉伸、中心双向拉伸 |
 
 - **SVG 内无原生 `border-image`**，九宫格必须在 SVG 内切块拼装；DOM 层（面板 / 弹窗）可直接用 CSS `border-image` 实现同一策略。**两侧实现可以不同，调用方接口必须相同。**
 - 适用范围：道路 / 建筑素材、面板与弹窗底图、按钮底图、色块——**凡是需要拉伸的一律走此接口**。
+
+**实现落点（React，2026-09-30）**：`target` 参数在本工程里体现为**选用哪个渲染器**，而不是运行期分支。
+
+- 唯一入口 `src/ui/Texture.tsx` 的 `textureProps(ref, assets, box, extra)`：取图 → 落位 → 换地址，一次给全一份 props；
+  **画不出来（该节点未被接管 / 包里缺这张图 / 环境给不出地址）返回 `undefined`**，调用方据此改画程序图形。
+- 拿到 props 后：**SVG 层用 `SvgTexture`（`<image>`）、DOM 层用 `DomTexture`（`<img>`）**，两者 props 完全相同；
+  `rotate` / `flip` 由落位结果给出（都绕盒心），**业务代码不参与变换计算**，素材节点也不带手绘滤镜、不吃点击（`S-6`）。
+- 几何与取图归纯函数 `src/engine/skin/texture.ts`（三写法归一 / 绕心旋转镜像 / `mode` 回落）；
+  素材地址归 `src/io/skin-assets.ts`（按需建、`release()` 一次撤，裁决 15）。
+- `nine` / `tile` 两个参数位在 `effectiveMode()` 里统一回落为 `stretch`——V2.2 落地九宫格时**只改这一处**。
 
 ## 五、素材字段的三种写法
 

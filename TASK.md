@@ -28,7 +28,7 @@
 |---|---|---|---|
 | **V1** | Phase 0 基座 / Phase A BUILD / Phase B PLAY | **已冻结口径**：七大类 · 13 项配置 · `encounter` 五选一 | **已完成**（A 首轮 ＋ B 全部 58 项勾选；全量 197 项单测绿） |
 | **V2.0** | **新增 NPC 与对话**（第 8 类组件 ＋ **进入建筑后的 NPC 触发节点**） | **追加设定 / 结构改造**（不属于 V1 的阶段性设计） | **已完成**（编辑器侧 E0–E3 ＋ 运行时 E4 ＋ 19 项原子验收；E5 皮肤落点并入 **V2.1**） |
-| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数已落地；D1–D3 待做） |
+| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / **D2 贴图渲染器** 已落地；D3 逐屏素材接入待做） |
 | **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 九宫格切片消费 / 皮肤校验 / 音频播放 | 叠加层 | V2.1 之后 |
 
 > **V1 口径冻结、不改写**：`task/00-foundation.md` / `task/01-build.md` 里的「七大类 / 13 项 / 五选一」是 **V1 史实**；
@@ -65,7 +65,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 | [task/01-build.md](task/01-build.md) | Phase A BUILD（构建页） | 信息架构/数据模型/布局/图层/组件库/模式/画布/属性编辑/引擎纯函数/校验/预设/导入导出 | **已完成首轮实现**（build + 78 项单测全绿） |
 | [task/02-play.md](task/02-play.md) | Phase B PLAY（游玩页） | 框架加载/开局/移动回合/战斗UI/骰子公示/技能交互/状态/遭遇/商店/装备背包/存档 | **已完成**（B0–B10 与 B 验收 1–14 全部勾选） |
 | [task/03-polish.md](task/03-polish.md) | Phase C 收尾 | 视觉打磨 / GitHub Pages 部署 | 部分已完成 |
-| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 类型与取图纯函数已落地，D1–D3 待做；**优先级 ②**；端到端依赖 B） |
+| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地，D3 待做；**优先级 ②**；端到端依赖 B） |
 | [task/05-npc.md](task/05-npc.md) | **V2.0** 新增 NPC 与对话（跨 A / B） | NPC 数据模型与对话树（**全树同一个结构**；给道具 `give`；本层掷骰 `dice` / 各项 `hit`）/ 组件库与组件页 / **NPC 模组面板（思维导图，命中覆盖检查）** / 建筑实例页与校验 / 运行时抽取与弹层（掷定锁死 / **重入三选项 ＋ 三标记** / `give` 一次性交付）/ 皮肤侧接口约定 | **已完成**（E0–E3 编辑器侧 ＋ E4 运行时 ＋ 19 项原子验收；E5 皮肤侧接口约定并入 [task/04-skin.md](task/04-skin.md)） |
 
 ---
@@ -130,6 +130,12 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 ---
 
 ## 进度同步
+
+**2026-09-30 · D2 落地（贴图渲染器）**
+- 三层落点：纯函数 [`src/engine/skin/texture.ts`](src/engine/skin/texture.ts)（`textureRef` / `spriteRef` 三写法归一、`placeTexture` 落位、`normalizeAngle`、`effectiveMode`）＋ 素材源 [`src/io/skin-assets.ts`](src/io/skin-assets.ts)（`createSkinAssets`：按需建地址、`mimeOf` 认扩展名、`release()` 一次撤）＋ 渲染器 [`src/ui/Texture.tsx`](src/ui/Texture.tsx)（`textureProps()` 唯一入口 ＋ `SvgTexture` / `DomTexture` 两层同接口）。
+- **单一入口的退路**：「该节点未被接管 / 包里缺这张图 / 环境给不出地址」三种情形一律返回 `undefined`，调用方据此改画程序图形——业务代码只判断「有没有」，**不判断素材类型**（§四）。
+- **两层同接口**：`rotate` / `flip` 由落位结果给出（绕盒心），SVG 层编译成 `transform`、DOM 层编译成 CSS；素材节点不写 `filter`（`S-6`）且统一 `pointerEvents: none`；`nine` / `tile` 在 `effectiveMode()` 统一回落 `stretch`（V2.2 落地时只改这一处）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **31 个文件 / 364 项**全绿（新增 3 个用例文件 / 28 项）。设计侧同步 [`docs/design/skin.md`](docs/design/skin.md) §四（补「实现落点」、表内版本线 `V1.1` → **V2.2**）、[`docs/DESIGN.md`](docs/DESIGN.md)；任务侧 [`task/04-skin.md`](task/04-skin.md) D2 五项勾选。**D3 逐屏接入待做**。
 
 **2026-09-30 · NPC 预设到达老库 ＋ NPC 模组面板直接新建（§6.1 ① / §5.6.1）**
 - 缺陷一：`ensureSeeded` 原先只在**首次播种**时补入预设，**V2.0 新增的 NPC 预设因此进不了老用户的组件库**（NPC 面板始终为空）。现引入 **`PRESET_VERSION`**：本地记录已补入到哪一版，**版本推进之后再次补入一次缺失项**（守「重名以本地优先」；同一版内不重复补入）；**改动内置预设必须同时 +1**。同步修 persist `merge` 漏掉的 `npcs` 语义色回填。
