@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { SkinRole } from '../../../types'
-import { backgroundOf, backgroundLayers } from '../canvas'
+import { backgroundOf, backgroundLayers, backgroundPlacement, backgroundUsable } from '../canvas'
 import { groundOf, groundPaint, itemSkinOf, portraitOf, roleSprite } from '../lookup'
 import { themeVars } from '../theme'
 
@@ -27,6 +27,47 @@ describe('backgroundOf：画布背景取层（§二）', () => {
   it('首层也不可用即整节未接管', () => {
     expect(backgroundOf([{}, { cellSize: 32 }], 1)).toBeUndefined()
     expect(backgroundOf(undefined, 0)).toBeUndefined()
+  })
+
+  it('额外的可用性判定参与回退（如路径在包内取不到）', () => {
+    const list = [{ img: 'a.png' }, { img: 'b.png' }, { img: 'c.png' }]
+    const onlyA = (l: { img?: string }) => l.img === 'a.png'
+
+    expect(backgroundOf(list, 2, onlyA)?.index).toBe(0)
+    expect(backgroundOf(list, 1, onlyA)?.index).toBe(0)
+    // 一路到首层都不可用 → 整节未接管
+    expect(backgroundOf(list, 2, () => false)).toBeUndefined()
+  })
+})
+
+describe('backgroundUsable / backgroundPlacement（§二 / §三）', () => {
+  it('可用层＝img ＋ 正的 cellSize 齐备', () => {
+    expect(backgroundUsable({ img: 'a.jpg', cellSize: 25 })).toBe(true)
+    expect(backgroundUsable({ img: 'a.jpg' })).toBe(false)
+    expect(backgroundUsable({ cellSize: 25 })).toBe(false)
+    expect(backgroundUsable({ img: 'a.jpg', cellSize: 0 })).toBe(false)
+    expect(backgroundUsable({ img: 'a.jpg', cellSize: Number.NaN })).toBe(false)
+    expect(backgroundUsable(undefined)).toBe(false)
+  })
+
+  it('坐标映射：图点 (startX,startY) ≡ 格 [0,0] 中心，倍率＝屏幕每格 ÷ cellSize', () => {
+    const layer = { img: 'a.jpg', cellSize: 25, startX: 256, startY: 256 }
+    const place = backgroundPlacement(layer, 48)!
+
+    expect(place.scale).toBe(48 / 25)
+    expect(place.x).toBeCloseTo(24 - 256 * (48 / 25))
+    expect(place.y).toBeCloseTo(24 - 256 * (48 / 25))
+  })
+
+  it('startX / startY 缺省按 0（图片原点落在格 [0,0] 中心）', () => {
+    expect(backgroundPlacement({ img: 'a.jpg', cellSize: 48 }, 48)).toEqual({ scale: 1, x: 24, y: 24 })
+  })
+
+  it('量不出落位的情形一律 undefined（缺 img / 缺 cellSize / 屏幕格无效）', () => {
+    expect(backgroundPlacement({ img: 'a.jpg' }, 48)).toBeUndefined()
+    expect(backgroundPlacement({ cellSize: 25 }, 48)).toBeUndefined()
+    expect(backgroundPlacement({ img: 'a.jpg', cellSize: 25 }, 0)).toBeUndefined()
+    expect(backgroundPlacement(undefined, 48)).toBeUndefined()
   })
 })
 

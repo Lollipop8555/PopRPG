@@ -87,12 +87,19 @@ function objectRef(image: SkinImage, turn: number, base?: SkinPath): TextureRef 
   }
 }
 
+/**
+ * 盒尺寸：数值按所在层的单位；**`auto` 表示尺寸交给素材自身像素**——画布背景
+ * 没有「多大一个盒」可言（`skin/05-canvas.md` §三 只给出缩放倍率与落点），
+ * 渲染侧据此不写尺寸属性，由浏览器按图片原始像素画。
+ */
+export type TextureSize = number | 'auto'
+
 /** 贴图落位的目标盒（调用方按格子 / 面板尺寸算好，单位随所在层） */
 export interface TextureBox {
   x: number
   y: number
-  w: number
-  h: number
+  w: TextureSize
+  h: TextureSize
 }
 
 /** 落位结果：盒 ＋ 变换参数（SVG 与 DOM 各自翻译成自己的写法） */
@@ -105,6 +112,9 @@ export interface TexturePlacement extends TextureBox {
 /**
  * 落位：把取图结果放进目标盒。V1 一律**拉伸**到盒；旋转与镜像都**绕盒心**做，
  * 故这里只交出角度与镜像两个数，绕心的合成由各层自己完成（SVG 用 `transform`，DOM 用 CSS）。
+ *
+ * 盒尺寸可以是 `auto`（画布背景）：此时量不出盒心，**这类元素不参与旋转 / 镜像**
+ * （背景节本来也没有 `rotate` / `flip`），旋转交由各自渲染层在量不出盒心时忽略。
  */
 export function placeTexture(box: TextureBox, ref: TextureRef | undefined): TexturePlacement | undefined {
   if (ref === undefined) return undefined

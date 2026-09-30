@@ -66,6 +66,30 @@ describe('SVG 层 SvgTexture', () => {
       'translate(25 40) scale(-1 1) rotate(90) translate(-25 -40)',
     )
   })
+
+  it('auto 盒不写尺寸属性（尺寸交给素材自身像素，仅画布背景用）', () => {
+    const props = textureProps(ref(), withTile(), { x: 0, y: 0, w: 'auto', h: 'auto' })!
+    render(
+      <svg>
+        <SvgTexture {...props} />
+      </svg>,
+    )
+    const image = document.querySelector('image')!
+
+    expect(image.getAttribute('x')).toBe('0')
+    expect(image.getAttribute('width')).toBeNull()
+    expect(image.getAttribute('height')).toBeNull()
+  })
+
+  it('auto 盒量不出盒心，故不合成绕心变换', () => {
+    const props = textureProps(ref({ rotate: 90, flip: true }), withTile(), { x: 0, y: 0, w: 'auto', h: 'auto' })!
+    render(
+      <svg>
+        <SvgTexture {...props} />
+      </svg>,
+    )
+    expect(document.querySelector('image')!.getAttribute('transform')).toBeNull()
+  })
 })
 
 describe('DOM 层 DomTexture', () => {

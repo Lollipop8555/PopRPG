@@ -11,6 +11,7 @@ import type { SkinAssets } from '../io/skin-assets'
 import { currentMap, neighbors } from './kit'
 import { canStep } from './flow'
 import { roadPickAt } from './road'
+import { backgroundOf, backgroundPlacement, backgroundUsable } from '../engine/skin'
 import { centerCamera } from '../lib/map'
 import { MapMarker } from '../ui/Marker'
 import { Footprint } from '../ui/Footprint'
@@ -20,11 +21,17 @@ import { fallbackColor, withAlpha } from '../lib/color'
 
 const CELL = 48
 
+/** 贴图坐标不必带浮点尾巴，免得每次渲染都换属性值 */
+function round3(value: number): number {
+  return Math.round(value * 1000) / 1000
+}
+
 export default function MapView({ session, onStep }: { session: Session; onStep: (cell: [number, number]) => void }) {
   const map = currentMap(session)
   // 皮肤：`assets` 永远是可用对象，未启用皮肤时道路那一格自然回退脚印（§四 降级链）
   const assets = useSkinStore((s) => s.assets)
   const road = useSkinStore((s) => s.skin?.manifest.road)
+  const background = useSkinStore((s) => s.skin?.manifest.background)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [size, setSize] = useState({ w: 800, h: 600 })
   const [cam, setCam] = useState<[number, number] | null>(null)
@@ -50,6 +57,17 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
   if (!map) return <div className="hintbox">这一局没有地图</div>
 
   const [vx, vy] = cam ?? [0, 0]
+
+  // 画布背景（`skin/05-canvas.md` §二 / §三）：下标即地图下标，取不到可用层就保留纸面底纹。
+  // `has()` 只问包里有没有这条素材（不建地址），故这一步判掉 `KB-2` 后仍向前回退。
+  const bgPick = backgroundOf(background, session.mapIndex, (l) => backgroundUsable(l) && assets.has(l.img))
+  const bgLayer = bgPick?.layer
+  const bgPlace = bgLayer ? backgroundPlacement(bgLayer, CELL) : undefined
+  // 背景图**按素材自身像素**出图（盒尺寸 `auto`），缩放与落点由外层 `<g>` 的坐标映射承担
+  const bgTile =
+    bgPlace && bgLayer?.img
+      ? textureProps({ src: bgLayer.img, rotate: 0, flip: false }, assets, { x: 0, y: 0, w: 'auto', h: 'auto' })
+      : undefined
 
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
     movedRef.current = false
@@ -89,7 +107,18 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
     >
       {/* 装饰层：不接收指针事件 */}
       <g pointerEvents="none">
-        <rect x={vx} y={vy} width={size.w} height={size.h} fill="var(--paper-card)" />
+        {/* ① 填充色：未被背景图覆盖的地方兜底（取**采用层**的 `color`，漏写即全局主题色） */}
+        <rect x={vx} y={vy} width={size.w} height={size.h} fill={bgLayer?.color ?? 'var(--paper-card)'} />
+
+        {/* ② 背景层：每张地图只画**采用的那一层**，图点 (startX,startY) 对齐格 [0,0] 中心 */}
+        {bgTile && bgPlace && (
+          <g
+            data-bg-layer={bgPick?.index}
+            transform={`translate(${round3(bgPlace.x)} ${round3(bgPlace.y)}) scale(${round3(bgPlace.scale)})`}
+          >
+            <SvgTexture {...bgTile} />
+          </g>
+        )}
 
         {/* [0,0] 基准十字 */}
         <g opacity={0.5}>
@@ -221,7 +250,9 @@ function NodeShape({
   // 道路：标签取自道路定义（`01-road.md` §六 样式集选取），连通关系看本格四邻与四角（`roadFlag`）
   const roadDef = node.ref !== undefined ? session.scenario.library.roads.find((r) => r.id === node.ref) : undefined
   const pick = roadPickAt(map, node, road, roadDef?.tags)
-  // 素材是 `cellSize × cellSize` 正方形、图形居中（`01-road.md` §3.1），故按短边居中落图
+  // 素材是 `cellSize × cellSize` 正方形、图形居中（`01-road.md` §3.1），故按短边居中落图。
+  // 出图基准无需另算：素材拉伸进**一个屏幕格**的盒，其倍率恰好是「屏幕每格像素 ÷ `cellSize`」，
+  // 与背景图（`05-canvas.md` §三）共用同一变换；未配背景时两者同值（`01-road.md` §3.1 末条）
   const side = Math.min(w, h)
   const tile = textureProps(
     pick ? { src: pick.src, rotate: pick.rotate, flip: false } : undefined,

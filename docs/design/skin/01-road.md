@@ -196,5 +196,5 @@
 - **纯换算**（[`road-bits.ts`](../../../src/engine/skin/road-bits.ts) / [`road.ts`](../../../src/engine/skin/road.ts) / [`road-style.ts`](../../../src/engine/skin/road-style.ts)）：`roadFlag()` 把四邻四角折成 8 位标记（位序从左上角起顺时针），`roadTileOf()` 出槽位与基准姿态角，`roadSprite()` 拼样式集目录前缀并归一三写法。
 - **业务折算**（[`src/play/road.ts`](../../../src/play/road.ts)）：`roadAt()` / `roadNeighbors()` 把地图布局折成四邻四角——**有路 = 被道路节点覆盖**（多格节点按占地全算），**多格道路节点按左上格取图**；`roadPickAt()` 把道路定义上的 `tags` 交给 `pickRoadStyle()`。
 - **渲染**（[`src/play/MapView.tsx`](../../../src/play/MapView.tsx)）：每格 `roadPickAt()` → `textureProps()` → `SvgTexture`，姿态角落在 `transform` 上；**该格未接管**（缺 `road` 节 / 缺该槽位 / 数组缺中间项 / 包里缺这张图）**即照旧画** `Footprint`，即 §十 待确认 3 的「逐格降级」。
-- **素材基准**：素材为 `cellSize × cellSize` 正方形、图形居中，渲染按**短边居中**落图；当前基准是屏幕 `CELL × CELL`，待 `background`（[`05-canvas.md`](05-canvas.md)）接入后改用背景层 `cellSize`。
+- **素材基准**：素材为 `cellSize × cellSize` 正方形、图形居中，渲染按**短边居中**落图。屏幕上一格恒为 `CELL`，素材被拉伸进**一个屏幕格**，其倍率恰好就是 §3.1 的「屏幕每格像素 ÷ `cellSize`」，**与背景图共用同一个变换**（[`05-canvas.md`](05-canvas.md) §八）——故无需另算基准；未配背景时两者同值（§3.1 末条）。
 - **构建页画布**（`src/build/Canvas.tsx`）尚未接入，仍画脚印。

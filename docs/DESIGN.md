@@ -124,6 +124,13 @@
 
 ## 进度同步
 
+**2026-09-30 · D3 第二屏：画布 `background` 接入（[`design/skin/05-canvas.md`](design/skin/05-canvas.md) §八）**
+- 取层与落位：[`src/engine/skin/canvas.ts`](../src/engine/skin/canvas.ts) 的 `backgroundUsable()`（`img` ＋ 正的 `cellSize` 齐备）、`backgroundOf(bg, mapIndex, available?)`（下标越界 clamp 到最后一层；采用层不可用即向前回退；`available` 由调用方传入以判掉「路径在包内取不到」，只问「有没有」不建地址）、`backgroundPlacement()`（倍率 ＝ 屏幕每格像素 ÷ `cellSize`；图点 `(startX,startY)` ≡ 格 `[0,0]` 中心）。
+- 渲染：[`src/play/MapView.tsx`](../src/play/MapView.tsx) 按 §四 顺序——底纹 `<rect>` 的 `fill` 取**采用层**的 `color`（漏写即 `var(--paper-card)`）→ 背景图放在 `translate(x y) scale(s)` 的 `<g>` 里 → 参照线 / 道路；未取到可用层则一字不改，照旧纸面底纹。
+- **图片尺寸交给素材自身像素**：取图盒新增 `w/h: 'auto'`（[`src/engine/skin/texture.ts`](../src/engine/skin/texture.ts)），SVG 层据此不写 `width` / `height`、由浏览器按 SVG2 的 auto 取素材原始像素——无需解码图片量尺寸；`auto` 盒量不出盒心，故不参与旋转 / 镜像。
+- 遗留销账：屏幕一格恒为 `CELL`，素材拉伸进一个屏幕格的倍率**就是**「屏幕每格像素 ÷ `cellSize`」，与背景图共用同一变换——[`design/skin/01-road.md`](design/skin/01-road.md) §3.1 的共同基准已是现状（D3 起步的「暂用 `CELL` 基准」关闭）。构建页画布（`src/build/Canvas.tsx`）仍未接。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **34 个文件 / 398 项**全绿（新增 12 项）。
+
 **2026-09-30 · D3 起步：运行期皮肤通道 ＋ 道路接入（[`design/skin/00-package.md`](design/skin/00-package.md) §4.4 / [`01-road.md`](design/skin/01-road.md)）**
 - 新增运行期入口 [`src/store/skin.ts`](../src/store/skin.ts)：界面侧读皮肤的唯一出口（生效皮肤 ＋ 素材源 ＋ 提示），`activateLayers({ game, user })` 整体换两层、`refresh()` 从皮肤库重取用户启用的全局皮肤（本局层不冲掉）、`release()` 回到全部程序绘制；换套时**先撤旧地址再交新的**（裁决 15）。未启用皮肤时素材源对一切路径回 `undefined`，各屏**逐节点**回退程序绘制，调用方不必判空。启动时 `App.tsx` 调一次 `refresh()`。
 - 道路接入：新增 [`src/play/road.ts`](../src/play/road.ts)（格子 → 四邻四角 → `roadFlag`；多格节点按占地全算、按左上格取图），[`src/play/MapView.tsx`](../src/play/MapView.tsx) 每格 `roadPickAt()` → `textureProps()` → `SvgTexture`，**该格未接管即照旧画脚印**。设计侧同步 [`design/skin/01-road.md`](design/skin/01-road.md) §十一 与 [`design/skin/00-package.md`](design/skin/00-package.md) §4.4 的「实现落点」。

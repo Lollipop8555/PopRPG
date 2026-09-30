@@ -52,13 +52,13 @@
 
 > 覆盖清单逐屏对照 [`skin.md`](../docs/design/skin.md) §「覆盖清单（逐屏）」。每接入一屏，用同一份 `.pp` 验证「有素材 / 无素材」两种形态。
 
-- [x] `road`：15 槽位 / 47 姿态 / 样式标签优先级（**已定稿**，按 [`skin/01-road.md`](../docs/design/skin/01-road.md) 实现）；缺图回退脚印 `src/ui/Footprint.tsx`——**落点**：邻接折算 `src/play/road.ts`（格子 → 四邻四角 → `roadFlag`，多格节点按占地全算、按左上格取图）、取图 `roadPickAt()`（标签取自道路定义，走 `pickRoadStyle`）、渲染 `src/play/MapView.tsx`（每格 `roadPickAt` → `textureProps` → `SvgTexture`，该格未接管即照旧画脚印；素材按 `cellSize` 正方形居中，暂以屏幕 `CELL` 为基准，待 `background` 接入后改用背景层 `cellSize`）。**构建页画布（`src/build/Canvas.tsx`）本轮未接**，仍画脚印
+- [x] `road`：15 槽位 / 47 姿态 / 样式标签优先级（**已定稿**，按 [`skin/01-road.md`](../docs/design/skin/01-road.md) 实现）；缺图回退脚印 `src/ui/Footprint.tsx`——**落点**：邻接折算 `src/play/road.ts`（格子 → 四邻四角 → `roadFlag`，多格节点按占地全算、按左上格取图）、取图 `roadPickAt()`（标签取自道路定义，走 `pickRoadStyle`）、渲染 `src/play/MapView.tsx`（每格 `roadPickAt` → `textureProps` → `SvgTexture`，该格未接管即照旧画脚印；素材按 `cellSize` 正方形居中；屏幕一格恒为 `CELL`，**拉伸进一个屏幕格的倍率就是「屏幕每格像素 ÷ `cellSize`」**，与背景图（`05-canvas.md` §八）共用同一变换，故无需另算基准）。**构建页画布（`src/build/Canvas.tsx`）本轮未接**，仍画脚印
 - [ ] `role`：玩家棋子 / 职业形象 / 怪物形象 / **NPC 形象 `npcs`**（单格、无朝向；**地图上不绘制 NPC**，其形象唯一落点是对话弹层）＋ **立绘 `portraits`**（裁决 24 / 25 / 26）：底栏 hp/mp 左侧（**替代整个 `hud-face`**，缺位不占宽）、对战对话框顶部 **VS 区**（**任一方有立绘即渲染**，主角在左 / 怪物在右，缺侧留空、不补 emoji）、**对话弹层不设立绘区**（`S-29` 2026-09-29 修订，原裁决 26 的对话 VS 区作废；NPC 只占标题栏 `icon` 一格，取 `role.npcs.<id>`）、出身卡职业立绘（**居中**替代 `.class-icon`）、状态面板头部（与底栏**同源同图**）；遭遇 / 商店弹层**仅预留不渲染**（`S-29`）；立绘按**窗口短边 `W`** 的比例缩放、**底边对齐**（仅出身卡居中）、**不用 `CELL` 基准**、**不套手绘滤镜**、**不参与点击命中**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §四）
 - [ ] **受击表现**（裁决 25）：棋子与立绘**同一套规则**——有 `hurt` 素材即改显示 `hurt`，未提供则形变（基准：棋子＝格中心、立绘＝底边）；**`dead`（倒下）不设变体**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §4.4）
 - [ ] `window`：对话框 / 抽屉 / 气泡 / 按钮 / 格子 / 条 / 提示条；**按钮四态**结构定稿、接入可后置——先只读 `normal`，其余三态暂由 CSS 表现并在清单提示 `KW-6`（裁决 13 / [`skin/03-window.md`](../docs/design/skin/03-window.md) §四.1）
 - [ ] `window` §四.2 **信息图标组合**（裁决 12）：`background` 衬底在下 ＋ `icon` 居中在上；名称与说明文字走**窗体自身**字体字色，**不读** `building.font` / `fontColor`
 - [ ] `misc`：起点终点标记 / 建筑节点 / 骰子与骰面 / 图标兜底 / 引导线（[`skin/04-misc.md`](../docs/design/skin/04-misc.md)；游玩态内容图标无独立衬底）
-- [ ] `background`（画布）：**下标一一对应、每张地图只渲染一层** / 越界降级为最后一层 / 图点与格 `[0,0]` 中心对齐 / 跟随 `cellSize` 缩放 / 图外填充色取**采用层**的值 / 无可用层即默认配置（裁决 17，修订 23；[`skin/05-canvas.md`](../docs/design/skin/05-canvas.md)）
+- [x] `background`（画布）：**下标一一对应、每张地图只渲染一层** / 越界降级为最后一层 / 图点与格 `[0,0]` 中心对齐 / 跟随 `cellSize` 缩放 / 图外填充色取**采用层**的值 / 无可用层即默认配置（裁决 17，修订 23；[`skin/05-canvas.md`](../docs/design/skin/05-canvas.md)）——**落点**：取层与落位归纯函数 `src/engine/skin/canvas.ts`（`backgroundUsable()` 判掉 `KB-1`、`backgroundOf()` 吃 `available` 判掉 `KB-2` 并向前回退、`backgroundPlacement()` 出倍率与左上角落点）；渲染在 `src/play/MapView.tsx`（底纹色取采用层 → `translate/scale` 的 `<g>` 里一张背景图 → 参照线 / 道路）；图**按素材自身像素**出图（取图盒 `w/h: 'auto'`，SVG 层不写 `width`/`height`），故无需解码量尺寸。**构建页画布（`src/build/Canvas.tsx`）本轮未接**，仍画纸面底纹
 - [ ] `item` / `building`：背包与穿戴格衬底（`.bag-cell`）、组件库与信息视图、建筑地图贴图 `img`、地图名称 `font` / `fontColor`（字号固定 11px，取舍 `S-10`）；**描边缺省不绘制**（裁决 18；[`skin/06-item-building.md`](../docs/design/skin/06-item-building.md) §3.3）
 - [ ] `startup` / `lobby`：APP 欢迎页与游戏首页／选角页面，**首页封面图归皮肤侧**（`bg`，`.pmod` 不设字段）；字体与字色**不由**这两节接管（裁决 20；[`skin/08-pages.md`](../docs/design/skin/08-pages.md)）
 - [ ] `audio`：**V1 只解析与校验**——识别字段、路径与 `volume` 校验、清单提示；**不加载／不解码／不播放**，播放整体排 **V2.2**（裁决 16；[`skin/07-audio.md`](../docs/design/skin/07-audio.md)）
@@ -186,6 +186,15 @@
 **2026-09-30 · D3 起步：运行期通道 ＋ `road` 接入**
 - **公共前置**：新增 [`../src/store/skin.ts`](../src/store/skin.ts)——界面侧读皮肤的唯一入口，持有「生效皮肤 ＋ 素材源 ＋ 提示」，`activateLayers({ game, user })` 整体换两层、`refresh()` 从皮肤库重取用户启用的全局皮肤（本局层记住不冲掉）、`release()` 回到全部程序绘制；换套时**先撤旧的一套地址再交新的**（裁决 15）。[`../src/app/App.tsx`](../src/app/App.tsx) 启动时 `refresh()` 一次（幂等，没启用就落回程序绘制）。未启用皮肤时 `assets` 是空素材源，一切查询落 `undefined`，各屏自然回退程序绘制，**调用方不必判空**。
 - **道路接入**：新增 [`../src/play/road.ts`](../src/play/road.ts)（`roadAt` / `roadNeighbors` / `roadPickAt`：多格节点按占地全算、按左上格取图；非道路节点不算有路）；[`../src/play/MapView.tsx`](../src/play/MapView.tsx) 每格 `roadPickAt` → `textureProps` → `SvgTexture`，未接管的那一格照旧画 `Footprint`，姿态角落在 `transform` 上、素材按短边居中落图。
-- 待办（同屏遗留）：素材基准暂用屏幕 `CELL × CELL`，等 `background` 接入后改用背景层 `cellSize`（`01-road.md` §3.1）；**构建页画布仍为脚印**。
+- 待办（同屏遗留）：**构建页画布仍为脚印**。
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **34 个文件 / 386 项**全绿（新增 `src/play/__tests__/road.test.ts` 10 项、`src/store/__tests__/skin.test.ts` 8 项、`src/play/__tests__/mapView.test.tsx` 4 项）。
 - 设计侧同步：[`../docs/design/skin/01-road.md`](../docs/design/skin/01-road.md) 与 [`../docs/design/skin/00-package.md`](../docs/design/skin/00-package.md) §4.4 补「实现落点」、[`../docs/DESIGN.md`](../docs/DESIGN.md) 与 [`../TASK.md`](../TASK.md) 进度同步。
+
+**2026-09-30 · D3 第二屏：画布 `background` 接入（→ V2.1）**
+- **取层与落位**：[`../src/engine/skin/canvas.ts`](../src/engine/skin/canvas.ts) 补 `backgroundUsable()`（`img` ＋ 正的 `cellSize` 齐备，即 `KB-1`）、`backgroundOf(bg, mapIndex, available?)`（下标量出越界即 clamp 到最后一层；采用层不可用即**向前回退**；`available` 由调用方传入以判掉 `KB-2`，构建期用素材源 `has()`，**只问包里有没有、不建地址**）、`backgroundPlacement()`（§三 的倍率 `屏幕每格 ÷ cellSize` 与图片左上角落点，`startX` / `startY` 缺省按 `0`）。
+- **渲染**：[`../src/play/MapView.tsx`](../src/play/MapView.tsx) 按 §四 顺序——底纹 `<rect>` 的 `fill` 取**采用层**的 `color`（漏写即 `var(--paper-card)`）→ 背景图放进 `translate(x y) scale(s)` 的 `<g>`（带 `data-bg-layer`）→ 参照线 / 道路。未取到可用层时一字不改，照旧纸面底纹。
+- **图片尺寸交给素材自身像素**：`background` 没有「多大一个盒」，故取图盒新增 `w/h: 'auto'`（[`../src/engine/skin/texture.ts`](../src/engine/skin/texture.ts)），SVG 层据此**不写 `width` / `height`**、由浏览器按 SVG2 的 auto 取素材原始像素——**无需解码图片量尺寸**；`auto` 盒量不出盒心，该类元素不参与旋转 / 镜像（`background` 本来也没有这两个字段），`DomTexture` 对应写 `auto`。
+- **`§3.1` 基准落地**：屏幕一格恒为 `CELL`，素材拉伸进一个屏幕格的倍率**就是**「屏幕每格像素 ÷ `cellSize`」，与背景图共用同一变换——`road` 侧无需改代码，`01-road.md` §3.1 末条与 D3 遗留「暂用 `CELL` 基准」随之销账。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **34 个文件 / 398 项**全绿（新增 `mapView.test.tsx` 4 项画布背景用例、`pick.test.ts` 5 项取层与落位用例、`texture.ts` / `texture.tsx` 各 1～2 项 `auto` 盒用例）。
+- 设计侧同步：[`../docs/design/skin/05-canvas.md`](../docs/design/skin/05-canvas.md) 新增 §八 实现落点、[`../docs/design/skin/01-road.md`](../docs/design/skin/01-road.md) §十一 素材基准条改写、[`../docs/DESIGN.md`](../docs/DESIGN.md) 与 [`../TASK.md`](../TASK.md) 进度同步。
+- 同屏遗留：**构建页画布（`src/build/Canvas.tsx`）本轮仍未接**，仍画纸面底纹。

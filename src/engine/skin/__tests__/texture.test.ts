@@ -89,6 +89,11 @@ describe('角度与落位', () => {
     expect(placeTexture(box, undefined)).toBeUndefined()
   })
 
+  it('盒尺寸可以是 auto（尺寸交给素材自身像素，仅画布背景用）', () => {
+    const box = { x: 0, y: 0, w: 'auto' as const, h: 'auto' as const }
+    expect(placeTexture(box, { src: 'bg.jpg', rotate: 0, flip: false })).toEqual({ ...box, rotate: 0, flip: false })
+  })
+
   it('九宫格 / 平铺未解析前一律按拉伸（参数位）', () => {
     expect(effectiveMode('nine')).toBe('stretch')
     expect(effectiveMode('tile')).toBe('stretch')

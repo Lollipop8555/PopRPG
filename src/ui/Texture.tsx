@@ -10,7 +10,15 @@
  * - V1 只有拉伸；`nine` / `tile` 由 `effectiveMode` 回落（D6 落地）
  */
 
-import { effectiveMode, placeTexture, type TextureBox, type TextureMode, type TexturePlacement, type TextureRef } from '../engine/skin/texture'
+import {
+  effectiveMode,
+  placeTexture,
+  type TextureBox,
+  type TextureMode,
+  type TexturePlacement,
+  type TextureRef,
+  type TextureSize,
+} from '../engine/skin/texture'
 import type { SkinAssets } from '../io/skin-assets'
 
 /** 两层共用的调用接口 */
@@ -53,12 +61,19 @@ function num(value: number): number {
   return Math.round(value * 1000) / 1000
 }
 
+/** 盒尺寸是不是「交给素材自身像素」 */
+function isAuto(size: TextureSize): size is 'auto' {
+  return size === 'auto'
+}
+
 /** SVG 的绕心变换；无旋转也无镜像时不写 `transform` */
 function svgTransform({ x, y, w, h, rotate, flip }: TexturePlacement): string | undefined {
   const ops: string[] = []
   if (flip) ops.push('scale(-1 1)')
   if (rotate) ops.push(`rotate(${num(rotate)})`)
   if (ops.length === 0) return undefined
+  // `auto` 盒量不出盒心（画布背景）：该类元素不旋转、不镜像
+  if (isAuto(w) || isAuto(h)) return undefined
 
   const cx = num(x + w / 2)
   const cy = num(y + h / 2)
@@ -73,8 +88,9 @@ export function SvgTexture({ src, x, y, w, h, rotate, flip, mode, opacity, class
       href={src}
       x={x}
       y={y}
-      width={w}
-      height={h}
+      // `auto` 不写尺寸属性：SVG2 按素材原始像素出图（画布背景的唯一写法，`05-canvas.md` §三）
+      width={isAuto(w) ? undefined : w}
+      height={isAuto(h) ? undefined : h}
       preserveAspectRatio={effectiveMode(mode) === 'stretch' ? 'none' : 'xMidYMid meet'}
       transform={svgTransform(placement)}
       opacity={opacity}
@@ -84,6 +100,11 @@ export function SvgTexture({ src, x, y, w, h, rotate, flip, mode, opacity, class
       aria-label={alt}
     />
   )
+}
+
+/** DOM 层的尺寸写法：数值走 px，`auto` 交给素材自身像素 */
+function sizeCss(size: TextureSize): string {
+  return isAuto(size) ? 'auto' : `${num(size)}px`
 }
 
 /** DOM 层：画在面板 / 弹窗里（父元素需 `position: relative`） */
@@ -102,8 +123,8 @@ export function DomTexture({ src, x, y, w, h, rotate, flip, opacity, className, 
         position: 'absolute',
         left: `${num(x)}px`,
         top: `${num(y)}px`,
-        width: `${num(w)}px`,
-        height: `${num(h)}px`,
+        width: sizeCss(w),
+        height: sizeCss(h),
         transform: transforms.length ? transforms.join(' ') : undefined,
         transformOrigin: 'center',
         opacity,

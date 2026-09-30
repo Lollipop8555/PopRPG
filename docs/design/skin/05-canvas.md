@@ -114,3 +114,11 @@
 ## 七、待确认
 
 1. **是否需要动画背景**：当前每层只有一张静态图，无视差 / 滚动 / 帧动画。
+
+## 八、实现落点（2026-09-30）
+
+- **取层与落位**（[`canvas.ts`](../../../src/engine/skin/canvas.ts)）：`backgroundLayers()` 归一单对象／数组两种写法；`backgroundUsable()` 收紧到「有 `img` ＋ 正的 `cellSize`」（即 `KB-1`）；`backgroundOf(bg, mapIndex, available?)` 落 §二 的三条规则——**下标量出越界即 clamp 到最后一层**、采用层不可用即**向前回退**、一路落空即整节未接管；其中「路径取不到」（`KB-2`）由调用方经 `available` 传入（构建期用素材源 `has()`，**只问包里有没有、不建地址**）。`backgroundPlacement()` 出 §三 的缩放倍率与图片左上角落点，`startX` / `startY` 缺省按 `0`。
+- **渲染**（[`src/play/MapView.tsx`](../../../src/play/MapView.tsx)）：底纹 `<rect>` 的 `fill` 取**采用层**的 `color`（漏写即 `var(--paper-card)`），紧跟着把背景图放进 `translate(x y) scale(s)` 的 `<g>`（`data-bg-layer` 便于核对取的是下标几），之后才是参照线 / 道路（§四 的 ①②③ 顺序）。
+- **图片尺寸交给素材自身像素**：`background` 没有「多大一个盒」，故取图盒用 `w/h: 'auto'`（[`texture.ts`](../../../src/engine/skin/texture.ts)），SVG 层据此**不写 `width` / `height`**，由浏览器按 SVG2 的 auto 取素材原始像素——**无需解码图片量尺寸**；`auto` 盒量不出盒心，故该类元素不参与旋转 / 镜像（`background` 本来也没有 `rotate` / `flip`）。
+- **§3.1 的共同基准已是现状**：屏幕上一格恒为 `MapView` 的 `CELL`，素材按 `cellSize` 出品、被拉伸进**一个屏幕格**，其倍率恰好就是「屏幕每格像素 ÷ `cellSize`」，与背景图共用同一个变换（[`01-road.md`](01-road.md) §十一）——故道路侧无需另算基准；未配背景时两者同值。
+- **构建页画布**（`src/build/Canvas.tsx`）尚未接入，仍画纸面底纹。
