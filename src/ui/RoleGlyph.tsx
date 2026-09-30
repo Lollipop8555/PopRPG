@@ -9,16 +9,10 @@
  * 职业 / 怪物 / NPC 缺位时不会去借别的组的图（§三 回退表）。
  */
 
-import { textureProps, InlineTexture } from './Texture'
+import { CSS_SIZED_BOX, textureProps, InlineTexture } from './Texture'
 import { spriteRef } from '../engine/skin'
 import type { SkinAssets } from '../io/skin-assets'
 import type { SkinSprite } from '../types'
-
-/**
- * 形象格的标称盒：**尺寸其实由 CSS 决定**（`.inline-texture` 的 `1em`，跟着字号走），
- * 这里给 1×1 只是为了让落位函数有个形状可拿；`rotate` / `flip` 仍由行内层照实生效。
- */
-const GLYPH_BOX = { x: 0, y: 0, w: 1, h: 1 }
 
 export function RoleGlyph({
   sprite,
@@ -31,6 +25,6 @@ export function RoleGlyph({
   /** 素材缺位时的原样回退：该组自己的 `icon` emoji */
   icon?: string
 }) {
-  const tile = textureProps(spriteRef(sprite), assets, GLYPH_BOX)
+  const tile = textureProps(spriteRef(sprite), assets, CSS_SIZED_BOX)
   return tile ? <InlineTexture {...tile} /> : <>{icon}</>
 }

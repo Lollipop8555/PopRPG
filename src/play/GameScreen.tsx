@@ -26,8 +26,9 @@ import TalkDialog from './TalkDialog'
 import HeroNotice from './HeroNotice'
 import Overlay from '../ui/Overlay'
 import { useSkinStore } from '../store/skin'
-import { roleSprite } from '../engine/skin'
+import { portraitOf, roleSprite } from '../engine/skin'
 import { RoleGlyph } from '../ui/RoleGlyph'
+import { Portrait, portraitTile } from '../ui/Portrait'
 import { navigate } from '../app/router'
 
 type Drawer = 'status' | 'bag' | 'log' | 'equip' | null
@@ -66,6 +67,8 @@ export default function GameScreen({ session }: { session: Session }) {
   // 职业形象（`skin/02-role.md` §三）：底栏那一格与状态面板同源同图（立绘是另一回事，§4.1）
   const assets = useSkinStore((s) => s.assets)
   const role = useSkinStore((s) => s.skin?.manifest.role)
+  // 主角立绘：落点 1（底栏）。取不到即整块不渲染、hud-face 原样留着（§4.3）
+  const hudPortrait = portraitTile(portraitOf(role, 'player'), assets)
   const { player } = session
   const env = currentNodeInfo(session)
   const gate = env.gate
@@ -175,12 +178,19 @@ export default function GameScreen({ session }: { session: Session }) {
           {/* 底栏：资源 + 雷达 / 技能格 / 骰子区 / 菜单，操作全在这一条上 */}
           <div className="hud-bar panel">
             <div className="hud-vitals">
-              <div className="hud-face">
-                <RoleGlyph sprite={roleSprite(role, 'class', player.cls?.id)} assets={assets} icon={player.cls?.icon} />{' '}
-                {player.cls?.name ?? '无职业'}
+              {/* 主角立绘替代整块 hud-face；没有立绘就原样留着 hud-face（§4.1 落点 1） */}
+              {hudPortrait ? (
+                <Portrait tile={hudPortrait} size="hud" />
+              ) : (
+                <div className="hud-face">
+                  <RoleGlyph sprite={roleSprite(role, 'class', player.cls?.id)} assets={assets} icon={player.cls?.icon} />{' '}
+                  {player.cls?.name ?? '无职业'}
+                </div>
+              )}
+              <div className="hud-vitals-main">
+                <Bar label="hp" value={player.resources.hp} max={player.stats.hp} tone="hp" />
+                <Bar label="mp" value={player.resources.mp} max={player.stats.mp} tone="mp" />
               </div>
-              <Bar label="hp" value={player.resources.hp} max={player.stats.hp} tone="hp" />
-              <Bar label="mp" value={player.resources.mp} max={player.stats.mp} tone="mp" />
             </div>
 
             <div className="hud-radar">

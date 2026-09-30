@@ -108,11 +108,21 @@
   backdrop-filter: blur(4px);
 }
 
+/* 底栏左端：立绘（有则出）在左、血蓝条在右，两者底边对齐（`skin/02-role.md` §4.1 落点 1） */
 .hud-vitals {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 150px;
+}
+
+.hud-vitals-main {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  min-width: 150px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .hud-face {
@@ -641,6 +651,32 @@
 /* 交锋对话框（文字战斗画面，§4.8.3） */
 .battle {
   width: min(560px, 100%);
+}
+
+/* 立绘 VS 区（`skin/02-role.md` §4.1 落点 2）：主角恒在左、怪物恒在右，
+   缺的一侧留空（不补 emoji、不补占位图），「VS」是文字、沿用主题字体 */
+.vs-area {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 4px 0 8px;
+}
+
+.vs-side {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.vs-text {
+  flex: 0 0 auto;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  padding-bottom: 6px;
 }
 
 .battle-foe {

@@ -23,6 +23,13 @@ import {
 } from '../engine/skin/texture'
 import type { SkinAssets } from '../io/skin-assets'
 
+/**
+ * **CSS 尺寸盒**（行内层专用）：尺寸不来自游戏坐标，而由所在处 CSS 决定——
+ * 形象格是 `.inline-texture` 的 `1em`（跟字号走），立绘是 `.portrait-*` 的 `vmin` 档（跟窗口走）。
+ * 给个 1×1 名义盒只为让落位函数拿到形状；`rotate` / `flip` 照旧生效（绕心，与盒大小无关）。
+ */
+export const CSS_SIZED_BOX: TextureBox = { x: 0, y: 0, w: 1, h: 1 }
+
 /** 两层共用的调用接口 */
 export interface TextureProps extends TexturePlacement {
   /** 已建好的可用地址（`textureProps()` 从素材源取好） */

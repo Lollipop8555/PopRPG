@@ -13,9 +13,10 @@ import type { LogLine, Session } from '../types/session'
 import { canUseSkill, costText } from '../engine/skill'
 import { usePlayStore } from '../store/play'
 import { useSkinStore } from '../store/skin'
-import { roleSprite } from '../engine/skin'
+import { portraitOf, roleSprite } from '../engine/skin'
 import Overlay from '../ui/Overlay'
 import { RoleGlyph } from '../ui/RoleGlyph'
+import { Portrait, portraitTile } from '../ui/Portrait'
 import { DieFace } from './DiceLog'
 import { Bar } from './StatusPanel'
 
@@ -98,6 +99,11 @@ export default function BattleDialog({ session }: { session: Session }) {
   const foeHpPct = monster.stats.hp > 0 ? Math.max(0, monster.resources.hp / monster.stats.hp) : 0
   const canAct = session.combatStage === 'player'
 
+  // VS 区立绘（`skin/02-role.md` §4.1 落点 2）：主角在左、怪物在右；怪物侧**不跨怪物借用**，
+  // 任一方画得出来即渲染整个 VS 区，缺的一侧留空（`undefined` 即该侧为空）
+  const heroPortrait = portraitTile(portraitOf(role, 'player'), assets)
+  const foePortrait = portraitTile(portraitOf(role, 'monster', monster.id), assets)
+
   return (
     <Overlay>
       <div className="modal battle">
@@ -108,6 +114,19 @@ export default function BattleDialog({ session }: { session: Session }) {
           </span>
           <span className="badge err">交锋中</span>
         </div>
+
+        {/* 立绘 VS 区（`skin/02-role.md` §4.1 落点 2）：任一方有立绘即整块渲染 */}
+        {(heroPortrait || foePortrait) && (
+          <div className="vs-area">
+            <div className="vs-side">
+              <Portrait tile={heroPortrait} size="vs" />
+            </div>
+            <span className="vs-text hand">VS</span>
+            <div className="vs-side">
+              <Portrait tile={foePortrait} size="vs" />
+            </div>
+          </div>
+        )}
 
         {/* 怪物状态 */}
         <div className="battle-foe">

@@ -28,7 +28,7 @@
 |---|---|---|---|
 | **V1** | Phase 0 基座 / Phase A BUILD / Phase B PLAY | **已冻结口径**：七大类 · 13 项配置 · `encounter` 五选一 | **已完成**（A 首轮 ＋ B 全部 58 项勾选；全量 197 项单测绿） |
 | **V2.0** | **新增 NPC 与对话**（第 8 类组件 ＋ **进入建筑后的 NPC 触发节点**） | **追加设定 / 结构改造**（不属于 V1 的阶段性设计） | **已完成**（编辑器侧 E0–E3 ＋ 运行时 E4 ＋ 19 项原子验收；E5 皮肤落点并入 **V2.1**） |
-| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ 棋子形象（`role` 的 `player` / `classes` / `monsters` / `npcs`）已接，立绘与受击表现、余下各屏待做） |
+| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ 棋子形象（`role` 的 `player` / `classes` / `monsters` / `npcs`）＋ 立绘（`role.portraits` 四落点）已接，受击表现（§4.4）与余下各屏待做） |
 | **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 九宫格切片消费 / 皮肤校验 / 音频播放 | 叠加层 | V2.1 之后 |
 
 > **V1 口径冻结、不改写**：`task/00-foundation.md` / `task/01-build.md` 里的「七大类 / 13 项 / 五选一」是 **V1 史实**；
@@ -130,6 +130,13 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 ---
 
 ## 进度同步
+
+**2026-09-30 · D3 第四屏（立绘 `role.portraits` 接入）**
+- 渲染件：[`src/ui/Portrait.tsx`](src/ui/Portrait.tsx)（`portraitTile()` ＋ `Portrait`），借**行内层** `InlineTexture` 出图；尺寸全在 CSS——`W = min(视口宽, 视口高)` 即 `100vmin`，故高度档是 `.portrait-hud / -vs / -card` 的 `6 / 18 / 10vmin`，宽度由素材宽高比推出、`max-width: 25%` 为上限（撞上限按比例整体回缩，不拉伸）；默认底边对齐、出身卡居中。`Texture.tsx` 相应抽出 `CSS_SIZED_BOX`（行内层「尺寸交给 CSS」的名义盒，形象格与立绘共用）。
+- 四个落点：① 底栏 `.hud-vitals` 内、hp / mp 条左侧（**替代整个 `hud-face`**；血蓝条包进 `.hud-vitals-main` 与立绘底边对齐）、④ 状态面板 `.panel-head`（与 ① 同源同图）、② 对战弹层新增 `.vs-area`（**任一方画得出来即整块渲染**，主角左 / 怪物右，缺侧是空 `<div>`、不补 emoji / 占位图）、⑤ 出身卡 `.class-card-head` 替代 `.class-icon`（逐卡查 `classes.<职业 id>`、缺位先回退 `portraits.player`）。
+- 缺位即不占位（§4.3）：`portraitTile()` 给 `undefined` 则 `Portrait` 返回 `null`；落点 ① / ④ 是显式二选一。**NPC 立绘仍不渲染**（`S-29`：对话弹层不设立绘区，NPC 形象只有标题栏那一格 `icon`）。
+- 遗留：`max-width: 25%` 的基数是「所在容器」还是「整个底栏 / 对话框」按观感定；**§4.4 受击表现（`hurt` 素材与形变）未接**（需「受击瞬间」信号）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **37 个文件 / 422 项**全绿（新增 16 项）。设计侧同步 [`docs/design/skin/02-role.md`](docs/design/skin/02-role.md) §十一（实现落点重写）与 §十 待确认 6；任务侧 [`task/04-skin.md`](task/04-skin.md) 的 `role` 条补立绘落点。
 
 **2026-09-30 · D3 第三屏（棋子形象 `role` 接入）**
 - 取图：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 的 `roleSprite(role, kind, id)` 按 `02-role.md` §三 四组各查各表（**不跨组借用**），`spriteRef()` 归一三写法、只出形状不碰 IO。

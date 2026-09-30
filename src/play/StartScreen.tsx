@@ -12,9 +12,10 @@
 import { useState } from 'react'
 import type { Scenario } from '../types/session'
 import { rollClass } from './flow'
-import { roleSprite } from '../engine/skin'
+import { portraitOf, roleSprite } from '../engine/skin'
 import { useSkinStore } from '../store/skin'
 import { RoleGlyph } from '../ui/RoleGlyph'
+import { Portrait, portraitTile } from '../ui/Portrait'
 
 export default function StartScreen({
   scenario,
@@ -37,6 +38,8 @@ export default function StartScreen({
   // 职业形象（`skin/02-role.md` §三）：卡片头上那一格按职业查表，缺位即 `cls.icon` emoji
   const assets = useSkinStore((s) => s.assets)
   const role = useSkinStore((s) => s.skin?.manifest.role)
+  // 职业立绘（§4.1 落点 5）：`classes.<职业 id>` → 回退 `player`；两者都取不到才是 `undefined`（⇒ 回 emoji）
+  const classPortrait = (id: string) => portraitTile(portraitOf(role, 'class', id), assets)
 
   // 玩家自己掷骰决定出身（带一个短暂的摇骰过程）
   const roll = () => {
@@ -97,9 +100,14 @@ export default function StartScreen({
                 onClick={() => setSelectedId(cls.id)}
               >
                 <div className="class-card-head">
-                  <span className="class-icon">
-                    <RoleGlyph sprite={roleSprite(role, 'class', cls.id)} assets={assets} icon={cls.icon} />
-                  </span>
+                  {/* 职业立绘放大替代 `.class-icon`（缺图回退 `portraits.player`，再缺才回 emoji）；居中（§4.1 落点 5） */}
+                  {classPortrait(cls.id) ? (
+                    <Portrait tile={classPortrait(cls.id)} size="card" center />
+                  ) : (
+                    <span className="class-icon">
+                      <RoleGlyph sprite={roleSprite(role, 'class', cls.id)} assets={assets} icon={cls.icon} />
+                    </span>
+                  )}
                   <span className="class-name">{cls.name}</span>
                 </div>
                 {cls.desc && <div className="muted">{cls.desc}</div>}

@@ -83,6 +83,44 @@ textarea {
   user-select: none;
 }
 
+/* 立绘（`skin/02-role.md` §4.2）：高度＝窗口短边 `W`（`100vmin`）的固定比例、宽度由素材宽高比推出，
+   并受可用宽度 25% 上限约束（超出即整体等比缩小，不拉伸变形）；默认底边对齐、出身卡居中。
+   素材必须自带透明留白，本节不提供内边距字段 */
+.portrait {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  max-width: 25%;
+}
+
+.portrait-hud {
+  /* 底栏 / 状态面板头部：6% W */
+  height: 6vmin;
+}
+
+.portrait-vs {
+  /* 对战对话框 VS 区：18% W */
+  height: 18vmin;
+}
+
+.portrait-card {
+  /* 出身卡：10% W */
+  height: 10vmin;
+}
+
+.portrait-center {
+  align-items: center;
+}
+
+/* 图片填满尺寸盒：高定死（跟窗口走），宽按素材自身宽高比；撞上 25% 上限即按比例整体缩小 */
+.portrait > img {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  vertical-align: baseline;
+}
+
 /* ---------------- 纸张卡片 / 面板 ---------------- */
 
 .panel {

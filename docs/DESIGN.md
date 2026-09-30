@@ -124,6 +124,13 @@
 
 ## 进度同步
 
+**2026-09-30 · D3 第四屏：立绘 `role.portraits` 接入（[`design/skin/02-role.md`](design/skin/02-role.md) §4.1 / §十一）**
+- 渲染件：[`src/ui/Portrait.tsx`](../src/ui/Portrait.tsx)（`portraitTile()` ＋ `Portrait`），借**行内层** `InlineTexture` 出图——立绘只吃 `src` / `flip`，尺寸全部交给 CSS：`W = min(视口宽, 视口高)` 本就是 `100vmin`，于是高度档是 `.portrait-hud / -vs / -card` 的 `6 / 18 / 10vmin`，宽度由素材宽高比推出、`max-width: 25%` 为上限（撞上限由替换元素规则**按比例整体回缩**，故不拉伸），默认底边对齐、出身卡 `.portrait-center` 居中。`Texture.tsx` 抽出 `CSS_SIZED_BOX`（行内层「尺寸交给 CSS」的名义盒）供形象格与立绘共用。
+- 四个落点（[`design/skin/02-role.md`](design/skin/02-role.md) §4.1）：① [`src/play/GameScreen.tsx`](../src/play/GameScreen.tsx) 底栏 `.hud-vitals` 内、hp / mp 条左侧（**替代整个 `hud-face`**，血蓝条包进 `.hud-vitals-main` 与之底边对齐）、④ [`src/play/StatusPanel.tsx`](../src/play/StatusPanel.tsx) 面板头（与 ① 同源同图）、② [`src/play/BattleDialog.tsx`](../src/play/BattleDialog.tsx) 新增 `.vs-area`（**任一方画得出来即整块渲染**，主角左 / 怪物右，缺侧留空、不补 emoji）、⑤ [`src/play/StartScreen.tsx`](../src/play/StartScreen.tsx) 出身卡 `.class-card-head` 替代 `.class-icon`（逐卡查职业、缺位先回退 `portraits.player`）。
+- 缺位即不占位（§4.3）：没配或包里缺图 → `Portrait` 返回 `null`；落点 ① / ④ 是显式二选一，落点 ② 整块条件渲染。**NPC 立绘仍不渲染**（`S-29`：对话弹层不设立绘区，NPC 形象只有标题栏那一格 `icon`）。
+- 遗留：`max-width: 25%` 的基数（所在容器 vs 整个底栏 / 对话框）按观感定；**§4.4 受击表现（`hurt` 素材与形变）未接**——需「受击瞬间」信号。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **37 个文件 / 422 项**全绿（新增 16 项）。
+
 **2026-09-30 · D3 第三屏：棋子形象 `role` 接入（[`design/skin/02-role.md`](design/skin/02-role.md) §十一）**
 - 取图：`roleSprite(role, kind, id)`（[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts)）按 §三 四组各查各表、**不跨组借用**（职业 / 怪物 / NPC 缺位即回退该组自己的 `icon` emoji）；`spriteRef()` 承担三写法归一，两者都只出形状、不碰 IO。
 - 地图棋子：[`src/play/MapView.tsx`](../src/play/MapView.tsx) 的 `role.player` 按**整格大小 ＋ 锚点格中心**出图（`x/y = 格 × CELL`、`w/h = CELL`，四周留白由素材自画）→ SVG 层 `SvgTexture`；**取不到图才回到方框 ＋ 职业 `icon` emoji**。绿色定位环是「你在这儿」的标记、与棋子形象无关，故照旧画。
