@@ -4,6 +4,7 @@
  */
 
 import { canUseSkill, costText } from '../engine/skill'
+import { useSlotStyle } from '../ui/useSlotStyle'
 import type { Session } from '../types/session'
 
 export default function SkillBar({
@@ -18,6 +19,7 @@ export default function SkillBar({
   const inCombat = session.phase === 'combat'
   const canAct = inCombat && session.combatStage === 'player'
   const skills = session.player.skills
+  const slot = useSlotStyle('skill')
 
   return (
     <div className="skill-slots">
@@ -28,6 +30,7 @@ export default function SkillBar({
           <button
             key={skill.id}
             className={`skill-slot ${selected === skill.id ? 'selected' : ''}`}
+            style={slot}
             disabled={!usable || !canAct}
             onClick={() => onSelect(skill.id)}
             title={`${skill.name}　成本：${costText(skill.cost)}`}

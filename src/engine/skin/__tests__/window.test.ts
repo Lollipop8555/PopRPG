@@ -4,11 +4,12 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { BUTTON_KINDS, buttonOf, surfaceOf } from '../lookup'
+import { BUTTON_KINDS, SLOT_KINDS, buttonOf, slotOf, surfaceOf } from '../lookup'
 import type { SkinButton, SkinWindow } from '../../../types'
 
 const DIALOG = 'art/window/paper.png'
 const PRIMARY = 'art/window/btn-primary.png'
+const SKILL = 'art/window/slot-skill.png'
 
 describe('window.surfaces 取值（§四）', () => {
   const win: SkinWindow = {
@@ -67,5 +68,33 @@ describe('window.buttons 取值（§四）', () => {
 
   it('键集合是固定的七个（清单与遍历用），键名不随实现漂移', () => {
     expect([...BUTTON_KINDS]).toEqual(['plain', 'primary', 'danger', 'ghost', 'small', 'icon', 'close'])
+  })
+})
+
+describe('window.slots 取值（§四）', () => {
+  const win: SkinWindow = {
+    slots: {
+      skill: SKILL,
+      bag: { img: 'art/window/slot-bag.png', slice: [8, 8, 8, 8] },
+    },
+  }
+
+  it('四个键各查自己的键：字符串写法与图引用写法都原样交出', () => {
+    expect(slotOf(win, 'skill')).toBe(SKILL)
+    expect(slotOf(win, 'bag')).toEqual({ img: 'art/window/slot-bag.png', slice: [8, 8, 8, 8] })
+  })
+
+  it('不跨键借用：配了技能格不会让奖励卡 / 部位标签跟着有图', () => {
+    expect(slotOf(win, 'reward')).toBeUndefined()
+    expect(slotOf(win, 'equipLabel')).toBeUndefined()
+  })
+
+  it('整个 window 节缺位（无皮肤 / 老包）即取不到，不抛', () => {
+    expect(slotOf(undefined, 'skill')).toBeUndefined()
+    expect(slotOf({ surfaces: {} }, 'skill')).toBeUndefined()
+  })
+
+  it('键集合是固定的四个（清单与遍历用），键名不随实现漂移', () => {
+    expect([...SLOT_KINDS]).toEqual(['skill', 'reward', 'bag', 'equipLabel'])
   })
 })

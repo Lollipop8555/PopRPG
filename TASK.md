@@ -131,6 +131,13 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 
 ## 进度同步
 
+**2026-09-30 · D3 第十二屏（固定族格子 `window.slots` 接入）**
+- 四个**固定族格子**键接入 `window.slots`：技能格 / 奖励卡 / 背包格 / 部位标签。固定族尺寸写死（技能格 54 / 奖励卡 92 / 部位标签 44），V1 走**整图等比拉伸**，不需要九宫格 → 该条能在 V2.1 内收口。
+- 取图 [`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `SLOT_KINDS` / `slotOf(win, kind)`（四键不跨键借用）；接线 [`src/ui/useSlotStyle.ts`](src/ui/useSlotStyle.ts) 的 `useSlotStyle(kind)` **复用容器那份 `surfaceStyle()`**——V1.1 接九宫格时容器 / 按钮 / 格子一处改完。
+- 落点四处：[`SkillBar.tsx`](src/play/SkillBar.tsx) 与 [`BattleDialog.tsx`](src/play/BattleDialog.tsx) 的 `.skill-slot`（同吃 `skill`）、[`GainNoteView.tsx`](src/play/GainNoteView.tsx) 的 `.reward-card`、[`EquipPanel.tsx`](src/play/EquipPanel.tsx) 的 `.equip-slot`、[`BagPanel.tsx`](src/play/BagPanel.tsx) 的 `.bag-cell`。
+- **背包格的交叠已定**（原先留待 V1.1 的唯一原因）：与 `item.background` 取「**道具衬底优先、格位底纹兜底**」，调用点写 `cell ?? bagSlot`，hook 不判别，两节不抢落点。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **52 个文件 / 608 项**全绿（新增 [`src/play/__tests__/slotSkin.test.tsx`](src/play/__tests__/slotSkin.test.tsx) 12 项 ＋ `window.test.ts` 补 4 项）。设计侧同步 [`docs/design/skin/03-window.md`](docs/design/skin/03-window.md) §4.3 / §八；任务侧 [`task/04-skin.md`](task/04-skin.md) 拆出已勾选的「固定族格子」条，剩余「条 / 提示条 / 分隔线」等 V1.1 九宫格。
+
 **2026-09-30 · D3 第十一屏（音频 `audio` 解析与校验接入）**
 - 取值与校验（纯函数）：新增 [`src/engine/skin/audio.ts`](src/engine/skin/audio.ts)——`bgmOf()` / `sfxOf()` 原值、`bgmTrackOf()` / `sfxTrackOf()` 收成 `{ file, loop?, volume }`（字符串 / 对象两写法、缺省、越界一次算清）、`clampVolume()` 越界夹回 0–1（不静音）；缺省 `BGM_DEFAULT_VOLUME = 0.5` / `BGM_DEFAULT_LOOP = true` / `SFX_DEFAULT_VOLUME = 0.8`；**场景 / 事件不跨键借用**。
 - 报码：`unknownSfxEvents()` 出 `KA-2`（清单外 `sfx` 事件键、忽略），`outOfRangeVolumes()` 出 `KA-3`（`volume` 越界出处，如 `audio.bgm.map.volume`）。

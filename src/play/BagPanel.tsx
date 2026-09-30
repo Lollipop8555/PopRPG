@@ -11,6 +11,7 @@ import type { Session } from '../types/session'
 import { bagCapacityText, itemDef } from './inventory'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useButtonStyle } from '../ui/useButtonStyle'
+import { useSlotStyle } from '../ui/useSlotStyle'
 import { ItemGlyph } from '../ui/ItemGlyph'
 import { groundStyle } from '../ui/Texture'
 import { GameIcon } from '../ui/GameIcon'
@@ -41,6 +42,9 @@ export default function BagPanel({
   // 按钮（`skin/03-window.md` §四）：格子里的行内动作走 `small`，标题栏的关闭走 `close`
   const smallBtn = useButtonStyle('small')
   const closeBtn = useButtonStyle('close')
+  // 背包格底纹（`skin/03-window.md` §四）：这是格子与 `item.background` 的**唯一交叠处**，
+  // 取「道具衬底优先、格位底纹兜底」——道具配了 `background` 就整格归它，没配才铺 `slots.bag`
+  const bagSlot = useSlotStyle('bag')
 
   return (
     <div className="panel" style={surface}>
@@ -75,7 +79,7 @@ export default function BagPanel({
             <div
               key={entry.id}
               className="bag-cell"
-              style={cell}
+              style={cell ?? bagSlot}
               title={`${item.name} ×${entry.count}${item.desc ? `\n${item.desc}` : ''}`}
             >
               <span className="bag-count">×{entry.count}</span>
@@ -109,7 +113,7 @@ export default function BagPanel({
                 <div
                   key={item.id}
                   className="bag-cell"
-                  style={cell}
+                  style={cell ?? bagSlot}
                   title={`${item.name}（${item.slots ? item.slots.map((s) => SLOT_LABEL[s]).join('/') : ''}）`}
                 >
                   <ItemGlyph skin={skin} assets={assets} icon={item.icon} className="bag-ico" />

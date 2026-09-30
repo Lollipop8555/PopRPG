@@ -16,6 +16,7 @@ import { useSkinStore } from '../store/skin'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useDieBodyStyle } from '../ui/useDieSkin'
 import { useButtonStyle } from '../ui/useButtonStyle'
+import { useSlotStyle } from '../ui/useSlotStyle'
 import { portraitOf, roleSprite } from '../engine/skin'
 import Overlay from '../ui/Overlay'
 import { RoleGlyph } from '../ui/RoleGlyph'
@@ -72,6 +73,9 @@ export default function BattleDialog({ session }: { session: Session }) {
   const surface = useSurfaceStyle('dialog')
   // 骰子本体（`skin/04-misc.md` §三）：战中那两枚（定格 30 / 掷骰中 38）同吃一张
   const dieBody = useDieBodyStyle()
+  // 技能格底纹（`skin/03-window.md` §四）：与 HUD 底栏的 `SkillBar` 同为「技能格」，
+  // 走同一个键 `window.slots.skill`（两处不是两套素材）
+  const skillSlot = useSlotStyle('skill')
   // 按钮（`skin/03-window.md` §四）：操作区的主行动（攻击 / 防御 / 继续交锋）走 `primary`，
   // 「不防御」是这一场里的危险动作，走 `danger`
   const primaryBtn = useButtonStyle('primary')
@@ -251,6 +255,7 @@ export default function BattleDialog({ session }: { session: Session }) {
                     <button
                       key={skill.id}
                       className={`skill-slot ${selected === skill.id ? 'selected' : ''}`}
+                      style={skillSlot}
                       disabled={!usable}
                       onClick={() => setSelected(skill.id)}
                       title={`${skill.name}　成本：${costText(skill.cost)}`}

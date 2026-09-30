@@ -101,6 +101,20 @@ export function surfaceOf(win: SkinWindow | undefined, kind: SurfaceKind): SkinT
 }
 
 /**
+ * **固定尺寸格子键**（`skin/03-window.md` §二「固定族」/ §四）：技能格 / 奖励卡 / 背包格 / 部位标签。
+ * 尺寸写死在程序里（技能格 54、奖励卡 92、部位标签 44），故 V1 可整图等比拉伸——与容器同一条取图链。
+ * 四个键各有落点、**不互相借用**；配了无人读取的键静默搁置，与其余各节一致。
+ */
+export const SLOT_KINDS = ['skill', 'reward', 'bag', 'equipLabel'] as const
+
+export type SlotKind = (typeof SLOT_KINDS)[number]
+
+/** 取固定族格子底纹；`window.slots` 未配该键即 `undefined` */
+export function slotOf(win: SkinWindow | undefined, kind: SlotKind): SkinTexture | undefined {
+  return win?.slots?.[kind]
+}
+
+/**
  * **按钮键**（`skin/03-window.md` §四）：键按**元素角色**判定，不按 CSS 类名判定——
  * `plain` 是 `.btn` 本身（中性按钮），`primary` / `danger` / `ghost` / `small` 是它的四个修饰类，
  * `icon`（只有图形、无文字的按钮）与 `close`（关闭）由调用点在落点处显式指定。

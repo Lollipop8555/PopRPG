@@ -9,9 +9,13 @@
  */
 
 import type { GainNote } from '../types/session'
+import { useSlotStyle } from '../ui/useSlotStyle'
 import { gainLines } from './gain'
 
 export default function GainNoteView({ note, compact = false }: { note: GainNote; compact?: boolean }) {
+  // 奖励卡底纹（`skin/03-window.md` §四）：`compact` 与整块走**同一个键**，钩子提到早返回之前
+  const card = useSlotStyle('reward')
+
   if (compact) {
     return (
       <div className="gain-lines">
@@ -31,7 +35,7 @@ export default function GainNoteView({ note, compact = false }: { note: GainNote
           <div className="reward-title">获得</div>
           <div className="reward-grid">
             {note.items.map((it, i) => (
-              <div key={i} className="reward-card" title={it.name}>
+              <div key={i} className="reward-card" style={card} title={it.name}>
                 <span className="reward-ico">{it.icon || '❔'}</span>
                 <span className="reward-name">{it.name}</span>
                 <span className="reward-count">×{it.count}</span>

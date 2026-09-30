@@ -13,6 +13,7 @@ import type { Session } from '../types/session'
 import { itemDef } from './inventory'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useButtonStyle } from '../ui/useButtonStyle'
+import { useSlotStyle } from '../ui/useSlotStyle'
 import { ItemGlyph } from '../ui/ItemGlyph'
 import { GameIcon } from '../ui/GameIcon'
 import { itemSkinOf } from '../engine/skin'
@@ -50,6 +51,8 @@ export default function EquipPanel({
   // 按钮（`skin/03-window.md` §四）：部位行的「更换 / 装备」走 `small`，标题栏的关闭走 `close`
   const smallBtn = useButtonStyle('small')
   const closeBtn = useButtonStyle('close')
+  // 部位标签底纹（`skin/03-window.md` §四）：左侧那一列固定 44px 的格子，走 `window.slots.equipLabel`
+  const slotLabel = useSlotStyle('equipLabel')
 
   // 背包里、能穿进该部位、且还没穿的装备
   const candidatesFor = (slot: (typeof EQUIP_SLOTS)[number]): ItemDef[] =>
@@ -83,7 +86,9 @@ export default function EquipPanel({
           const items = equippedIn(slot)
           return (
             <div key={slot} className="equip-row">
-              <div className="equip-slot">{SLOT_LABEL[slot]}</div>
+              <div className="equip-slot" style={slotLabel}>
+                {SLOT_LABEL[slot]}
+              </div>
               <div className="equip-items">
                 {items.length === 0 ? (
                   <span className="faint">— 空 —</span>

@@ -124,6 +124,13 @@
 
 ## 进度同步
 
+**2026-09-30 · D3 第十二屏：固定族格子 `window.slots` 接入（[`design/skin/03-window.md`](design/skin/03-window.md) §4.3 / §八）**
+- **D3「`window` 其余」的第一项落地**：四个**固定族格子**键——技能格 / 奖励卡 / 背包格 / 部位标签——接入 `window.slots`。固定族尺寸写死（§二：技能格 54 / 奖励卡 92 / 部位标签 44），故 V1 走**整图等比拉伸**，不需要九宫格，这一项因此能在 V2.1 内完成。
+- **与容器 / 按钮同一条取图链**：[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `SLOT_KINDS` / `slotOf(win, kind)`（四键**不跨键借用**）→ [`src/ui/useSlotStyle.ts`](../src/ui/useSlotStyle.ts) 的 `useSlotStyle(kind)` 复用 `surfaceStyle()`。V1.1 接九宫格时**容器 / 按钮 / 格子一处改完**（`surfaceStyle()` 内部换 `border-image`），三侧调用方一行不动。
+- **四个落点**：[`SkillBar.tsx`](../src/play/SkillBar.tsx) 与 [`BattleDialog.tsx`](../src/play/BattleDialog.tsx) 的 `.skill-slot`（**两处同吃 `skill`**，不是两套素材）、[`GainNoteView.tsx`](../src/play/GainNoteView.tsx) 的 `.reward-card`、[`EquipPanel.tsx`](../src/play/EquipPanel.tsx) 的 `.equip-slot`、[`BagPanel.tsx`](../src/play/BagPanel.tsx) 的背包格与穿戴格 `.bag-cell`。未配该键 / 包里缺图 / 未启用皮肤一律不传 `style`，CSS 纸面照旧。
+- **背包格的交叠已定**（原文留待 V1.1 的唯一原因）：`.bag-cell` 同时是道具衬底位（[`06-item-building.md`](design/skin/06-item-building.md) §3.2），取「**道具衬底优先、格位底纹兜底**」——调用点写 `cell ?? bagSlot`（`cell` 为 `undefined` 即道具没配 `background`），**hook 本身仍是纯读取、不判别**，两节因此不会抢同一个落点、同一格上只出现一层。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **52 个文件 / 608 项**全绿（新增 1 个用例文件 / 16 项：[`src/play/__tests__/slotSkin.test.tsx`](../src/play/__tests__/slotSkin.test.tsx) 12 项落点（含背包格两半的优先级）、[`src/engine/skin/__tests__/window.test.ts`](../src/engine/skin/__tests__/window.test.ts) 补 4 项取值，且旧的「整节没接管 → 一个行内样式都不传」不变量未回归）。任务侧 [`task/04-skin.md`](../task/04-skin.md) 拆出已勾选的「固定族格子」条。
+
 **2026-09-30 · D3 第十一屏：音频 `audio` 解析与校验接入（[`design/skin/07-audio.md`](design/skin/07-audio.md) §五 / §八）**
 - **承接裁决 16 的「V1 只解析预留、不播放」**：本批把 `audio` 这一节的**解析与校验**接上——识别字段、校验事件键与 `volume`、给加载期提示；**不建 `AudioContext`、不请求 / 解码素材、不播放**，播放（含 `KA-5` 曲目时长）整体留 V2.2。
 - **取值与校验归纯函数**：[`src/engine/skin/audio.ts`](../src/engine/skin/audio.ts) 新增 `bgmOf()` / `sfxOf()`（原值）、`bgmTrackOf()` / `sfxTrackOf()`（收成 `{ file, loop?, volume }`，把字符串 / 对象两写法、缺省、越界一次算清）、`clampVolume()`（越界夹回 0–1，不静音不换算）；缺省常量 `BGM_DEFAULT_VOLUME = 0.5` / `BGM_DEFAULT_LOOP = true` / `SFX_DEFAULT_VOLUME = 0.8`。**场景 / 事件各查自己的键、不跨键借用**。
