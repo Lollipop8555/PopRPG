@@ -35,14 +35,14 @@ export function useLobbyBgStyle(): CSSProperties | undefined {
   return pageBgStyle(textureRef(bg), assets, pageFitOf(bg))
 }
 
-/** 「这一局的世界」正文面板的底（`.panel.scroll`）；V1 一律拉伸（`S-1`） */
+/** 「这一局的世界」正文面板的底（`.panel.scroll`）；铺法看素材有没有交 `slice`（九宫格已落地） */
 export function useLobbyPanelStyle(): CSSProperties | undefined {
   const assets = useSkinStore((s) => s.assets)
   const lobby = useSkinStore((s) => s.skin?.manifest.lobby)
   return surfaceStyle(textureRef(lobby?.panel), assets)
 }
 
-/** 出身卡底：`img` 铺满整卡（V1 拉伸，`KPG-2`），`stroke` 只写在配了的那一态 */
+/** 出身卡底：`img` 铺满整卡（没交切片即拉伸，`KPG-2`），`stroke` 只写在配了的那一态 */
 export function useLobbyCardStyle(selected: boolean): CSSProperties | undefined {
   const assets = useSkinStore((s) => s.assets)
   const lobby = useSkinStore((s) => s.skin?.manifest.lobby)

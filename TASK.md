@@ -28,8 +28,8 @@
 |---|---|---|---|
 | **V1** | Phase 0 基座 / Phase A BUILD / Phase B PLAY | **已冻结口径**：七大类 · 13 项配置 · `encounter` 五选一 | **已完成**（A 首轮 ＋ B 全部 58 项勾选；全量 197 项单测绿） |
 | **V2.0** | **新增 NPC 与对话**（第 8 类组件 ＋ **进入建筑后的 NPC 触发节点**） | **追加设定 / 结构改造**（不属于 V1 的阶段性设计） | **已完成**（编辑器侧 E0–E3 ＋ 运行时 E4 ＋ 19 项原子验收；E5 皮肤落点并入 **V2.1**） |
-| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条（棋子形象 / 立绘四落点 / 受击表现）＋ `window` 容器衬底（对话框 / 抽屉 / 气泡）＋ `misc` 地图标记与骰子 ＋ `item` / `building`（道具格子与图标 ＋ 建筑地图节点 / 名称字体字色）＋ `startup` / `lobby`（欢迎页封面三件 ＋ 首页背景与出身卡）＋ `window` 按钮 `normal` 态 ＋ `misc` 图标按名替换**已收口**，余下各屏待做） |
-| **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 九宫格切片消费 / 皮肤校验 / 音频播放 | 叠加层 | V2.1 之后 |
+| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条（棋子形象 / 立绘四落点 / 受击表现）＋ `window` 容器衬底（对话框 / 抽屉 / 气泡）＋ `misc` 地图标记与骰子 ＋ `item` / `building`（道具格子与图标 ＋ 建筑地图节点 / 名称字体字色）＋ `startup` / `lobby`（欢迎页封面三件 ＋ 首页背景与出身卡）＋ `window` 按钮 `normal` 态 ＋ `misc` 图标按名替换 ＋ `window` 固定族格子 ＋ **`window` 条 / 提示条 / 分隔线 ＋ 九宫格（DOM 层，提前落地）** 已收口，余下各屏待做） |
+| **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 皮肤校验 / 音频播放 | 叠加层 | V2.1 之后（**九宫格切片消费已提前到 V2.1**；余 `tile` 平铺待裁决） |
 
 > **V1 口径冻结、不改写**：`task/00-foundation.md` / `task/01-build.md` 里的「七大类 / 13 项 / 五选一」是 **V1 史实**；
 > 第 8 类 NPC、14 项配置、六选一行为属 **V2.0 追加设定**，只在 V2.0 的设计与任务里生效。
@@ -65,7 +65,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 | [task/01-build.md](task/01-build.md) | Phase A BUILD（构建页） | 信息架构/数据模型/布局/图层/组件库/模式/画布/属性编辑/引擎纯函数/校验/预设/导入导出 | **已完成首轮实现**（build + 78 项单测全绿） |
 | [task/02-play.md](task/02-play.md) | Phase B PLAY（游玩页） | 框架加载/开局/移动回合/战斗UI/骰子公示/技能交互/状态/遭遇/商店/装备背包/存档 | **已完成**（B0–B10 与 B 验收 1–14 全部勾选） |
 | [task/03-polish.md](task/03-polish.md) | Phase C 收尾 | 视觉打磨 / GitHub Pages 部署 | 部分已完成 |
-| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地；D3 进行中：运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条 ＋ `window` 容器衬底 ＋ `misc` 地图标记与骰子 ＋ `item` / `building` ＋ `startup` / `lobby` ＋ `window` 按钮 `normal` 态 ＋ `misc` 图标按名替换 已接；**优先级 ②**；端到端依赖 B） |
+| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地；D3 进行中：运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条 ＋ `window` 容器衬底 ＋ `misc` 地图标记与骰子 ＋ `item` / `building` ＋ `startup` / `lobby` ＋ `window` 按钮 `normal` 态 ＋ `misc` 图标按名替换 ＋ `window` 固定族格子 ＋ `window` 条 / 提示条 / 分隔线（九宫格随批落地）已接；**优先级 ②**；端到端依赖 B） |
 | [task/05-npc.md](task/05-npc.md) | **V2.0** 新增 NPC 与对话（跨 A / B） | NPC 数据模型与对话树（**全树同一个结构**；给道具 `give`；本层掷骰 `dice` / 各项 `hit`）/ 组件库与组件页 / **NPC 模组面板（思维导图，命中覆盖检查）** / 建筑实例页与校验 / 运行时抽取与弹层（掷定锁死 / **重入三选项 ＋ 三标记** / `give` 一次性交付）/ 皮肤侧接口约定 | **已完成**（E0–E3 编辑器侧 ＋ E4 运行时 ＋ 19 项原子验收；E5 皮肤侧接口约定并入 [task/04-skin.md](task/04-skin.md)） |
 
 ---
@@ -130,6 +130,14 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 ---
 
 ## 进度同步
+
+**2026-09-30 · D3 第十三屏（条 / 提示条 / 分隔线接入 ＋ 九宫格提前落地）**
+- 三节六键接入 `window`：`bars`（`hp` / `mp`，各两张）、`hints`（`ok` / `warn` / `error`）、`rules.line`。三族原本因「必须九宫格」整批留 V2.2，本批**九宫格一并提前落地** → 六键在 V2.1 内收口。
+- **九宫格无新字段**：素材自带 `slice` 即走九宫格。新增 [`src/engine/skin/texture.ts`](src/engine/skin/texture.ts) 的 `surfaceMode(ref)`（带 `slice` → `nine`）＋ `effectiveMode` 的「策略 ＋ 切片齐备」把关；[`src/ui/Texture.tsx`](src/ui/Texture.tsx) 的 `surfaceStyle()` 内部改出 `border-image`（`Slice` 语序 `[上,右,下,左]`、末带 `fill`、**不写 `borderWidth`**）。**容器 / 按钮 / 格子 / 条 / 提示条 / 分隔线六处一次升级，调用方一行不动**；SVG 层本批不动；`tile` 待裁决。
+- 取值 [`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `barOf(win, tone)` / `hintOf(win, tone)` / `ruleOf(win)`（不跨键不跨档）；接线 [`src/ui/useBarStyle.ts`](src/ui/useBarStyle.ts)（返回 `{ track?, fill? }`，两张各自独立）/ [`src/ui/useHintStyle.ts`](src/ui/useHintStyle.ts) / [`src/ui/useRuleStyle.ts`](src/ui/useRuleStyle.ts)。
+- 落点：属性面板与交锋弹层的血条、`GainNoteView` 的「没拿下」、`EncounterView` 的事件判定框（同一元素按 `verdict` 换 `ok` / `warn` / `error`，三档全部先取再挑）、`LoadScreen` / `StartScreen` 的警告条与分隔线、`BagPanel` 的分隔线。**中性 `.hintbox` 不设键也不借用**，构建页不接。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **53 个文件 / 627 项**全绿。设计侧同步 [`docs/design/skin/03-window.md`](docs/design/skin/03-window.md) 新增 §4.4 与 §八两小节、[`docs/design/skin.md`](docs/design/skin.md) §3.3 / §四 / `S-1`；任务侧 [`task/04-skin.md`](task/04-skin.md) 勾掉「`window` 其余」条。
+- 同屏遗留：**按钮 `hover` / `active` / `disabled` 三态**（九宫格已落地，该条现为独立的一批）。
 
 **2026-09-30 · D3 第十二屏（固定族格子 `window.slots` 接入）**
 - 四个**固定族格子**键接入 `window.slots`：技能格 / 奖励卡 / 背包格 / 部位标签。固定族尺寸写死（技能格 54 / 奖励卡 92 / 部位标签 44），V1 走**整图等比拉伸**，不需要九宫格 → 该条能在 V2.1 内收口。

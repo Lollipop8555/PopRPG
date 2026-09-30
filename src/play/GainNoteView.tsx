@@ -9,12 +9,15 @@
  */
 
 import type { GainNote } from '../types/session'
+import { useHintStyle } from '../ui/useHintStyle'
 import { useSlotStyle } from '../ui/useSlotStyle'
 import { gainLines } from './gain'
 
 export default function GainNoteView({ note, compact = false }: { note: GainNote; compact?: boolean }) {
   // 奖励卡底纹（`skin/03-window.md` §四）：`compact` 与整块走**同一个键**，钩子提到早返回之前
   const card = useSlotStyle('reward')
+  // 丢失提示条（`skin/03-window.md` §四 `hints`）：只铺 `warn` 一档，中性的 `.hintbox` 不走素材
+  const warnHint = useHintStyle('warn')
 
   if (compact) {
     return (
@@ -52,7 +55,7 @@ export default function GainNoteView({ note, compact = false }: { note: GainNote
       )}
 
       {note.losses.length > 0 && (
-        <div className="hintbox warn" style={{ marginTop: 4 }}>
+        <div className="hintbox warn" style={{ marginTop: 4, ...warnHint }}>
           {note.losses.map((lo, i) => (
             <div key={i}>
               {lo.icon}

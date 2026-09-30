@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render } from '@testing-library/react'
-import { DomTexture, InlineTexture, SvgTexture, textureProps } from '../Texture'
+import { DomTexture, InlineTexture, SvgTexture, surfaceStyle, textureProps } from '../Texture'
 import type { TextureRef } from '../../engine/skin/texture'
 import type { SkinAssets } from '../../io/skin-assets'
 
@@ -33,6 +33,51 @@ describe('单一入口 textureProps', () => {
   it('未接管的节点、包里缺这张图，都返回 undefined（调用方改画程序图形）', () => {
     expect(textureProps(undefined, withTile(), BOX)).toBeUndefined()
     expect(textureProps(ref(), assets(), BOX)).toBeUndefined()
+  })
+})
+
+describe('背景铺法 surfaceStyle：九宫格走 border-image（§3.3）', () => {
+  it('素材没交切片：整图拉伸铺满，只写图 / 尺寸 / 重复，**不写底色**', () => {
+    expect(surfaceStyle(ref(), withTile())).toEqual({
+      backgroundImage: 'url("blob:1")',
+      backgroundSize: '100% 100%',
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
+    })
+  })
+
+  it('素材交了切片：改走 `border-image`，四值按 `[上, 右, 下, 左]` 逐字落，中心用 `fill` 画出来', () => {
+    const style = surfaceStyle(ref({ slice: [6, 12, 18, 24] }), withTile())!
+
+    expect(style.borderImageSource).toBe('url("blob:1")')
+    expect(style.borderImageSlice).toBe('6 12 18 24 fill')
+    expect(style.borderImageWidth).toBe('6px 12px 18px 24px')
+    expect(style.borderImageRepeat).toBe('stretch')
+    // 九宫格与背景图是两套画法，不能同时写
+    expect(style.backgroundImage).toBeUndefined()
+    // S-4：边框与底色仍归元素自己的 CSS，这里一个都不动
+    expect(style.borderWidth).toBeUndefined()
+    expect(style.borderStyle).toBeUndefined()
+    expect(style.backgroundColor).toBeUndefined()
+  })
+
+  it('单轴九宫格就是上下切片给 0：只在左右拉伸（单向族的写法）', () => {
+    const style = surfaceStyle(ref({ slice: [0, 10, 0, 10] }), withTile())!
+
+    expect(style.borderImageSlice).toBe('0 10 0 10 fill')
+    expect(style.borderImageWidth).toBe('0px 10px 0px 10px')
+  })
+
+  it('`contain` 那一档不受切片影响（骰子本体等比缩放，不能切）', () => {
+    const style = surfaceStyle(ref({ slice: [6, 6, 6, 6] }), withTile(), 'contain')!
+
+    expect(style.backgroundSize).toBe('contain')
+    expect(style.borderImageSource).toBeUndefined()
+  })
+
+  it('没配 / 包里缺这张图一律 `undefined`（调用方不传 `style`，CSS 纸面照旧）', () => {
+    expect(surfaceStyle(undefined, withTile())).toBeUndefined()
+    expect(surfaceStyle(ref({ slice: [6, 6, 6, 6] }), assets())).toBeUndefined()
   })
 })
 

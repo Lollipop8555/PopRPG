@@ -33,7 +33,7 @@ export interface SkinImage {
   rotate?: number
   /** 显式左右镜像（不默认启用） */
   flip?: boolean
-  /** 九宫格切片；V1 不解析，按普通拉伸处理 */
+  /** 九宫格切片；**给了即走九宫格**（DOM 层已落地），不给即按普通拉伸处理 */
   slice?: SkinSlice
   /** 填充方式，仅封面类背景使用 */
   fit?: SkinFit

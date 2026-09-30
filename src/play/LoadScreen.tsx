@@ -16,6 +16,8 @@ import { downloadLibrary, pickLibraryFile, pickSaveFile } from '../io/psave'
 import { navigate } from '../app/router'
 import { APP_VERSION, changelog } from '../lib/version'
 import Overlay from '../ui/Overlay'
+import { useHintStyle } from '../ui/useHintStyle'
+import { useRuleStyle } from '../ui/useRuleStyle'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useButtonStyle } from '../ui/useButtonStyle'
 import { useStartupArt, useStartupBgStyle, useStartupDiceBody } from '../ui/usePageSkin'
@@ -57,6 +59,9 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
   const bg = useStartupBgStyle()
   const titleArt = useStartupArt('title', CSS_SIZED_BOX)
   const coverArt = useStartupArt('cover', CAVE_BOX)
+  // 分隔线与警告提示条（`skin/03-window.md` §二「单向族 / 随内容族」）：都靠九宫格，素材带 `slice` 才生效
+  const rule = useRuleStyle()
+  const warnHint = useHintStyle('warn')
 
   const fromBuild = () => {
     const library = useLibraryStore.getState()
@@ -167,7 +172,7 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
                   <GameIcon name="FileUp" size={14} icon={FileUp} /> 载入 .psave 存档
                 </button>
               </div>
-              <div className="sketch-line" style={{ width: 220, margin: '2px 0' }} />
+              <div className="sketch-line" style={{ width: 220, margin: '2px 0', ...rule }} />
               <div className="cover-more-body">
                 <button className="btn small" style={smallBtn} onClick={exportLibrary}>
                   <GameIcon name="LibraryBig" size={13} icon={LibraryBig} /> 导出组件库
@@ -182,7 +187,7 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
         </div>
 
         {warnings.length > 0 && (
-          <div className="hintbox warn" style={{ maxWidth: 460 }}>
+          <div className="hintbox warn" style={{ maxWidth: 460, ...warnHint }}>
             {warnings.map((w) => (
               <div key={w}>· {w}</div>
             ))}

@@ -15,6 +15,7 @@ import { usePlayStore } from '../store/play'
 import { useSkinStore } from '../store/skin'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useDieBodyStyle } from '../ui/useDieSkin'
+import { useBarStyle } from '../ui/useBarStyle'
 import { useButtonStyle } from '../ui/useButtonStyle'
 import { useSlotStyle } from '../ui/useSlotStyle'
 import { portraitOf, roleSprite } from '../engine/skin'
@@ -76,6 +77,8 @@ export default function BattleDialog({ session }: { session: Session }) {
   // 技能格底纹（`skin/03-window.md` §四）：与 HUD 底栏的 `SkillBar` 同为「技能格」，
   // 走同一个键 `window.slots.skill`（两处不是两套素材）
   const skillSlot = useSlotStyle('skill')
+  // 怪物那条血条（`skin/03-window.md` §四 `bars`）：轨道与填充两张，缺哪张哪张走 CSS
+  const foeBar = useBarStyle('hp')
   // 按钮（`skin/03-window.md` §四）：操作区的主行动（攻击 / 防御 / 继续交锋）走 `primary`，
   // 「不防御」是这一场里的危险动作，走 `danger`
   const primaryBtn = useButtonStyle('primary')
@@ -163,8 +166,8 @@ export default function BattleDialog({ session }: { session: Session }) {
 
         {/* 怪物状态 */}
         <div className="battle-foe">
-          <div className="bar hp">
-            <div className="fill" style={{ width: `${foeHpPct * 100}%` }} />
+          <div className="bar hp" style={foeBar.track}>
+            <div className="fill" style={{ width: `${foeHpPct * 100}%`, ...foeBar.fill }} />
             <div className="label">
               hp {monster.resources.hp} / {monster.stats.hp}
             </div>

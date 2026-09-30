@@ -173,7 +173,7 @@ describe('游戏首页（§2.2）', () => {
     expect(bgOf(shell(startScreen()))).toContain(`blob:${BG}`)
   })
 
-  it('`panel` 落在「这一局的世界」那张卡片上（V1 一律拉伸，`S-1`）', () => {
+  it('`panel` 落在「这一局的世界」那张卡片上（素材没交切片即整图拉伸）', () => {
     paint({ lobby: { panel: { img: PANEL } } })
     const panel = startScreen().querySelector('.panel.scroll') as HTMLElement
 

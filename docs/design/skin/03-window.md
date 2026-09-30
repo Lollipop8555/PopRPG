@@ -1,7 +1,7 @@
 # skin 分节：容器与控件 `window`
 
 > 上层索引：[`../skin.md`](../skin.md)　依据：[`../00b-style.md`](../00b-style.md)、`src/styles/play.css`／`theme.css`、`src/ui/Overlay.tsx`／`Popover.tsx`
-> **状态**：已补（由既有游玩态实现推算，待校正）。**容器衬底已接入**（对话框 / 抽屉 / 气泡）、**按钮 `normal` 态已接入**（七个键）、**固定族格子已接入**（技能格 / 奖励卡 / 背包格 / 部位标签，见 §八）。
+> **状态**：已补（由既有游玩态实现推算，待校正）。**容器衬底已接入**（对话框 / 抽屉 / 气泡）、**按钮 `normal` 态已接入**（七个键）、**固定族格子已接入**（技能格 / 奖励卡 / 背包格 / 部位标签）、**条 / 提示条 / 分隔线已接入**（`bars` / `hints` / `rules`，九宫格随 `slice` 生效，见 §八）。
 > **划分原则**：**容器 = 带底纹或边框、且尺寸由内容或视口决定的元素**。内容自适应与九宫格强相关，因此单独成节。
 
 ## 一、覆盖范围（按游玩态屏划分）
@@ -131,6 +131,43 @@
 - **背包格是唯一的交叠处**：`.bag-cell` 同时也是道具衬底位（`item.background`，[`06-item-building.md`](06-item-building.md) §3.2）。取「**道具衬底优先、格位底纹兜底**」——道具配了 `background` 就整格归它，没配才铺 `slots.bag`。两节因此不会抢同一个落点：**同一个格子上只会出现一层**。
 - 键名允许自定义：引擎只读上表四个键，其余键配了也静默搁置（与其余各节一致，不报错也不回退到别的键）。
 
+### 4.4 条与提示（`bars` / `hints` / `rules`）
+
+这三族一句话概括：**同样是「取图 → 铺满」，区别只在铺法**（§二）。因为都**必须九宫格 / 单轴九宫格**（硬拉伸会违反 `KW-3`），所以素材**带 `slice` 才生效**：没带就回落成 V1 的整图拉伸（视觉上不变形但会糊），**不是回落成 CSS**。
+
+**`bars`：单向族**，按**资源档**分键。一档给两张——轨道与填充**各自独立**（填充是百分比宽度，轨道是满宽，两者尺寸不同，合成一张必错）：
+
+| 键 | 元素角色 | 游玩态的落点 |
+|---|---|---|
+| `hp` | 生命条 | 属性面板 `.bar`（轨道 ＋ `.fill` 填充）、交锋弹层里主角与对手的两条 |
+| `mp` | 法力条 | 属性面板 `.bar`（同上一处结构） |
+
+- 只配 `track` 不配 `fill` 是合法的：轨道归素材、填充仍是 CSS 那条实色（`KW-5` 缺省回退的逐条版本）。
+- 切片建议**只给左右**（上下给 0）：条只会横向伸缩（§三）。上下给非 0 会在条高度小于切片和时四角重叠（`KW-2`）。
+
+**`hints`：随内容族**，按**语气档**分键——与 `.hintbox` 的四处外观一一对应：
+
+| 键 | 语气 | 对应类名 |
+|---|---|---|
+| `ok` | 成功 / 确认 | `.hintbox.ok`（绿） |
+| `warn` | 警告 / 有代价 | `.hintbox.warn`（黄） |
+| `error` | 失败 / 危险 | `.hintbox.error`（红） |
+
+- **中性档没有键**：`.hintbox` 不带修饰符的那一份是中性提示（如「箱内无物品」「不触发任何效果」），语气上不属于上面三档，故**不设键、也不借用任何键**——调用方遇到中性提示**不调 hook**，由 CSS 全权表现。
+- **同一个元素可以一格多档**：遭遇弹层的判定框是**一个 `.hintbox` 换三种配色**（`success` → `ok`、`blocked` → `warn`、`fail` → `error`）。hook 不能落在条件分支里，故三档**全部先取**、再按判定挑一份（见 §八「提示条」）。
+- 左侧那道 3px 竖线（`.hintbox` 的 `border-left`）**不归素材**：素材只铺底纹（§五）。
+
+**`rules`：单向族**，目前只有一个键：
+
+| 键 | 元素角色 | 游玩态的落点 |
+|---|---|---|
+| `line` | 手绘分隔线 | 凡是 `.sketch-line`——背包抽屉（「穿戴中」之上）、首页（「这一局的世界」之下）、载入屏（更新记录之上） |
+
+- CSS 那条线是 `repeat-x` 的手绘图（`theme.css` 的 `.sketch-line`）；素材接管后由 **`border-image` 单轴九宫格**铺一条，切片**上下给 0**（线只有左右可伸）。
+- §七.2「分隔线是否改用平铺素材（`tile`）」**尚未裁决**：本批只落「单向族 → 单轴九宫格」这一档，未引入第二套字段。
+
+键名允许自定义：引擎只读上表这些键，其余键配了也静默搁置（与其余各节一致，不报错也不回退到别的键）。
+
 ## 五、V1 策略（重要）
 
 V1 不解析九宫格，因此：
@@ -159,20 +196,25 @@ V1 不解析九宫格，因此：
 
 > **已裁决（13）**：按钮 `hover` / `active` / `disabled` 三态**结构现在就定稿**（§四.1：字段名 ＋ 缺省回退链），**实现顺序可后置**。
 >
-> **排期已定**（D3 第九屏）：`normal` 态已接入（§八「按钮」）；其余三态与九宫格**同批**（V1.1）——两者的落法都落在 `surfaceStyle()` 内部，分两批做要改两遍同一个函数。
+> **排期已定**（D3 第九屏）：`normal` 态已接入（§八「按钮」）；其余三态原定与九宫格**同批**（V1.1）。
+>
+> **九宫格已提前落地**（D3 第十三屏，§八「九宫格」）：容器 / 按钮 / 格子 / 条 / 提示条 / 分隔线六处**一处改完**，调用方一行不动。
+> 于是四态里剩下的 `hover` / `active` / `disabled` 现在是**独立的最后一批**——它要接的是「一个按钮按状态取不同图」，与九宫格无耦合。
 
 ## 八、实现落点（2026-09-30）
 
-> **本批落「容器衬底 ＋ 按钮 `normal` 态 ＋ 固定族格子」**：三种**随视口族**容器（§二）——对话框 / 抽屉 / 气泡——已接入 `window.surfaces`；
-> 七个按钮键（§四）已接入 `window.buttons` 的 `normal` 态；四个**固定族格子**键（§4.3）已接入 `window.slots`。
-> 四态里的其余三态（§4.1）与其余两族（条 / 提示条 / 分隔线）**尚未接入**，原因见文末「未接部分」。
+> **本批落「容器衬底 ＋ 按钮 `normal` 态 ＋ 固定族格子 ＋ 条 / 提示条 / 分隔线」**：三种**随视口族**容器（§二）——对话框 / 抽屉 / 气泡——已接入 `window.surfaces`；
+> 七个按钮键（§四）已接入 `window.buttons` 的 `normal` 态；四个**固定族格子**键（§4.3）已接入 `window.slots`；
+> **单向族与随内容族**三节（§4.4）已接入 `window.bars` / `window.hints` / `window.rules`。
+> **九宫格随本批一并落地**：素材带了 `slice` 就走 `border-image`，没带回落整图拉伸。
+> 只余四态里的其余三态（§4.1）尚未接入，原因见文末「未接部分」。
 
 ### 取图与落图
 
 - **取图**：[`src/engine/skin/lookup.ts`](../../../src/engine/skin/lookup.ts) 的 `surfaceOf(win, kind)`——`dialog` / `drawer` / `popover` 各查自己的键，**不跨键借用**（对话框没配就用不回抽屉的图）；`SurfaceKind` 与 §四 字段同名。拿到 `SkinTexture` 后由 `textureRef()` 归一三写法（衬底不需要 `rotate` / `flip`）。
 - **落图**：[`src/ui/Texture.tsx`](../../../src/ui/Texture.tsx) 的 `surfaceStyle(ref, assets)`——与 SVG 层 / 行内层 / DOM 层**同吃「取图结果 → 可用地址」**，差别只在落法：**铺满容器的整个背景**（`background-size: 100% 100%`）。尺寸交给 CSS（§二：随视口族「尺寸由窗口决定」，量不出「多大一个盒」，故这里只取 `src`）；**不写 `background-color`**——底纹可以带透明，纸面底色得留给容器的 CSS，衔接处才不露白。
 - **接线**：[`src/ui/useSurfaceStyle.ts`](../../../src/ui/useSurfaceStyle.ts) 的 `useSurfaceStyle(kind)` 把 `store/skin` 的两份状态（素材源 ＋ `manifest.window`）接到上面两个纯函数上；**未启用皮肤 / 未配该键 / 包里缺这张图**一律返回 `undefined`，调用方**不传 `style`**，CSS 纸面照旧（§一：皮肤是可选叠加层）。
-- **V1 一律拉伸**（§五）：`nine` 落地（V1.1）时只改 `surfaceStyle()` 内部出 `border-image`，三个调用方一行都不动。
+- **拉伸还是九宫格，由素材自己声明**（§八「九宫格」）：素材带 `slice` → `surfaceStyle()` 内部出 `border-image`；不带 → 整图拉伸（§五的 V1 形态仍然有效，老素材不用改）。**六个调用方一行都不动**。
 
 ### 三个落点
 
@@ -189,8 +231,8 @@ V1 不解析九宫格，因此：
 ### 按钮（§四）
 
 - **取图**：[`src/engine/skin/lookup.ts`](../../../src/engine/skin/lookup.ts) 的 `buttonOf(win, kind)`——七个键（`BUTTON_KINDS`）各查自己的键，**不跨键借用**；四态对象**只取 `normal`**，缺 `normal` 即整颗按钮算没配（老包 / 手写配置不会因为只有 `hover` 就凭空多出一张底图）。
-- **落图与接线**：容器那份**原样复用**——[`src/ui/useButtonStyle.ts`](../../../src/ui/useButtonStyle.ts) 的 `useButtonStyle(kind)` 走同一条「`buttonOf()` → `textureRef()` → `surfaceStyle()`」。按钮是**随内容族**（盒随文字量变，§二），V1 与容器同档：**整体拉伸铺满**，圆角与描边仍归 `.btn` 的 CSS（§五「素材只提供纸面底纹」）。
-- **与容器的差别只有一处**：容器取 `surfaces.<键>` 的值，按钮多一步「从四态里挑 `normal`」。因此 V1.1 接九宫格时**容器与按钮一处改完**（`surfaceStyle()` 内部换 `border-image`），两侧调用方一行都不动。
+- **落图与接线**：容器那份**原样复用**——[`src/ui/useButtonStyle.ts`](../../../src/ui/useButtonStyle.ts) 的 `useButtonStyle(kind)` 走同一条「`buttonOf()` → `textureRef()` → `surfaceStyle()`」。按钮是**随内容族**（盒随文字量变，§二），交没交 `slice` 决定拉伸还是九宫格（§八「九宫格」），圆角与描边仍归 `.btn` 的 CSS（§五「素材只提供纸面底纹」）。
+- **与容器的差别只有一处**：容器取 `surfaces.<键>` 的值，按钮多一步「从四态里挑 `normal`」。九宫格落地时**容器与按钮一体改完**（`surfaceStyle()` 内部换 `border-image`），两侧调用方一行都不动。
 - **四态只读 `normal`**（§4.1，`KW-6`）：`hover` / `active` / `disabled` 仍由 CSS 表现——`:disabled { opacity }` 与 `:active { transform }` 照旧生效，`:hover` 变的只是素材**之下**的底色（素材不透明时看不出变化，属 V1 的既定取舍）。
 
 | 文件 | 接入的键 | 元素 |
@@ -213,8 +255,8 @@ V1 不解析九宫格，因此：
 ### 格子（§4.3）
 
 - **取图**：[`src/engine/skin/lookup.ts`](../../../src/engine/skin/lookup.ts) 的 `slotOf(win, kind)`——四个键（`SLOT_KINDS`）各查自己的键，**不跨键借用**。
-- **落图与接线**：容器那份**原样复用**——[`src/ui/useSlotStyle.ts`](../../../src/ui/useSlotStyle.ts) 的 `useSlotStyle(kind)` 走同一条「`slotOf()` → `textureRef()` → `surfaceStyle()`」。格子是**固定族**（§二：像素写死），V1 与容器同档：**整图等比拉伸铺满**，圆角与描边仍归格子自己的 CSS（§五「素材只提供纸面底纹」）。
-- **与容器 / 按钮的唯一差别**：取的是 `slots.<键>` 的值（按钮多一步挑 `normal`）。因此 V1.1 接九宫格时**容器 / 按钮 / 格子一处改完**（`surfaceStyle()` 内部换 `border-image`），三侧调用方一行都不动。
+- **落图与接线**：容器那份**原样复用**——[`src/ui/useSlotStyle.ts`](../../../src/ui/useSlotStyle.ts) 的 `useSlotStyle(kind)` 走同一条「`slotOf()` → `textureRef()` → `surfaceStyle()`」。格子是**固定族**（§二：像素写死），**尺寸写死故整图等比拉伸就够**（`KW-4`）；素材若交了 `slice` 也照样走九宫格，圆角与描边仍归格子自己的 CSS（§五「素材只提供纸面底纹」）。
+- **与容器 / 按钮的唯一差别**：取的是 `slots.<键>` 的值（按钮多一步挑 `normal`）。九宫格落地时**容器 / 按钮 / 格子一体改完**（`surfaceStyle()` 内部换 `border-image`），三侧调用方一行都不动。
 - **背包格的优先级写在调用点**：[`src/play/BagPanel.tsx`](../../../src/play/BagPanel.tsx) 的两处 `.bag-cell` 都用 `cell ?? bagSlot`——`cell` 是道具衬底（`groundStyle(groundPaint(...))`，道具没配 `background` 时为 `undefined`），`bagSlot` 是 `useSlotStyle('bag')`。**hook 本身仍是纯读取、不判别的**：优先级只在这一行表达式里，别的节要复用「格子 ＋ 内容层」时照抄这一行即可。
 
 | 文件 | 接入的键 | 元素 |
@@ -227,11 +269,48 @@ V1 不解析九宫格，因此：
 
 - **构建页不接**：`src/build/*` 不铺游玩态格子底纹，与「构建页画布未接」（[`05-canvas.md`](05-canvas.md) §八）保持一致。
 
+### 条 / 提示条 / 分隔线（§4.4）
+
+三节共用一句实话：**取图逻辑与前三节不同，落图逻辑一模一样**（都落到 `surfaceStyle()`），所以 §八「九宫格」那一处改完，这六处（容器 / 按钮 / 格子 / 条 / 提示条 / 分隔线）一起升级。
+
+- **取图**：[`src/engine/skin/lookup.ts`](../../../src/engine/skin/lookup.ts) 新增三个——`barOf(win, tone)`（`BAR_TONES = ['hp','mp']`）、`hintOf(win, tone)`（`HINT_TONES = ['ok','warn','error']`）、`ruleOf(win)`（只有 `rules.line`）。同样是「各查自己的键、**不跨键 / 不跨档借用**」。
+- **条多一层结构**：`bars.<档>` 一次给两张（`track` / `fill`），故返回值不是单张而是 `SkinBar`；[`src/ui/useBarStyle.ts`](../../../src/ui/useBarStyle.ts) 的 `useBarStyle(tone)` 返回 `{ track?, fill? }`——**两张各自独立**，只配一张不影响另一张（轨道归素材、填充仍是 CSS 那条实色）。
+- **提示条逐档调用**：提示条一档一张，返回**单个** `CSSProperties | undefined`；[`src/ui/useHintStyle.ts`](../../../src/ui/useHintStyle.ts) 的 `useHintStyle(tone)`。
+- **分隔线**：[`src/ui/useRuleStyle.ts`](../../../src/ui/useRuleStyle.ts) 的 `useRuleStyle()`，无参数（只有一个键）。素材接管后由 `border-image` 单轴铺一条，CSS 那条 `repeat-x` 手绘线让位；没配 / 缺图时**不传 `style`**，手绘线照旧。
+- **中性档与 `.hintbox` 的 CSS 边线都不动**：中性提示不调 hook；`border-left` 那道竖线归 CSS（§4.4）。
+
+| 文件 | 接入的键 | 元素 |
+|---|---|---|
+| [`StatusPanel.tsx`](../../../src/play/StatusPanel.tsx) | `bars.hp` / `bars.mp` | 属性面板的 `.bar`（轨道）与 `.bar > .fill`（填充）——`Bar` 的 `tone` 从 `'hp' \| 'mp'` 放宽为 `BarTone` |
+| [`BattleDialog.tsx`](../../../src/play/BattleDialog.tsx) | `bars.hp` | 交锋弹层里对手那条血条（`.bar` ＋ `.fill`）——与属性面板**同键**，不是两套素材 |
+| [`GainNoteView.tsx`](../../../src/play/GainNoteView.tsx) | `hints.warn` | 「没拿下」那条 `.hintbox.warn`（中性 `.hintbox` 不铺） |
+| [`EncounterView.tsx`](../../../src/play/EncounterView.tsx) | `hints.ok` / `hints.warn` / `hints.error` | 事件判定框——**同一个 `.hintbox` 按 `verdict` 换三档**，故三档全部先取、再挑一份（`success` → `ok`、`blocked` → `warn`、`fail` → `error`） |
+| [`LoadScreen.tsx`](../../../src/play/LoadScreen.tsx) | `hints.warn` / `rules.line` | 载入警告条、更新记录之上的分隔线 |
+| [`StartScreen.tsx`](../../../src/play/StartScreen.tsx) | `hints.warn` / `rules.line` | 「这一局还没有可选职业」、世界简介与出身卡之间的分隔线 |
+| [`BagPanel.tsx`](../../../src/play/BagPanel.tsx) | `rules.line` | 背包格与「穿戴中」之间的分隔线 |
+
+- **构建页不接**：`src/build/*` 的 `.hintbox`（校验清单 / 各编辑器提示）不铺游玩态提示条底纹——那里是作者工具，与「构建页画布未接」（[`05-canvas.md`](05-canvas.md) §八）保持一致。
+- **`MapView` 的空态提示不铺**：「这一局没有地图」那一处是中性 `.hintbox`，按 §4.4 本来就没有键。
+
+### 九宫格（§二 / §三）
+
+九宫格**没有独立字段**：它由素材自己声明（`SkinTexture` 的 `slice`），因此**同一个键**可以今天是拉伸、明天是九宫格，而调用方一行都不动——这正是 §五「调用方接口不变」的兑现。
+
+- **判定**：[`src/engine/skin/texture.ts`](../../../src/engine/skin/texture.ts) 的 `surfaceMode(ref)`：素材带 `slice` → `'nine'`，否则 `'stretch'`；`effectiveMode(mode?, slice?)` 再做一次「策略与素材是否齐备」的把关——**`nine` 需要策略与切片同时成立**（只写 `mode: 'nine'` 而没给 `slice` 会回落 `stretch`，不会画出半张九宫格）。
+- **落法**：[`src/ui/Texture.tsx`](../../../src/ui/Texture.tsx) 的 `surfaceStyle()` 内部多一个分支——`nine` 时改出 `border-image` 四件套（`borderImageSource` / `Slice` / `Width` / `Repeat`）；`stretch` 时照旧走 `background-size: 100% 100%`。
+- **两条硬约束**：
+  1. **`Slice` 的语义与 `[上,右,下,左]` 逐字对应**（§三），末带 `fill`（否则中心会被挖空，只剩一圈边框）。
+  2. **不写 `borderWidth`**：盒子的尺寸是 CSS 量好的，素材不许改布局——`border-image` 的宽度只取切片值，不参与盒模型。
+- **只改 DOM 层**：本批六处落点全在 DOM 层（`surfaceStyle()` 的 `border-image`）；SVG 层（地图 / 画布 / 棋子）**本批不动**——它那侧目前按 `preserveAspectRatio` 出图（[`04-misc.md`](04-misc.md)），要走九宫格得另起切块拼装，属另一批。
+- **老素材不受影响**：不带 `slice` 的素材走原路（§五的 V1 形态），故**皮肤包升级不必一次性到位**。
+- **本批没接的两条衬底路**：`groundStyle()`（`item.background` / `building.background` 的衬底三件套，[`06-item-building.md`](06-item-building.md) §二）与 `pageBgStyle()`（封面整屏 `bg`，[`08-pages.md`](08-pages.md) §2.1）**仍是整图铺法**——前者是尺寸写死的固定族格子（`KW-4`，拉伸不成问题），后者是整屏铺法（`cover` / `contain` / `tile` 三档，与九宫格无关）。要接九宫格得各自再走一遍 `nineStyle()`，本批不动。
+
 ### 未接部分
 
-- **按钮四态**（§4.1）：`normal` 已接入；`hover` / `active` / `disabled` 仍由 CSS 表现（`KW-6`），与九宫格同批（V1.1）。
-- **随内容族与单向族**（§二：提示条 / 条 / 分隔线）**必须九宫格 / 单轴九宫格**，V1 硬拉伸会违反「随内容族禁止拉伸」（`KW-3`），故整批留到 V1.1：提示条与分隔线继续由 CSS 绘制。
-- **校验项**：`KW-1`（随视口族无 `slice`，V1 会整体拉伸）与 `KW-5`（路径不存在）的清单提示**尚未落进校验层**（`SkinIssueCode` 目前只有 `KP-*`），等汇总批（D6）统一接。
+- **按钮四态**（§4.1）：`normal` 已接入；`hover` / `active` / `disabled` 仍由 CSS 表现（`KW-6`）。九宫格已落地，故这三态现在是**独立的一批**——与九宫格无耦合。
+- **`tile` 平铺**：§七.2 的「分隔线是否改用平铺素材」尚未裁决，故**未引入第二套字段**。`effectiveMode` 已认得 `tile`（平铺独立成立，不需要切片），只等裁决后接线。
+- **校验项**：`KW-1`（随视口族无 `slice`）与 `KW-5`（路径不存在）的清单提示**尚未落进校验层**（`SkinIssueCode` 目前只有 `KP-*`），等汇总批（D6）统一接。
 
-> **已接**（D3 第十一屏）：固定族格子（§4.3）四个键——技能格 / 奖励卡 / 背包格 / 部位标签。
-> **排期已定**：`hover` / `active` / `disabled` 三态与九宫格**同批**（V1.1）——两者的落法都落在 `surfaceStyle()` 内部，分两批做要改两遍同一个函数。
+> **已接**（D3 第十二屏）：固定族格子（§4.3）四个键——技能格 / 奖励卡 / 背包格 / 部位标签。
+> **已接**（D3 第十三屏）：条 / 提示条 / 分隔线（§4.4）三个节——`bars`（两档 × 两图）、`hints`（三档）、`rules.line`；**九宫格随本批落地**（素材带 `slice` 即生效）。
+> **待接**：`hover` / `active` / `disabled` 三态（§4.1）；`tile` 平铺待 §七.2 裁决。

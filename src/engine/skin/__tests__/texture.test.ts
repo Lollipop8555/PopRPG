@@ -1,7 +1,7 @@
 /** 贴图取图与落位（`skin.md` §四 / §五）：三写法归一 ＋ 盒 / 旋转 / 镜像 */
 
 import { describe, expect, it } from 'vitest'
-import { effectiveMode, normalizeAngle, placeTexture, spriteRef, textureRef } from '../texture'
+import { effectiveMode, normalizeAngle, placeTexture, spriteRef, surfaceMode, textureRef } from '../texture'
 
 describe('单张写法（textureRef）', () => {
   it('字符串即包内完整路径', () => {
@@ -23,7 +23,7 @@ describe('单张写法（textureRef）', () => {
     expect(textureRef({ img: 'a.png' })?.flip).toBe(false)
   })
 
-  it('九宫格切片随取图结果带出（V1 只是参数位）', () => {
+  it('九宫格切片随取图结果带出（铺法由它决定）', () => {
     expect(textureRef({ img: 'panel.png', slice: [8, 8, 8, 8] })?.slice).toEqual([8, 8, 8, 8])
     expect(textureRef('panel.png')?.slice).toBeUndefined()
   })
@@ -94,10 +94,27 @@ describe('角度与落位', () => {
     expect(placeTexture(box, { src: 'bg.jpg', rotate: 0, flip: false })).toEqual({ ...box, rotate: 0, flip: false })
   })
 
-  it('九宫格 / 平铺未解析前一律按拉伸（参数位）', () => {
+  it('九宫格要「策略 ＋ 切片」齐备：只给策略没给切片，回落拉伸（`KW-1`）', () => {
+    expect(effectiveMode('nine', [8, 8, 8, 8])).toBe('nine')
     expect(effectiveMode('nine')).toBe('stretch')
-    expect(effectiveMode('tile')).toBe('stretch')
-    expect(effectiveMode('stretch')).toBe('stretch')
+  })
+
+  it('平铺不需要切片，独立成立', () => {
+    expect(effectiveMode('tile')).toBe('tile')
+    expect(effectiveMode('tile', [8, 8, 8, 8])).toBe('tile')
+  })
+
+  it('拉伸与缺省都是拉伸', () => {
+    expect(effectiveMode('stretch', [8, 8, 8, 8])).toBe('stretch')
     expect(effectiveMode(undefined)).toBe('stretch')
+  })
+
+  it('背景铺法看素材有没有交切片：交了按九宫格、没交整图拉伸（§二）', () => {
+    const base = { src: 'art/window/panel.png', rotate: 0, flip: false } as const
+    expect(surfaceMode({ ...base })).toBe('stretch')
+    expect(surfaceMode({ ...base, slice: [8, 8, 8, 8] })).toBe('nine')
+    // 全 0 切片也是「交了切片」：四角为空、四边不拉，是美术的合法选择，不当作没交
+    expect(surfaceMode({ ...base, slice: [0, 0, 0, 0] })).toBe('nine')
+    expect(surfaceMode(undefined)).toBe('stretch')
   })
 })

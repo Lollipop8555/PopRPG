@@ -9,8 +9,9 @@ import { ABILITY_KEYS, STAT_KEYS, STAT_LABEL } from '../types'
 import type { Session } from '../types/session'
 import { freePoints } from './flow'
 import RadarChart from './RadarChart'
-import { portraitOf, roleSprite } from '../engine/skin'
+import { portraitOf, roleSprite, type BarTone } from '../engine/skin'
 import { useSkinStore } from '../store/skin'
+import { useBarStyle } from '../ui/useBarStyle'
 import { RoleGlyph } from '../ui/RoleGlyph'
 import { Portrait, portraitHurtTile, portraitTile } from '../ui/Portrait'
 import { useHitPulse } from '../ui/useHitPulse'
@@ -141,11 +142,24 @@ export default function StatusPanel({
   )
 }
 
-export function Bar({ label, value, max, tone }: { label: string; value: number; max: number; tone: 'hp' | 'mp' }) {
+export function Bar({
+  label,
+  value,
+  max,
+  tone,
+}: {
+  label: string
+  value: number
+  max: number
+  tone: BarTone
+}) {
   const pct = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0
+  // 血蓝条两层各自取图（`skin/03-window.md` §二「单向族」/ §四 `bars`）：
+  // 轨道铺 `.bar`、填充铺 `.bar > .fill`，两张独立——没配的那层保持 CSS
+  const bar = useBarStyle(tone)
   return (
-    <div className={`bar ${tone}`} style={{ marginBottom: 4 }}>
-      <div className="fill" style={{ width: `${pct * 100}%` }} />
+    <div className={`bar ${tone}`} style={{ marginBottom: 4, ...bar.track }}>
+      <div className="fill" style={{ width: `${pct * 100}%`, ...bar.fill }} />
       <div className="label">
         {label} {value} / {max}
       </div>

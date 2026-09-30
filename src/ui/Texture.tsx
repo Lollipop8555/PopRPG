@@ -8,15 +8,18 @@
  *   行内层用 `InlineTexture`（`<img>`，跟文字同排，尺寸交给 CSS）
  * - **位图不套手绘滤镜**（S-6）：素材节点一律不带 `filter`，手绘滤镜只加在程序绘制的图形上；
  *   素材自身也**不参与点击命中**（`pointerEvents: none`），命中判定仍归所在层的业务元素
- * - V1 只有拉伸；`nine` / `tile` 由 `effectiveMode` 回落（D6 落地）
+ * - **三种铺法**：`stretch`（整图拉伸，固定族与旧素材）/ `nine`（九宫格，素材带 `slice` 即生效）/
+ *   `tile`（原尺寸平铺）。DOM 层的九宫格走 `border-image`，与 SVG 层的切块拼装**语义一致**
+ *   （§3.3「两侧实现可以不同，调用方接口必须相同」）
  */
 
 import type { CSSProperties } from 'react'
 import type { GroundPaint } from '../engine/skin'
-import type { SkinFit } from '../types'
+import type { SkinFit, SkinSlice } from '../types'
 import {
   effectiveMode,
   placeTexture,
+  surfaceMode,
   type TextureBox,
   type TextureMode,
   type TexturePlacement,
@@ -84,7 +87,7 @@ export type SurfaceFit = 'stretch' | 'contain'
  * 被圆角剪裁，正是 `03-window.md` §五「素材只提供纸面底纹」的落法。
  *
  * 返回 `undefined`（未配该键、包里缺这张图）即调用方不传 `style`，CSS 纸面照旧。
- * 容器 V1 一律拉伸；D6 落地九宫格时，这里改出 `border-image` 即可，调用方接口不变。
+ * **素材带了 `slice` 就走九宫格**（见 `surfaceMode()`），否则整图拉伸；`contain` 那一档不受影响。
  */
 export function surfaceStyle(
   ref: TextureRef | undefined,
@@ -95,6 +98,10 @@ export function surfaceStyle(
   const src = assets.urlOf(ref.src)
   if (src === undefined) return undefined
 
+  if (fit === 'stretch' && surfaceMode(ref) === 'nine' && ref.slice !== undefined) {
+    return nineStyle(src, ref.slice)
+  }
+
   // 只写 image / size / repeat：**不动 `background-color`**——底纹可以带透明，
   // 纸面底色得留着（衔接处不露白）
   return {
@@ -102,6 +109,27 @@ export function surfaceStyle(
     backgroundSize: fit === 'contain' ? 'contain' : '100% 100%',
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',
+  }
+}
+
+/**
+ * **九宫格 → CSS `border-image`**（`skin.md` §3.3、`03-window.md` §二）。
+ *
+ * `slice` 是**图片像素**的 `[上, 右, 下, 左]`，与 `border-image-slice` 的语义逐字对应：
+ * 四角原样、四边单向拉伸、中心双向拉伸；末尾的 `fill` 让**中心区也画出来**（纸面底纹正在中心）。
+ *
+ * 与元素自身 CSS 的分工（`S-4`：素材只提供底纹、边框仍由 CSS 绘制）：
+ * - **不写 `border-width` / `border-style`**——盒尺寸与边框都归元素自己的 CSS，这里只换「边框怎么画」；
+ *   `border-image-width` 按切片给像素值，图区因此从边框盒边**往里铺**，四边压进内边距也不动布局；
+ * - **不写 `background-color`**——九宫格的 `fill` 只画中心区的**图**，纸面底色照旧由 CSS 兜着。
+ */
+function nineStyle(src: string, slice: SkinSlice): CSSProperties {
+  const [t, r, b, l] = slice
+  return {
+    borderImageSource: `url("${src}")`,
+    borderImageSlice: `${num(t)} ${num(r)} ${num(b)} ${num(l)} fill`,
+    borderImageWidth: `${num(t)}px ${num(r)}px ${num(b)}px ${num(l)}px`,
+    borderImageRepeat: 'stretch',
   }
 }
 

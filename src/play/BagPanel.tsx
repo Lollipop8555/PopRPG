@@ -11,6 +11,7 @@ import type { Session } from '../types/session'
 import { bagCapacityText, itemDef } from './inventory'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useButtonStyle } from '../ui/useButtonStyle'
+import { useRuleStyle } from '../ui/useRuleStyle'
 import { useSlotStyle } from '../ui/useSlotStyle'
 import { ItemGlyph } from '../ui/ItemGlyph'
 import { groundStyle } from '../ui/Texture'
@@ -45,6 +46,8 @@ export default function BagPanel({
   // 背包格底纹（`skin/03-window.md` §四）：这是格子与 `item.background` 的**唯一交叠处**，
   // 取「道具衬底优先、格位底纹兜底」——道具配了 `background` 就整格归它，没配才铺 `slots.bag`
   const bagSlot = useSlotStyle('bag')
+  // 分隔线（`skin/03-window.md` §二「单向族」/ §四 `rules.line`）：背包格与「穿戴中」之间那条
+  const rule = useRuleStyle()
 
   return (
     <div className="panel" style={surface}>
@@ -100,7 +103,7 @@ export default function BagPanel({
 
       {equipped.length > 0 && (
         <>
-          <div className="sketch-line" style={{ margin: '8px 0' }} />
+          <div className="sketch-line" style={{ margin: '8px 0', ...rule }} />
           <div className="panel-title hand" style={{ fontSize: 13 }}>
             穿戴中
           </div>

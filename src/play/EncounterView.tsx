@@ -11,6 +11,7 @@ import Overlay from '../ui/Overlay'
 import GainNoteView from './GainNoteView'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useButtonStyle } from '../ui/useButtonStyle'
+import { useHintStyle } from '../ui/useHintStyle'
 
 export default function EncounterView({
   session,
@@ -26,8 +27,15 @@ export default function EncounterView({
   // 按钮（`skin/03-window.md` §四）：标题栏的确认走 `primary`，货架行的「买下」走 `small`
   const primaryBtn = useButtonStyle('primary')
   const smallBtn = useButtonStyle('small')
+  // 事件判定框是**同一个元素换三种语气**（`skin/03-window.md` §四 `hints`）：三档都得先取，
+  // 之后按 `verdict` 挑一份——hook 不能落在条件分支里，这也是「一元素多档」的唯一写法。
+  const okHint = useHintStyle('ok')
+  const warnHint = useHintStyle('warn')
+  const errorHint = useHintStyle('error')
   const encounter = session.encounter
   if (!encounter) return null
+  const verdictHint =
+    encounter.event?.verdict === 'success' ? okHint : encounter.event?.verdict === 'blocked' ? warnHint : errorHint
 
   const nameOf = (id: string) => {
     const item = session.scenario.library.items.find((i) => i.id === id)
@@ -50,7 +58,10 @@ export default function EncounterView({
 
         {/* 事件：把判定摆明白 */}
         {encounter.event && (
-          <div className={`hintbox ${encounter.event.verdict === 'success' ? 'ok' : encounter.event.verdict === 'blocked' ? 'warn' : 'error'}`}>
+          <div
+            className={`hintbox ${encounter.event.verdict === 'success' ? 'ok' : encounter.event.verdict === 'blocked' ? 'warn' : 'error'}`}
+            style={verdictHint}
+          >
             {encounter.event.verdict === 'blocked' && <div>未满足门槛条件 —— 请备齐所需标签后再尝试。</div>}
             {encounter.event.verdict !== 'blocked' && (
               <div>

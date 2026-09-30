@@ -20,6 +20,7 @@
  */
 
 import type {
+  SkinBar,
   SkinBuilding,
   SkinBuildingSkin,
   SkinColor,
@@ -112,6 +113,42 @@ export type SlotKind = (typeof SLOT_KINDS)[number]
 /** 取固定族格子底纹；`window.slots` 未配该键即 `undefined` */
 export function slotOf(win: SkinWindow | undefined, kind: SlotKind): SkinTexture | undefined {
   return win?.slots?.[kind]
+}
+
+/**
+ * **单向族**（`03-window.md` §二）：血蓝条轨道与填充各一张，两端固定、中段伸缩。
+ * 与格子同理，**素材带了 `slice` 就按单轴九宫格**（切片上下给 0 即退化成单轴），
+ * 没交切片就整图拉伸。两个字键 `hp` / `mp` **不互相借用**。
+ */
+export const BAR_TONES = ['hp', 'mp'] as const
+
+export type BarTone = (typeof BAR_TONES)[number]
+
+/** 取血蓝条的两张图（`track` / `fill` 各自可缺，缺哪张哪张走程序绘制） */
+export function barOf(win: SkinWindow | undefined, tone: BarTone): SkinBar | undefined {
+  return win?.bars?.[tone]
+}
+
+/**
+ * **提示条**（`03-window.md` §二「随内容族」，§四 `hints`）：三档 tone 各一张，**不互相借用**。
+ *
+ * 注意 `.hintbox` 有**四**种外观（中性 ＋ `warn` / `error` / `ok`），而字段只定义**三档 tone**：
+ * **中性那档没有键、不铺素材**，继续由 CSS 绘制（见 §八「提示条」）。
+ */
+export const HINT_TONES = ['ok', 'warn', 'error'] as const
+
+export type HintTone = (typeof HINT_TONES)[number]
+
+export function hintOf(win: SkinWindow | undefined, tone: HintTone): SkinTexture | undefined {
+  return win?.hints?.[tone]
+}
+
+/**
+ * **分隔线**（`03-window.md` §二「单向族」，§四 `rules.line`）：只有一条键。
+ * 走单轴九宫格（§七.2 的平铺方案是同一处的另一档，未裁决前不引入第二套字段）。
+ */
+export function ruleOf(win: SkinWindow | undefined): SkinTexture | undefined {
+  return win?.rules?.line
 }
 
 /**

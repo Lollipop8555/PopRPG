@@ -18,6 +18,8 @@ import { RoleGlyph } from '../ui/RoleGlyph'
 import { Portrait, portraitTile } from '../ui/Portrait'
 import { useLobbyBgStyle, useLobbyCardStyle, useLobbyPanelStyle } from '../ui/usePageSkin'
 import { useButtonStyle } from '../ui/useButtonStyle'
+import { useHintStyle } from '../ui/useHintStyle'
+import { useRuleStyle } from '../ui/useRuleStyle'
 
 export default function StartScreen({
   scenario,
@@ -51,6 +53,9 @@ export default function StartScreen({
   // 按钮（`skin/03-window.md` §四）：该屏不另立按钮字段，直接复用 `window.buttons`（`08-pages.md` §一）
   const plainBtn = useButtonStyle('plain')
   const primaryBtn = useButtonStyle('primary')
+  // 分隔线与警告提示条（`skin/03-window.md` §二「单向族 / 随内容族」）：素材带 `slice` 才生效
+  const rule = useRuleStyle()
+  const warnHint = useHintStyle('warn')
 
   // 玩家自己掷骰决定出身（带一个短暂的摇骰过程）
   const roll = () => {
@@ -89,7 +94,7 @@ export default function StartScreen({
             <span className="badge">{scenario.library.skills.length} 种技能</span>
           </div>
 
-          <div className="sketch-line" style={{ margin: '10px 0' }} />
+          <div className="sketch-line" style={{ margin: '10px 0', ...rule }} />
 
           <div className="panel-title hand" style={{ fontSize: 14, marginBottom: 2 }}>
             选择出身
@@ -100,7 +105,11 @@ export default function StartScreen({
               : '挑一张卡片决定你的出身；想交给运气就掷骰。'}
           </p>
 
-          {list.length === 0 && <div className="hintbox warn">这一局还没有可选职业。</div>}
+          {list.length === 0 && (
+            <div className="hintbox warn" style={warnHint}>
+              这一局还没有可选职业。
+            </div>
+          )}
 
           <div className="class-cards">
             {list.map((cls) => (

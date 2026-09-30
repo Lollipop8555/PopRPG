@@ -4,7 +4,7 @@
  * 道路有自己的合成规则（`road.ts`：切片名 → 槽位 → 姿态角），其余各节（`role` / `misc` /
  * `window` / `item` / `building` …）都走这里。取图结果只有「哪张图 ＋ 什么变换」这一种形状，
  * **业务代码据此画图即可，不判断素材类型**（§四「业务代码内禁止判断素材类型」，也不写
- * `if (is9Patch)`——九宫格只落在 `TextureRef.slice` 这一个字段上，V1 渲染侧按拉伸处理）。
+ * `if (is9Patch)`——九宫格只落在 `TextureRef.slice` 这一个字段上，**带不带切片决定铺法**）。
  *
  * 本模块是**纯函数**：不生成标记语言、不碰 DOM。SVG 层与 DOM 层各自把 `TexturePlacement`
  * 翻译成自己的写法（`ui/Texture.tsx`），两层共用同一份几何。
@@ -28,7 +28,7 @@ export interface TextureRef {
   flip: boolean
   /** 数组写法时的下标；其余写法为 `undefined` */
   index?: PoseIndex
-  /** 九宫格切片（容器类才有）；**V1 不解析**，渲染侧按拉伸处理，是 D6 的参数位 */
+  /** 九宫格切片（容器类才有）；**带了即走九宫格、不带即整图拉伸**（`surfaceMode()` 判） */
   slice?: SkinSlice
 }
 
@@ -121,13 +121,34 @@ export function placeTexture(box: TextureBox, ref: TextureRef | undefined): Text
   return { ...box, rotate: normalizeAngle(ref.rotate), flip: ref.flip }
 }
 
-/** 填充方式；V1 只实现 `stretch`，其余两项是参数位（D6） */
+/** 填充方式（§3.3） */
 export type TextureMode = 'stretch' | 'nine' | 'tile'
 
+/** 生效的填充方式 */
+export type EffectiveMode = 'stretch' | 'nine' | 'tile'
+
 /**
- * 生效的填充方式（§四）：`nine` / `tile` 未解析前一律按 `stretch` 处理。
- * 渲染侧只调这一处，D6 落地九宫格 / 平铺时也只有这里要改。
+ * 生效的填充方式（§四）：**策略由调用方给、切片由素材给**，两者齐备才成立。
+ *
+ * - `nine` 要**同时**拿到策略与 `slice`——没给切片参数就无从切起，与「字符串写法」一样回落 `stretch`
+ *   （`03-window.md` §六 `KW-1`：随视口族素材无 `slice` 时 V1 会整体拉伸，正是这条回落）；
+ * - `tile` 不需要切片，独立成立；
+ * - 渲染侧只调这一处，各层各自把结果翻译成自己的写法（DOM 用 `border-image`、SVG 内切块拼装）。
  */
-export function effectiveMode(_mode?: TextureMode): 'stretch' {
+export function effectiveMode(mode?: TextureMode, slice?: SkinSlice): EffectiveMode {
+  if (mode === 'nine') return slice === undefined ? 'stretch' : 'nine'
+  if (mode === 'tile') return 'tile'
   return 'stretch'
+}
+
+/**
+ * 衬底 / 格子这类**背景铺法**的默认策略：**素材带了 `slice` 就按九宫格**。
+ *
+ * 依据 `03-window.md` §二：随视口族、随内容族、单向族**都要求九宫格**（硬拉伸会被 `KW-3` 点名），
+ * 固定族则尺寸写死、整图拉伸即可。两族的区别不在「要不要九宫格」，而在**素材有没有交切片**——
+ * 交了就切，没交就整图拉伸。故这一处不需要调用方多传参数：调用方接口保持 `(ref, assets, fit)`。
+ */
+export function surfaceMode(ref: TextureRef | undefined): EffectiveMode {
+  if (ref?.slice === undefined) return 'stretch'
+  return effectiveMode('nine', ref.slice)
 }
