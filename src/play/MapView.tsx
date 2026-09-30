@@ -5,19 +5,26 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import type { GameMap, MapNode } from '../types'
+import type { GameMap, MapNode, SkinRoad } from '../types'
 import type { Session } from '../types/session'
+import type { SkinAssets } from '../io/skin-assets'
 import { currentMap, neighbors } from './kit'
 import { canStep } from './flow'
+import { roadPickAt } from './road'
 import { centerCamera } from '../lib/map'
 import { MapMarker } from '../ui/Marker'
 import { Footprint } from '../ui/Footprint'
+import { SvgTexture, textureProps } from '../ui/Texture'
+import { useSkinStore } from '../store/skin'
 import { fallbackColor, withAlpha } from '../lib/color'
 
 const CELL = 48
 
 export default function MapView({ session, onStep }: { session: Session; onStep: (cell: [number, number]) => void }) {
   const map = currentMap(session)
+  // 皮肤：`assets` 永远是可用对象，未启用皮肤时道路那一格自然回退脚印（§四 降级链）
+  const assets = useSkinStore((s) => s.assets)
+  const road = useSkinStore((s) => s.skin?.manifest.road)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [size, setSize] = useState({ w: 800, h: 600 })
   const [cam, setCam] = useState<[number, number] | null>(null)
@@ -126,7 +133,7 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
         </g>
 
         {map.nodes.map((node) => (
-          <NodeShape key={`${node.x},${node.y}`} node={node} session={session} />
+          <NodeShape key={`${node.x},${node.y}`} node={node} session={session} map={map} road={road} assets={assets} />
         ))}
 
         {/* 主角 */}
@@ -182,7 +189,19 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
   )
 }
 
-function NodeShape({ node, session }: { node: MapNode; session: Session }) {
+function NodeShape({
+  node,
+  session,
+  map,
+  road,
+  assets,
+}: {
+  node: MapNode
+  session: Session
+  map: GameMap
+  road?: SkinRoad
+  assets: SkinAssets
+}) {
   const w = Math.max(1, node.w ?? 1) * CELL
   const h = Math.max(1, node.h ?? 1) * CELL
   const x = node.x * CELL
@@ -199,6 +218,17 @@ function NodeShape({ node, session }: { node: MapNode; session: Session }) {
   const markSize = Math.min(w, h) * 0.86
   const nodeColor = def?.color ?? fallbackColor(def?.id ?? node.type)
 
+  // 道路：标签取自道路定义（`01-road.md` §六 样式集选取），连通关系看本格四邻与四角（`roadFlag`）
+  const roadDef = node.ref !== undefined ? session.scenario.library.roads.find((r) => r.id === node.ref) : undefined
+  const pick = roadPickAt(map, node, road, roadDef?.tags)
+  // 素材是 `cellSize × cellSize` 正方形、图形居中（`01-road.md` §3.1），故按短边居中落图
+  const side = Math.min(w, h)
+  const tile = textureProps(
+    pick ? { src: pick.src, rotate: pick.rotate, flip: false } : undefined,
+    assets,
+    { x: x + (w - side) / 2, y: y + (h - side) / 2, w: side, h: side },
+  )
+
   return (
     <g>
       <rect
@@ -212,7 +242,12 @@ function NodeShape({ node, session }: { node: MapNode; session: Session }) {
         strokeWidth={isRoad ? 0 : 1.8}
         transform={isBuilding ? `rotate(-0.6 ${x + w / 2} ${y + h / 2})` : undefined}
       />
-      {isRoad && <Footprint cx={x + w / 2} cy={y + h / 2} size={Math.min(w, h) * 0.6} color={nodeColor} />}
+      {isRoad &&
+        (tile ? (
+          <SvgTexture {...tile} />
+        ) : (
+          <Footprint cx={x + w / 2} cy={y + h / 2} size={Math.min(w, h) * 0.6} color={nodeColor} />
+        ))}
       {isMarker ? (
         <MapMarker kind={node.type as 'start' | 'end'} x={x + (w - markSize) / 2} y={y + (h - markSize) / 2} size={markSize} />
       ) : isRoad ? null : (

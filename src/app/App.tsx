@@ -8,6 +8,7 @@ import BuildApp from '../build/BuildApp'
 import PlayApp from '../play/PlayApp'
 import SketchDefs from '../ui/SketchDefs'
 import { useLibraryStore } from '../store/library'
+import { useSkinStore } from '../store/skin'
 import '../styles/play.css'
 
 export default function App() {
@@ -16,6 +17,11 @@ export default function App() {
   // 首次启动把内置预设播种进组件库（§6.1.1）；幂等，已播种过则跳过
   useEffect(() => {
     useLibraryStore.getState().ensureSeeded()
+  }, [])
+
+  // 启动即激活「本机启用的全局皮肤」（用户配置层）；幂等，没启用就落回程序绘制（§4.4）
+  useEffect(() => {
+    void useSkinStore.getState().refresh()
   }, [])
 
   return (

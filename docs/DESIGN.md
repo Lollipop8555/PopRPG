@@ -124,6 +124,11 @@
 
 ## 进度同步
 
+**2026-09-30 · D3 起步：运行期皮肤通道 ＋ 道路接入（[`design/skin/00-package.md`](design/skin/00-package.md) §4.4 / [`01-road.md`](design/skin/01-road.md)）**
+- 新增运行期入口 [`src/store/skin.ts`](../src/store/skin.ts)：界面侧读皮肤的唯一出口（生效皮肤 ＋ 素材源 ＋ 提示），`activateLayers({ game, user })` 整体换两层、`refresh()` 从皮肤库重取用户启用的全局皮肤（本局层不冲掉）、`release()` 回到全部程序绘制；换套时**先撤旧地址再交新的**（裁决 15）。未启用皮肤时素材源对一切路径回 `undefined`，各屏**逐节点**回退程序绘制，调用方不必判空。启动时 `App.tsx` 调一次 `refresh()`。
+- 道路接入：新增 [`src/play/road.ts`](../src/play/road.ts)（格子 → 四邻四角 → `roadFlag`；多格节点按占地全算、按左上格取图），[`src/play/MapView.tsx`](../src/play/MapView.tsx) 每格 `roadPickAt()` → `textureProps()` → `SvgTexture`，**该格未接管即照旧画脚印**。设计侧同步 [`design/skin/01-road.md`](design/skin/01-road.md) §十一 与 [`design/skin/00-package.md`](design/skin/00-package.md) §4.4 的「实现落点」。
+- 遗留：地图层素材基准暂用屏幕 `CELL × CELL`，待 `background`（[`design/skin/05-canvas.md`](design/skin/05-canvas.md)）接入后改用背景层 `cellSize`；构建页画布仍未接（画脚印）。验收：`npx tsc --noEmit` 无错，`npx vitest run` **34 个文件 / 386 项**全绿。
+
 **2026-09-30 · D2 落地（贴图渲染器，[`design/skin.md`](design/skin.md) §四）**
 - `skin.md` §四 补「**实现落点（React）**」：`drawTexture(target, src, box, opts)` 在本工程里由 [`src/ui/Texture.tsx`](../src/ui/Texture.tsx) 的 `textureProps(ref, assets, box, extra)` 承担唯一入口（取图 → 落位 → 换地址，**画不出来返回 `undefined`**，调用方据此改画程序图形），`target` 体现为**选用哪个渲染器**（`SvgTexture` / `DomTexture`，props 完全相同）而非运行期分支；几何归纯函数 [`src/engine/skin/texture.ts`](../src/engine/skin/texture.ts)，素材地址归 [`src/io/skin-assets.ts`](../src/io/skin-assets.ts)（按需建、`release()` 一次撤）；`nine` / `tile` 在 `effectiveMode()` 统一回落 `stretch`，V2.2 落地时只改这一处。
 - 同节表内版本线 `V1.1` 更正为 **V2.2**（与 2026-09-29 版本线定义一致；`S-1` 的取舍描述不受影响）。

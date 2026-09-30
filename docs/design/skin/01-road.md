@@ -190,3 +190,11 @@
 1. **连通判定是否看标签**：当前规范为「相邻格同为道路件即连通，标签只决定样式集」。若设计意图是「只有同标签的道路才互相连通」，需在连通判定中引入标签匹配，槽位计算随之改变。
 2. **`straight` 的两张素材**：现行规范只要求一张（旋转 180° 复用）。若手绘素材在任何角度下都带方向感，则需补第二张。
 3. **素材与脚印的混用**：是否允许同一张地图内部分道路有素材、部分回退脚印（当前规范允许，逐格降级）。
+
+## 十一、实现落点（2026-09-30）
+
+- **纯换算**（[`road-bits.ts`](../../../src/engine/skin/road-bits.ts) / [`road.ts`](../../../src/engine/skin/road.ts) / [`road-style.ts`](../../../src/engine/skin/road-style.ts)）：`roadFlag()` 把四邻四角折成 8 位标记（位序从左上角起顺时针），`roadTileOf()` 出槽位与基准姿态角，`roadSprite()` 拼样式集目录前缀并归一三写法。
+- **业务折算**（[`src/play/road.ts`](../../../src/play/road.ts)）：`roadAt()` / `roadNeighbors()` 把地图布局折成四邻四角——**有路 = 被道路节点覆盖**（多格节点按占地全算），**多格道路节点按左上格取图**；`roadPickAt()` 把道路定义上的 `tags` 交给 `pickRoadStyle()`。
+- **渲染**（[`src/play/MapView.tsx`](../../../src/play/MapView.tsx)）：每格 `roadPickAt()` → `textureProps()` → `SvgTexture`，姿态角落在 `transform` 上；**该格未接管**（缺 `road` 节 / 缺该槽位 / 数组缺中间项 / 包里缺这张图）**即照旧画** `Footprint`，即 §十 待确认 3 的「逐格降级」。
+- **素材基准**：素材为 `cellSize × cellSize` 正方形、图形居中，渲染按**短边居中**落图；当前基准是屏幕 `CELL × CELL`，待 `background`（[`05-canvas.md`](05-canvas.md)）接入后改用背景层 `cellSize`。
+- **构建页画布**（`src/build/Canvas.tsx`）尚未接入，仍画脚印。

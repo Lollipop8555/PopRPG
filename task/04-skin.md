@@ -52,7 +52,7 @@
 
 > 覆盖清单逐屏对照 [`skin.md`](../docs/design/skin.md) §「覆盖清单（逐屏）」。每接入一屏，用同一份 `.pp` 验证「有素材 / 无素材」两种形态。
 
-- [ ] `road`：15 槽位 / 47 姿态 / 样式标签优先级（**已定稿**，按 [`skin/01-road.md`](../docs/design/skin/01-road.md) 实现）；缺图回退脚印 `src/ui/Footprint.tsx`
+- [x] `road`：15 槽位 / 47 姿态 / 样式标签优先级（**已定稿**，按 [`skin/01-road.md`](../docs/design/skin/01-road.md) 实现）；缺图回退脚印 `src/ui/Footprint.tsx`——**落点**：邻接折算 `src/play/road.ts`（格子 → 四邻四角 → `roadFlag`，多格节点按占地全算、按左上格取图）、取图 `roadPickAt()`（标签取自道路定义，走 `pickRoadStyle`）、渲染 `src/play/MapView.tsx`（每格 `roadPickAt` → `textureProps` → `SvgTexture`，该格未接管即照旧画脚印；素材按 `cellSize` 正方形居中，暂以屏幕 `CELL` 为基准，待 `background` 接入后改用背景层 `cellSize`）。**构建页画布（`src/build/Canvas.tsx`）本轮未接**，仍画脚印
 - [ ] `role`：玩家棋子 / 职业形象 / 怪物形象 / **NPC 形象 `npcs`**（单格、无朝向；**地图上不绘制 NPC**，其形象唯一落点是对话弹层）＋ **立绘 `portraits`**（裁决 24 / 25 / 26）：底栏 hp/mp 左侧（**替代整个 `hud-face`**，缺位不占宽）、对战对话框顶部 **VS 区**（**任一方有立绘即渲染**，主角在左 / 怪物在右，缺侧留空、不补 emoji）、**对话弹层不设立绘区**（`S-29` 2026-09-29 修订，原裁决 26 的对话 VS 区作废；NPC 只占标题栏 `icon` 一格，取 `role.npcs.<id>`）、出身卡职业立绘（**居中**替代 `.class-icon`）、状态面板头部（与底栏**同源同图**）；遭遇 / 商店弹层**仅预留不渲染**（`S-29`）；立绘按**窗口短边 `W`** 的比例缩放、**底边对齐**（仅出身卡居中）、**不用 `CELL` 基准**、**不套手绘滤镜**、**不参与点击命中**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §四）
 - [ ] **受击表现**（裁决 25）：棋子与立绘**同一套规则**——有 `hurt` 素材即改显示 `hurt`，未提供则形变（基准：棋子＝格中心、立绘＝底边）；**`dead`（倒下）不设变体**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §4.4）
 - [ ] `window`：对话框 / 抽屉 / 气泡 / 按钮 / 格子 / 条 / 提示条；**按钮四态**结构定稿、接入可后置——先只读 `normal`，其余三态暂由 CSS 表现并在清单提示 `KW-6`（裁决 13 / [`skin/03-window.md`](../docs/design/skin/03-window.md) §四.1）
@@ -182,3 +182,10 @@
 - **参数位**：`nine` / `tile` 在 `effectiveMode()` 统一回落 `stretch`——V2.2 落地九宫格时只改这一处。
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **31 个文件 / 364 项**全绿（新增 `src/engine/skin/__tests__/texture.test.ts` 14 项、`src/io/__tests__/skin-assets.test.ts` 8 项、`src/ui/__tests__/texture.test.tsx` 6 项）。
 - 设计侧同步：[`../docs/design/skin.md`](../docs/design/skin.md) §四 补「实现落点」并把表内版本线 `V1.1` 更正为 **V2.2**、[`../docs/DESIGN.md`](../docs/DESIGN.md) 进度同步、[`../TASK.md`](../TASK.md) 里程碑索引与进度同步。
+
+**2026-09-30 · D3 起步：运行期通道 ＋ `road` 接入**
+- **公共前置**：新增 [`../src/store/skin.ts`](../src/store/skin.ts)——界面侧读皮肤的唯一入口，持有「生效皮肤 ＋ 素材源 ＋ 提示」，`activateLayers({ game, user })` 整体换两层、`refresh()` 从皮肤库重取用户启用的全局皮肤（本局层记住不冲掉）、`release()` 回到全部程序绘制；换套时**先撤旧的一套地址再交新的**（裁决 15）。[`../src/app/App.tsx`](../src/app/App.tsx) 启动时 `refresh()` 一次（幂等，没启用就落回程序绘制）。未启用皮肤时 `assets` 是空素材源，一切查询落 `undefined`，各屏自然回退程序绘制，**调用方不必判空**。
+- **道路接入**：新增 [`../src/play/road.ts`](../src/play/road.ts)（`roadAt` / `roadNeighbors` / `roadPickAt`：多格节点按占地全算、按左上格取图；非道路节点不算有路）；[`../src/play/MapView.tsx`](../src/play/MapView.tsx) 每格 `roadPickAt` → `textureProps` → `SvgTexture`，未接管的那一格照旧画 `Footprint`，姿态角落在 `transform` 上、素材按短边居中落图。
+- 待办（同屏遗留）：素材基准暂用屏幕 `CELL × CELL`，等 `background` 接入后改用背景层 `cellSize`（`01-road.md` §3.1）；**构建页画布仍为脚印**。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **34 个文件 / 386 项**全绿（新增 `src/play/__tests__/road.test.ts` 10 项、`src/store/__tests__/skin.test.ts` 8 项、`src/play/__tests__/mapView.test.tsx` 4 项）。
+- 设计侧同步：[`../docs/design/skin/01-road.md`](../docs/design/skin/01-road.md) 与 [`../docs/design/skin/00-package.md`](../docs/design/skin/00-package.md) §4.4 补「实现落点」、[`../docs/DESIGN.md`](../docs/DESIGN.md) 与 [`../TASK.md`](../TASK.md) 进度同步。
