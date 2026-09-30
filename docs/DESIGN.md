@@ -124,6 +124,16 @@
 
 ## 进度同步
 
+**2026-09-30 · D3 第十一屏：音频 `audio` 解析与校验接入（[`design/skin/07-audio.md`](design/skin/07-audio.md) §五 / §八）**
+- **承接裁决 16 的「V1 只解析预留、不播放」**：本批把 `audio` 这一节的**解析与校验**接上——识别字段、校验事件键与 `volume`、给加载期提示；**不建 `AudioContext`、不请求 / 解码素材、不播放**，播放（含 `KA-5` 曲目时长）整体留 V2.2。
+- **取值与校验归纯函数**：[`src/engine/skin/audio.ts`](../src/engine/skin/audio.ts) 新增 `bgmOf()` / `sfxOf()`（原值）、`bgmTrackOf()` / `sfxTrackOf()`（收成 `{ file, loop?, volume }`，把字符串 / 对象两写法、缺省、越界一次算清）、`clampVolume()`（越界夹回 0–1，不静音不换算）；缺省常量 `BGM_DEFAULT_VOLUME = 0.5` / `BGM_DEFAULT_LOOP = true` / `SFX_DEFAULT_VOLUME = 0.8`。**场景 / 事件各查自己的键、不跨键借用**。
+- **报码**：`unknownSfxEvents()` 出 `KA-2`（§三 清单外的 `sfx` 事件键、忽略），`outOfRangeVolumes()` 出 `KA-3`（`volume` 越界项的出处，形如 `audio.bgm.map.volume`）。
+- **`KA-4` 落 IO 层**：[`src/io/pp.ts`](../src/io/pp.ts) 新增 `checkAudio()`——单文件体积要读**包内条目长度**（`engine/skin/audio.ts` 不碰 zip）；路径**先去重**，同一个文件被多处引用只报一次；阈值 `AUDIO_MAX_BYTES = 2 MB`。
+- **码表**：`SkinIssueCode` 新增 `KA-2` / `KA-3` / `KA-4`，与包级 `KP-*` 同一码空间；**`KA-1`（路径不存在）不单列**——由包级 `KP-2` 的通用收集（按扩展名认音频）判，单列会让同一条缺失在清单里出现两遍；`KA-5` 待 V2.2。
+- **类型收紧**：`SkinAudio.sfx` 的值由 `SkinTexture` 收紧为 `string | SkinSfxObject`（音效不吃贴图对象）。
+- **已知边界**：越界音量只在**已知事件键**上判——写在清单外的键整体已被 `KA-2` 忽略，其音量**不另判**。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **51 个文件 / 592 项**全绿（本轮新增 2 个用例文件 / 31 项：[`src/engine/skin/__tests__/audio.test.ts`](../src/engine/skin/__tests__/audio.test.ts) 18 项纯函数、[`src/io/__tests__/pp-audio.test.ts`](../src/io/__tests__/pp-audio.test.ts) 13 项加载期，含「`KA-1` 不与 `KP-2` 重复报」不变量）。里程碑状态：[`task/04-skin.md`](../task/04-skin.md) 的 `audio` 条勾选；设计侧 [`design/skin/07-audio.md`](design/skin/07-audio.md) 新增 §八 实现落点、§五 补状态列与 `KA-1` 说明。
+
 **2026-09-30 · D3 第十屏：图标按名替换接入（[`design/skin/04-misc.md`](design/skin/04-misc.md) §四 / §十）**
 - **承接 `misc` 的地图标记 ＋ 骰子那一批**：本批落 §四 的 **lucide 图标按名替换**——键即 lucide 图标名，清单 `ICON_NAMES` 九个（`Sword` / `Hammer` / `FileDown` / `FileUp` / `LibraryBig` / `Menu` / `Flag` / `StepForward` / `X`），正好是游玩态实际写到的那九个；**构建页不接**。
 - **取图**：[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `ICON_NAMES` / `IconName` 与 `iconOf(misc, name)`——**按名各查自己的名、不跨名借用**（配了 `Sword` 不会让同屏的 `Hammer` 跟着出图）；`misc` 整节缺位不抛；**清单外的名字**照样照读但静默搁置（清单声明的是落点，不是白名单）。

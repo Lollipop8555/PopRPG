@@ -5,6 +5,7 @@
  * 渲染由 `ui/Texture.tsx`（取图 → 落位 → 换地址，见 `./texture`）承担，加载归皮肤库（D1）。
  */
 
+export * from './audio'
 export * from './canvas'
 export * from './lookup'
 export * from './road-bits'

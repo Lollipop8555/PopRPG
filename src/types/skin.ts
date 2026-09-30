@@ -303,7 +303,13 @@ export interface SkinSfxObject {
 
 export interface SkinAudio {
   bgm?: Partial<Record<BgmScene, SkinBgm>>
-  sfx?: Partial<Record<SfxEvent, SkinTexture | SkinSfxObject>>
+  /**
+   * 音效：路径字符串，或 `{ file, volume }`（`skin/07-audio.md` §二）。
+   *
+   * **不是 `SkinTexture`**：`rotate` / `flip` 对音源没有意义，写成纹理那两种形状
+   * 只会在解析时变成一句「取不到路径」的提示，故取值类型收紧到这两种写法。
+   */
+  sfx?: Partial<Record<SfxEvent, string | SkinSfxObject>>
 }
 
 // ── 欢迎页与游戏首页 `startup` / `lobby` ───────────────────────────────
@@ -452,9 +458,20 @@ export interface PGamePack {
 export const PGAME_DEFAULT_PMOD = 'game.pmod'
 export const PGAME_DEFAULT_SKIN_DIR = 'skin/'
 
-// ── 校验项 `KP-1`~`KP-10`（`skin/00-package.md` §六） ────────────────────
+// ── 校验项 `KP-1`~`KP-10`（`skin/00-package.md` §六） ＋ 分节项 `KA-*` ──
 
-/** 加载期校验项编号；全部为**提示**，不阻断加载与导出 */
+/**
+ * 加载期校验项编号；全部为**提示**，不阻断加载与导出。
+ *
+ * 两族混在同一个编号空间里，靠前缀区分：
+ * - `KP-*`：**包级**，`skin/00-package.md` §六 总表，读 manifest 与包内条目即可判；
+ * - `KA-*`：**分节**，`skin/07-audio.md` §五，各节文档自己编号（`audio` 先来，其余节随后）。
+ *
+ * 分节项只收**不需要解码素材**的那几条，故 V1 起就能生效；需要解码或需要时长的项
+ * （如 `KA-5` 的曲目时长）在 §五 已注明「V1.1 起检查」。
+ * `KA-1`（音频路径在包内不存在）**不单列**——它与 `KP-2` 判的是同一件事、报的是同一处，
+ * 单列只会让同一条缺失在清单里出现两遍（见 `skin/07-audio.md` §五 注）。
+ */
 export const SKIN_ISSUE_CODES = [
   'KP-1',
   'KP-2',
@@ -466,6 +483,9 @@ export const SKIN_ISSUE_CODES = [
   'KP-8',
   'KP-9',
   'KP-10',
+  'KA-2',
+  'KA-3',
+  'KA-4',
 ] as const
 
 export type SkinIssueCode = (typeof SKIN_ISSUE_CODES)[number]
@@ -482,6 +502,9 @@ export const SKIN_ISSUE_TITLES: Record<SkinIssueCode, string> = {
   'KP-8': 'extends 路径不存在或形成环',
   'KP-9': 'theme 含未知 token 或布局 token',
   'KP-10': '含已废除的 resource 键',
+  'KA-2': 'sfx 的事件键不在清单内',
+  'KA-3': '音频 volume 超出 0–1',
+  'KA-4': '单个音频文件体积过大',
 }
 
 /**

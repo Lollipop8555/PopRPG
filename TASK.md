@@ -131,6 +131,14 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 
 ## 进度同步
 
+**2026-09-30 · D3 第十一屏（音频 `audio` 解析与校验接入）**
+- 取值与校验（纯函数）：新增 [`src/engine/skin/audio.ts`](src/engine/skin/audio.ts)——`bgmOf()` / `sfxOf()` 原值、`bgmTrackOf()` / `sfxTrackOf()` 收成 `{ file, loop?, volume }`（字符串 / 对象两写法、缺省、越界一次算清）、`clampVolume()` 越界夹回 0–1（不静音）；缺省 `BGM_DEFAULT_VOLUME = 0.5` / `BGM_DEFAULT_LOOP = true` / `SFX_DEFAULT_VOLUME = 0.8`；**场景 / 事件不跨键借用**。
+- 报码：`unknownSfxEvents()` 出 `KA-2`（清单外 `sfx` 事件键、忽略），`outOfRangeVolumes()` 出 `KA-3`（`volume` 越界出处，如 `audio.bgm.map.volume`）。
+- `KA-4`（单文件体积）落 [`src/io/pp.ts`](src/io/pp.ts) 的 `checkAudio()`——要读**包内条目长度**；路径先去重、同一文件只报一次；阈值 `AUDIO_MAX_BYTES = 2 MB`。
+- 码表：`SkinIssueCode` 新增 `KA-2` / `KA-3` / `KA-4`，与 `KP-*` 同一码空间；**`KA-1` 不单列**（归 `KP-2` 的通用收集，避免同一条缺失报两遍）、`KA-5` 待 V2.2。类型 `SkinAudio.sfx` 值收紧为 `string | SkinSfxObject`。
+- **V1 全程无声音**：不建 `AudioContext`、不请求 / 解码素材、不播放（裁决 16）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **51 个文件 / 592 项**全绿（新增 2 个用例文件 / 31 项：[`src/engine/skin/__tests__/audio.test.ts`](src/engine/skin/__tests__/audio.test.ts) 18 项、[`src/io/__tests__/pp-audio.test.ts`](src/io/__tests__/pp-audio.test.ts) 13 项）。设计侧同步 [`docs/design/skin/07-audio.md`](docs/design/skin/07-audio.md) §五 / §八；任务侧 [`task/04-skin.md`](task/04-skin.md) 的 `audio` 条勾选。
+
 **2026-09-30 · D3 第十屏（图标按名替换接入）**
 - 取图：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `ICON_NAMES` / `IconName` 与 `iconOf(misc, name)`——键即 lucide 图标名（九个：`Sword` / `Hammer` / `FileDown` / `FileUp` / `LibraryBig` / `Menu` / `Flag` / `StepForward` / `X`），**不跨名借用**；`misc` 缺位不抛；清单外的名字静默搁置。
 - 入口：新增 [`src/ui/GameIcon.tsx`](src/ui/GameIcon.tsx)，把各处直接写的 `<Sword size={22} />` 统一成 `<GameIcon name="Sword" size={22} icon={Sword} />`——配了才换、没配 / 缺图 / 未启用皮肤原样回退 lucide 元件，业务代码不判断素材类型。
