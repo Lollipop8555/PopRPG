@@ -5,13 +5,26 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import type { GameMap, MapNode, SkinMisc, SkinRoad } from '../types'
+import type { GameMap, MapNode, SkinBuilding, SkinMisc, SkinRoad } from '../types'
 import type { Session } from '../types/session'
 import type { SkinAssets } from '../io/skin-assets'
 import { currentMap, neighbors } from './kit'
 import { canStep } from './flow'
 import { roadPickAt } from './road'
-import { backgroundOf, backgroundPlacement, backgroundUsable, markOf, roleSprite, spriteRef, type MarkKind } from '../engine/skin'
+import {
+  backgroundOf,
+  backgroundPlacement,
+  backgroundUsable,
+  buildingImgOf,
+  buildingSkinOf,
+  groundPaint,
+  markOf,
+  roleSprite,
+  spriteRef,
+  textureRef,
+  type MarkKind,
+} from '../engine/skin'
+import { usePackFont } from '../ui/skinFont'
 import { centerCamera } from '../lib/map'
 import { MapMarker } from '../ui/Marker'
 import { Footprint } from '../ui/Footprint'
@@ -34,6 +47,7 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
   const road = useSkinStore((s) => s.skin?.manifest.road)
   const background = useSkinStore((s) => s.skin?.manifest.background)
   const misc = useSkinStore((s) => s.skin?.manifest.misc)
+  const building = useSkinStore((s) => s.skin?.manifest.building)
   const role = useSkinStore((s) => s.skin?.manifest.role)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [size, setSize] = useState({ w: 800, h: 600 })
@@ -184,6 +198,7 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
             map={map}
             road={road}
             misc={misc}
+            building={building}
             assets={assets}
           />
         ))}
@@ -256,6 +271,7 @@ function NodeShape({
   map,
   road,
   misc,
+  building,
   assets,
 }: {
   node: MapNode
@@ -263,6 +279,7 @@ function NodeShape({
   map: GameMap
   road?: SkinRoad
   misc?: SkinMisc
+  building?: SkinBuilding
   assets: SkinAssets
 }) {
   const w = Math.max(1, node.w ?? 1) * CELL
@@ -308,19 +325,50 @@ function NodeShape({
     className: 'mark-footprint',
   })
 
+  // 建筑皮肤（`06-item-building.md` §2.3）：键是组件 `id`；**贴图缺位才回退**通用件 `misc.nodes.building`
+  const buildingSkin = isBuilding && def ? buildingSkinOf(building, def.id) : undefined
+  // 地图名称的字体（§2.3 末条）：包内字体注入 `@font-face`，内置字体名原样用，缺文件即回退内置字体
+  const nameFont = usePackFont(buildingSkin?.font)
+
+  // 建筑节点贴图（§3.1 / 取舍 `S-9`）：**整图替换 `rect`**，保留 3px 内缩与 -0.6° 倾斜
+  const nodeImg = isBuilding
+    ? textureProps(textureRef(buildingImgOf(building, misc, def?.id)), assets, {
+        x: x + 3,
+        y: y + 3,
+        w: w - 6,
+        h: h - 6,
+      }, { className: 'node-img' })
+    : undefined
+  // 衬底三件套接管 `rect` 的 `fill` / `stroke`（§3.1 / 裁决 18）：`fill` 沿用 α0.42、**`stroke` 缺省不绘制**。
+  // 未接管（无 `background`）时 `nodeGround` 为 `undefined`，下面三项即程序绘制形态（取舍 `S-11`）
+  const nodeGround = isBuilding ? groundPaint(buildingSkin?.background, nodeColor) : undefined
+  const noStroke = nodeGround !== undefined && nodeGround.stroke === undefined
+  const fill = isRoad ? 'transparent' : withAlpha(nodeGround?.fill ?? nodeColor, isBuilding ? 0.42 : 0.34)
+  const stroke = isRoad ? 'transparent' : (nodeGround?.stroke ?? (nodeGround ? 'transparent' : nodeColor))
+  const strokeWidth = isRoad || noStroke ? 0 : 1.8
+
+  // 节点的倾斜（§3.1 / 取舍 `S-9`）：贴图与程序 `rect` 同一角度
+  const tilt = isBuilding ? `rotate(-0.6 ${x + w / 2} ${y + h / 2})` : undefined
+
   return (
     <g>
-      <rect
-        x={x + 3}
-        y={y + 3}
-        width={w - 6}
-        height={h - 6}
-        rx={isBuilding ? 8 : 4}
-        fill={isRoad ? 'transparent' : withAlpha(nodeColor, isBuilding ? 0.42 : 0.34)}
-        stroke={isRoad ? 'transparent' : nodeColor}
-        strokeWidth={isRoad ? 0 : 1.8}
-        transform={isBuilding ? `rotate(-0.6 ${x + w / 2} ${y + h / 2})` : undefined}
-      />
+      {nodeImg ? (
+        <g transform={tilt}>
+          <SvgTexture {...nodeImg} />
+        </g>
+      ) : (
+        <rect
+          x={x + 3}
+          y={y + 3}
+          width={w - 6}
+          height={h - 6}
+          rx={isBuilding ? 8 : 4}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+          transform={tilt}
+        />
+      )}
       {isRoad &&
         (tile ? (
           <SvgTexture {...tile} />
@@ -335,13 +383,22 @@ function NodeShape({
         ) : (
           <MapMarker kind={node.type as 'start' | 'end'} x={x + (w - markSize) / 2} y={y + (h - markSize) / 2} size={markSize} />
         )
-      ) : isRoad ? null : (
+      ) : // 建筑出了贴图就不再画图标字形：地图上这个位置整块由 `img` 取代（`06-item-building.md` §一 `icon` 落点）
+      isRoad || nodeImg ? null : (
         <text x={x + w / 2} y={y + h / 2 + 7} fontSize={Math.min(22, CELL * 0.46)} textAnchor="middle">
           {def?.icon ?? '·'}
         </text>
       )}
       {isBuilding && (
-        <text x={x + w / 2} y={y + h - 5} fontSize={11} textAnchor="middle" fill="var(--ink-soft)">
+        // 地图名称（§3.1）：字号固定 11px，只有字色与字体交给素材
+        <text
+          x={x + w / 2}
+          y={y + h - 5}
+          fontSize={11}
+          textAnchor="middle"
+          fill={buildingSkin?.fontColor ?? 'var(--ink-soft)'}
+          fontFamily={nameFont}
+        >
           {def?.name}
         </text>
       )}

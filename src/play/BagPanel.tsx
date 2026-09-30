@@ -10,6 +10,11 @@ import type { ItemDef } from '../types'
 import type { Session } from '../types/session'
 import { bagCapacityText, itemDef } from './inventory'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { ItemGlyph } from '../ui/ItemGlyph'
+import { groundStyle } from '../ui/Texture'
+import { groundPaint, itemSkinOf } from '../engine/skin'
+import { fallbackColor } from '../lib/color'
+import { useSkinStore } from '../store/skin'
 
 export default function BagPanel({
   session,
@@ -28,6 +33,9 @@ export default function BagPanel({
   const equipped = session.player.equipped
   // 抽屉纸面底纹（`skin/03-window.md` §四）：抽屉里四张卡片同吃 `surfaces.drawer`
   const surface = useSurfaceStyle('drawer')
+  // 道具皮肤（`skin/06-item-building.md` §3.2）：键是组件 `id`，图标与衬底都按格子逐个查
+  const itemSkins = useSkinStore((s) => s.skin?.manifest.item)
+  const assets = useSkinStore((s) => s.assets)
 
   return (
     <div className="panel" style={surface}>
@@ -50,14 +58,18 @@ export default function BagPanel({
           const item = itemDef(session, entry.id)
           if (!item) return null
           const consumable = item.kind === 'consumable'
+          // 衬底三件套（§3.2）：`fill` 缺省回退组件色（再缺主题色），**描边缺省不绘制**（裁决 18）
+          const skin = itemSkinOf(itemSkins, item.id)
+          const cell = groundStyle(groundPaint(skin?.background, item.color ?? fallbackColor(item.id)), assets)
           return (
             <div
               key={entry.id}
               className="bag-cell"
+              style={cell}
               title={`${item.name} ×${entry.count}${item.desc ? `\n${item.desc}` : ''}`}
             >
               <span className="bag-count">×{entry.count}</span>
-              <span className="bag-ico">{item.icon}</span>
+              <ItemGlyph skin={skin} assets={assets} icon={item.icon} className="bag-ico" />
               <span className="bag-name">{item.name}</span>
               <button
                 className="btn small bag-act"
@@ -78,15 +90,25 @@ export default function BagPanel({
             穿戴中
           </div>
           <div className="bag-grid">
-            {equipped.map((item: ItemDef) => (
-              <div key={item.id} className="bag-cell" title={`${item.name}（${item.slots ? item.slots.map((s) => SLOT_LABEL[s]).join('/') : ''}）`}>
-                <span className="bag-ico">{item.icon}</span>
-                <span className="bag-name">{item.name}</span>
-                <button className="btn small bag-act" onClick={() => onUnequip(item.id)}>
-                  卸下
-                </button>
-              </div>
-            ))}
+            {equipped.map((item: ItemDef) => {
+              // 穿戴中的格子与背包格同吃一份道具皮肤（§3.2 的「背包／穿戴格子」）
+              const skin = itemSkinOf(itemSkins, item.id)
+              const cell = groundStyle(groundPaint(skin?.background, item.color ?? fallbackColor(item.id)), assets)
+              return (
+                <div
+                  key={item.id}
+                  className="bag-cell"
+                  style={cell}
+                  title={`${item.name}（${item.slots ? item.slots.map((s) => SLOT_LABEL[s]).join('/') : ''}）`}
+                >
+                  <ItemGlyph skin={skin} assets={assets} icon={item.icon} className="bag-ico" />
+                  <span className="bag-name">{item.name}</span>
+                  <button className="btn small bag-act" onClick={() => onUnequip(item.id)}>
+                    卸下
+                  </button>
+                </div>
+              )
+            })}
           </div>
         </>
       )}

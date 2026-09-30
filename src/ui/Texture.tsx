@@ -12,6 +12,7 @@
  */
 
 import type { CSSProperties } from 'react'
+import type { GroundPaint } from '../engine/skin'
 import {
   effectiveMode,
   placeTexture,
@@ -101,6 +102,37 @@ export function surfaceStyle(
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',
   }
+}
+
+/**
+ * **衬底三件套 → CSS**（`skin/06-item-building.md` §二）：填充色 ＋ 描边色 ＋ 背景图，
+ * 物品格子（`.bag-cell`）与其它「衬底 ＋ 内容」的固定尺寸格子共用这一处算法。
+ *
+ * - `fill` 落到 `background-color`，同时是背景图透明区的**兜底色**（§2.3）
+ * - `stroke` 落到 `border-color`；**未给即不绘制描边**（裁决 18）——写成 `transparent`
+ *   而不是去掉边框，只为不改变盒尺寸（取舍 `S-24` 明确只改观感、不改布局）
+ * - `img` 铺成背景图，铺法与容器衬底同一档（V1 一律拉伸，[`../skin.md`](../skin.md) §3.3）
+ *
+ * 返回 `undefined`（整节未接管）即调用方不传 `style`，CSS 纸面照旧。
+ */
+export function groundStyle(
+  paint: GroundPaint | undefined,
+  assets: SkinAssets,
+  fit: SurfaceFit = 'stretch',
+): CSSProperties | undefined {
+  if (paint === undefined) return undefined
+
+  const style: CSSProperties = { borderColor: paint.stroke ?? 'transparent' }
+  if (paint.fill !== undefined) style.backgroundColor = paint.fill
+
+  const src = paint.img === undefined ? undefined : assets.urlOf(paint.img)
+  if (src !== undefined) {
+    style.backgroundImage = `url("${src}")`
+    style.backgroundSize = fit === 'contain' ? 'contain' : '100% 100%'
+    style.backgroundRepeat = 'no-repeat'
+    style.backgroundPosition = 'center'
+  }
+  return style
 }
 
 /** 千分位取整：贴图坐标不必带浮点尾巴，免得每次渲染都换属性值 */

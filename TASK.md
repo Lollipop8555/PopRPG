@@ -28,7 +28,7 @@
 |---|---|---|---|
 | **V1** | Phase 0 基座 / Phase A BUILD / Phase B PLAY | **已冻结口径**：七大类 · 13 项配置 · `encounter` 五选一 | **已完成**（A 首轮 ＋ B 全部 58 项勾选；全量 197 项单测绿） |
 | **V2.0** | **新增 NPC 与对话**（第 8 类组件 ＋ **进入建筑后的 NPC 触发节点**） | **追加设定 / 结构改造**（不属于 V1 的阶段性设计） | **已完成**（编辑器侧 E0–E3 ＋ 运行时 E4 ＋ 19 项原子验收；E5 皮肤落点并入 **V2.1**） |
-| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条（棋子形象 / 立绘四落点 / 受击表现）＋ `window` 容器衬底（对话框 / 抽屉 / 气泡）＋ `misc` 地图标记与骰子**已收口**，余下各屏待做） |
+| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条（棋子形象 / 立绘四落点 / 受击表现）＋ `window` 容器衬底（对话框 / 抽屉 / 气泡）＋ `misc` 地图标记与骰子 ＋ `item` / `building`（道具格子与图标 ＋ 建筑地图节点 / 名称字体字色）**已收口**，余下各屏待做） |
 | **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 九宫格切片消费 / 皮肤校验 / 音频播放 | 叠加层 | V2.1 之后 |
 
 > **V1 口径冻结、不改写**：`task/00-foundation.md` / `task/01-build.md` 里的「七大类 / 13 项 / 五选一」是 **V1 史实**；
@@ -65,7 +65,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 | [task/01-build.md](task/01-build.md) | Phase A BUILD（构建页） | 信息架构/数据模型/布局/图层/组件库/模式/画布/属性编辑/引擎纯函数/校验/预设/导入导出 | **已完成首轮实现**（build + 78 项单测全绿） |
 | [task/02-play.md](task/02-play.md) | Phase B PLAY（游玩页） | 框架加载/开局/移动回合/战斗UI/骰子公示/技能交互/状态/遭遇/商店/装备背包/存档 | **已完成**（B0–B10 与 B 验收 1–14 全部勾选） |
 | [task/03-polish.md](task/03-polish.md) | Phase C 收尾 | 视觉打磨 / GitHub Pages 部署 | 部分已完成 |
-| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地；D3 进行中：运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条 ＋ `window` 容器衬底 ＋ `misc` 地图标记与骰子已接；**优先级 ②**；端到端依赖 B） |
+| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地；D3 进行中：运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条 ＋ `window` 容器衬底 ＋ `misc` 地图标记与骰子 ＋ `item` / `building` 已接；**优先级 ②**；端到端依赖 B） |
 | [task/05-npc.md](task/05-npc.md) | **V2.0** 新增 NPC 与对话（跨 A / B） | NPC 数据模型与对话树（**全树同一个结构**；给道具 `give`；本层掷骰 `dice` / 各项 `hit`）/ 组件库与组件页 / **NPC 模组面板（思维导图，命中覆盖检查）** / 建筑实例页与校验 / 运行时抽取与弹层（掷定锁死 / **重入三选项 ＋ 三标记** / `give` 一次性交付）/ 皮肤侧接口约定 | **已完成**（E0–E3 编辑器侧 ＋ E4 运行时 ＋ 19 项原子验收；E5 皮肤侧接口约定并入 [task/04-skin.md](task/04-skin.md)） |
 
 ---
@@ -130,6 +130,14 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 ---
 
 ## 进度同步
+
+**2026-09-30 · D3 第七屏（道具 `item` ＋ 建筑 `building` 接入）**
+- 取图：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `itemSkinOf()` / `buildingSkinOf()`（键一律组件 `id`、**不跨键借用**）、`groundPaint(field, fallback?)`（衬底三元组；字符串写法＝只写 `fill`；**三项全空即整节未接管**——判的是**原字段**，兜底色救不回来）、`buildingImgOf(building, misc, id)`（`building[<id>].img ?? misc.nodes.building`，**全篇唯一跨节回退**；节点查不到组件时不拿空串撞键）。
+- 衬底一种落法吃三处：[`src/ui/Texture.tsx`](src/ui/Texture.tsx) 的 `groundStyle()`——`img` → `background-image`（`100% 100%` / no-repeat / center，V1 一律拉伸）、`fill` → `background-color`、`stroke` → `border-color`；**未给 `stroke` 写 `transparent` 而不是摘掉边框**，只为不改盒尺寸（裁决 18 / 取舍 `S-24` 只改观感）。整节未接管返回 `undefined`，调用方**不传 `style`**、CSS 纸面照旧（`S-11`）。
+- 道具：[`src/ui/ItemGlyph.tsx`](src/ui/ItemGlyph.tsx) 有素材出**行内层** `InlineTexture`（尺寸交给所在处的 `.bag-ico` / `.equip-ico` 字号、等比内缩）、否则原样输出组件 `icon` 字形；取图走唯一入口 `textureProps()`，故缺图 / 未启用皮肤自动落到字形。落点 [`src/play/BagPanel.tsx`](src/play/BagPanel.tsx) 的背包格与穿戴格（`.bag-cell` 衬底，`fill` 兜底＝组件 `color` → `fallbackColor(id)`）与 [`src/play/EquipPanel.tsx`](src/play/EquipPanel.tsx) 的穿戴行 ＋ **更换气泡候选**；**`bag-name` 的字体字色不接**（归窗体，`item` 本就不得写 `font`）。
+- 建筑：[`src/play/MapView.tsx`](src/play/MapView.tsx) 的 `NodeShape`——`img` 可用即 `<g rotate(-0.6°)>` ＋ `SvgTexture` **整图替换 `rect`**（`x/y +3`、`w/h −6`：保留 3px 内缩与倾斜角，取舍 `S-9`），该节点**不再画图标字形**（`🧳` 让位给贴图、名称仍留）；未出图时 `background` 接管 `rect`（`fill` 沿用 α0.42、**`stroke` 缺省即 `transparent` ＋ `stroke-width: 0`**）；两件都缺即程序绘制形态照旧（含组件色描边）。名称 `fontColor` 接 `fill`；`font` 走 [`src/ui/skinFont.ts`](src/ui/skinFont.ts) 的 `usePackFont()`——包内文件（按扩展名识别）注入 `@font-face`（**族名取文件名去扩展名**、`font-display: swap`），**内置字体名原样交给 CSS、不注入**，**缺该文件即回退内置字体**（`KIB-4`，不写 `font-family`）；字号仍固定 11px（`S-10`）。
+- 未接：§3.3 物品／建筑**信息视图**与 §3.4 **组件库**（等 [`docs/design/skin/03-window.md`](docs/design/skin/03-window.md) §四.2 与构建页排期）、`KIB-*` 校验层（`SkinIssueCode` 现只有 `KP-*`）、`misc.nodes.building` 的**九宫格**（`KM-1` → V1.1，本轮按**普通拉伸**顶替 `building.img`）与固定族格子上 `item.background` 的落点。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **44 个文件 / 504 项**全绿（本轮新增 2 个用例文件 / 33 项：[`src/engine/skin/__tests__/item-building.test.ts`](src/engine/skin/__tests__/item-building.test.ts) 11 项 + [`src/play/__tests__/itemBuildingSkin.test.tsx`](src/play/__tests__/itemBuildingSkin.test.tsx) 22 项，后者专盯**落图**：背包格衬底三件套 / 图标改图与回字形、地图节点整图替换与 3px 内缩 / 名称字色字体 / 缺文件回退）。设计侧同步 [`docs/design/skin/06-item-building.md`](docs/design/skin/06-item-building.md) §七（新增「实现落点」）与状态行；任务侧 [`task/04-skin.md`](task/04-skin.md) 的 `item` / `building` 条勾选、`misc.nodes.building` 条补注。
 
 **2026-09-30 · D3 第六屏（`misc` 地图标记 ＋ 骰子接入）**
 - 取图：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `markOf(misc, kind)`（`start` / `end` / `footprint` 三键**不跨键借用**）、`dieBodyOf(misc)`（一张通吃 46 / 38 / 34 三档）、`dieFaceOf(misc, pips)`（`1`–`6` → 点阵 `d1`–`d6`，其余点数一律 `numeric`；缺 `d2` 就只缺那一面，**不倒借**）。

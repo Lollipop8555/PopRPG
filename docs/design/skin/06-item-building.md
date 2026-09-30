@@ -3,7 +3,7 @@
 > **上层索引**：[`../skin.md`](../skin.md)　**包结构**：[`00-package.md`](00-package.md)　**贴图渲染器**：[`../skin.md`](../skin.md) §3.3
 > **设计依据**：原始需求「道具」「建筑」两节 ＋ 2026-09-29 裁决（拆节、衬底结构化、落点、**18：描边为独立设置项**）；
 > 现状：`src/play/MapView.tsx:185-230`（地图节点）、`src/play/BagPanel.tsx:45-88` 与 `src/styles/play.css:948-1072`（物品格子）
-> **状态**：新增（含 1 处待确认）
+> **状态**：已实现——`item` 一条全部落地；`building` 的**地图节点**已落地（贴图 ＋ 名称字体字色 ＋ 衬底接管 `rect`），信息视图与组件库见 §六 待确认 1
 
 ## 一、为什么拆成两节（已裁决）
 
@@ -131,3 +131,15 @@
 ## 六、待确认
 
 1. **建筑信息视图是否在 V1 实现**：若该视图不在 V1，则 `building.background` 在 V1 只在组件库生效（`item.background` 不受影响，背包格子已实现）。**图标与衬底的组合方式已定**（裁决 12 / [`03-window.md`](03-window.md) §四.2），此处仅剩 V1 排期未定。
+
+## 七、实现落点（2026-09-30）
+
+> **`item` 一条全部落地**；`building` 的**地图节点（§3.1）已落地**，§3.3 信息视图与 §3.4 组件库随 [`03-window.md`](03-window.md) §四.2 与构建页排期（§六 待确认 1）。
+
+- **取图** [`src/engine/skin/lookup.ts`](../../../src/engine/skin/lookup.ts)：`itemSkinOf(item, id)` / `buildingSkinOf(building, id)`（键一律组件 `id`，**不跨键借用**）；`groundPaint(field, fallback?)`（字符串写法＝只写 `fill`；`fill` 缺省用 `fallback`，调用方再缺即主题色；**三项全空即整节未接管**、返回 `undefined`——判的是**原字段**，兜底色也救不回来）；`buildingImgOf(building, misc, id)`（`building[<id>].img ?? misc.nodes.building`，全篇唯一的跨节回退；节点查不到组件（`id` 为空）时**不拿空串去撞键**，直接走通用件）。
+- **衬底落法** [`src/ui/Texture.tsx`](../../../src/ui/Texture.tsx) 的 `groundStyle(paint, assets, fit = 'stretch')`：`img` → `background-image`（`100% 100%` / no-repeat / center，V1 一律拉伸）、`fill` → `background-color`、`stroke` → `border-color`。**未给 `stroke` 时写 `transparent` 而非摘掉边框**——只为不改盒尺寸（`S-24` 只改观感、不改布局）。整节未接管返回 `undefined`，调用方**不传 `style`**、CSS 纸面照旧（`S-11`）。
+- **道具落点**：渲染件 [`src/ui/ItemGlyph.tsx`](../../../src/ui/ItemGlyph.tsx)——有素材出**行内层** `InlineTexture`（尺寸交给所在处的 `.bag-ico` / `.equip-ico` 字号、等比内缩），否则原样输出组件 `icon` 字形；取图走唯一入口 `textureProps()`，故「包里缺这张图」「皮肤未启用」自动落到字形。三处落点：[`src/play/BagPanel.tsx`](../../../src/play/BagPanel.tsx) 的背包格与穿戴格（`.bag-cell` 衬底 ＋ 图标）、[`src/play/EquipPanel.tsx`](../../../src/play/EquipPanel.tsx) 的穿戴行与**更换气泡候选**。`fill` 兜底＝组件 `color`，再缺 `fallbackColor(id)`。**`bag-name` 的字体字色不接**（§一 规则 2，仍归窗体；`item` 本就不得写 `font`）。
+- **建筑落点** [`src/play/MapView.tsx`](../../../src/play/MapView.tsx) 的 `NodeShape`：`img` 可用时用 **`<g transform="rotate(-0.6° …)">` ＋ `SvgTexture` 整图替换 `rect`**（`x/y + 3`、`w/h − 6`——保留 3px 内缩与倾斜角，`S-9`），该节点的**图标字形不再绘制**（`🧳` 让位给贴图，名称仍留）；未出图时 `background.fill` / `background.stroke` 接管 `rect`（`fill` 沿用 α0.42；**`stroke` 缺省即 `transparent` ＋ `stroke-width: 0`**）；两件都缺则程序绘制形态照旧，含组件色描边（`S-11`）。
+- **名称字体字色**：`fill = buildingSkin.fontColor ?? 'var(--ink-soft)'`；`font` 经 [`src/ui/skinFont.ts`](../../../src/ui/skinFont.ts) 的 `usePackFont()`——包内文件（按扩展名 `ttf` / `otf` / `ttc` / `woff` / `woff2` 识别）注入 `@font-face`（**族名取文件名去扩展名**、`font-display: swap`），**内置字体名原样交给 CSS、不注入**，**包里缺该文件即回退内置字体**（`KIB-4`，不写 `font-family`）。字号仍固定 11px（`S-10`）。
+- **未接**：§3.3 物品／建筑信息视图、§3.4 组件库、`KIB-1`–`KIB-8` 校验层（`SkinIssueCode` 现只有 `KP-*`）；`misc.nodes.building` 的**九宫格**（`KM-1`）与固定族格子（技能格 / 奖励卡 / 部位标签）上的 `item.background` 落点一并留 **V1.1**——本轮通用件按**普通拉伸**顶替 `building.img`。
+- **验收**：`npx tsc --noEmit` 无错；`npx vitest run` **44 个文件 / 504 项**全绿（本轮新增 2 个用例文件 / 33 项：[`engine/skin/__tests__/item-building.test.ts`](../../../src/engine/skin/__tests__/item-building.test.ts) 11 项、[`play/__tests__/itemBuildingSkin.test.tsx`](../../../src/play/__tests__/itemBuildingSkin.test.tsx) 22 项——含**落图**：背包格衬底三件套 / 图标改图与回字形、地图节点整图替换与 3px 内缩 / 名称字色字体 / 缺文件回退）。

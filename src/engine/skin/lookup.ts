@@ -12,6 +12,8 @@
  * - 容器：对话框 / 抽屉 / 气泡三种容器各查 `window.surfaces` 一个键，**互不借用**。
  * - 地图标记：起点 / 终点 / 脚印三键各查 `misc.marks` 自己的键，**互不借用**（缺了照旧画程序图形）。
  * - 骰子：本体与骰面各一张；骰面 1–6 取点阵 `d1`–`d6`、其余点数取数字面 `numeric`。
+ * - 道具 / 建筑：键一律为**组件 `id`**，不跨键借用；建筑贴图 `building.img` 缺位才回退
+ *   `misc.nodes.building`（`06-item-building.md` §2.3，全篇唯一的一处跨节回退）。
  */
 
 import type {
@@ -23,6 +25,7 @@ import type {
   SkinItem,
   SkinItemSkin,
   SkinMisc,
+  SkinPath,
   SkinPortrait,
   SkinPortraitObject,
   SkinRole,
@@ -123,15 +126,41 @@ export function groundOf(field: SkinGroundField | undefined): SkinGround | undef
   return typeof field === 'string' ? { fill: field } : field
 }
 
+/** 衬底的落法：背景图 ＋ 填充色 ＋ 描边色（`skin/06-item-building.md` §二 三元组） */
+export interface GroundPaint {
+  /** 衬底背景图；优先于 `fill`，`fill` 作其透明区的兜底 */
+  img?: SkinPath
+  /** 背景填充色；已含组件色 / 主题色兜底 */
+  fill?: string
+  /** 描边色；**未给即不绘制描边**（裁决 18） */
+  stroke?: string
+}
+
 /**
  * 衬底的实际绘制取舍：**背景图优先于填充色**，`stroke` 独立判断。
- * 返回 `undefined` 即该节点不设衬底、沿用程序默认。
+ * 返回 `undefined` 即该元素**整节未接管**、沿用程序绘制形态（含组件色描边，取舍 `S-11`）。
+ *
+ * @param fallback `fill` 的兜底色：组件定义的 `color`，再缺由调用方给主题色（§2.3 字段表）
  */
 export function groundPaint(
   field: SkinGroundField | undefined,
-): { img?: string; fill?: string; stroke?: string } | undefined {
+  fallback?: string,
+): GroundPaint | undefined {
   const ground = groundOf(field)
   if (!ground) return undefined
-  const paint = { img: ground.img, fill: ground.fill, stroke: ground.stroke }
-  return paint.img || paint.fill || paint.stroke ? paint : undefined
+  // 「整节未接管」看**原字段**：三项都空（如 `{}`）不算接管，兜底色也救不回来
+  if (!ground.img && !ground.fill && !ground.stroke) return undefined
+  return { img: ground.img, fill: ground.fill ?? fallback, stroke: ground.stroke }
+}
+
+/**
+ * **建筑节点贴图**（`skin/06-item-building.md` §2.3）：`building[<id>].img` 优先，
+ * 缺位回退通用件 `misc.nodes.building`，再缺即程序绘制圆角矩形。
+ */
+export function buildingImgOf(
+  building: SkinBuilding | undefined,
+  misc: SkinMisc | undefined,
+  id: string | undefined,
+): SkinTexture | undefined {
+  return (id === undefined ? undefined : building?.[id]?.img) ?? misc?.nodes?.building
 }

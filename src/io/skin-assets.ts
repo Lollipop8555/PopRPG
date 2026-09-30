@@ -42,6 +42,13 @@ const MIME_BY_EXT: Record<string, string> = {
   gif: 'image/gif',
   svg: 'image/svg+xml',
   avif: 'image/avif',
+  // 字体（`skin/06-item-building.md` §2.3 的建筑名称 `font`）：`@font-face` 的地址
+  // 由本模块的 blob 地址给出，mime 给对才不会被浏览器的字体嗅探挡下
+  ttf: 'font/ttf',
+  otf: 'font/otf',
+  woff: 'font/woff',
+  woff2: 'font/woff2',
+  ttc: 'font/collection',
 }
 
 /** 由扩展名推 mime；不认识的按二进制给（浏览器多能按内容识别） */

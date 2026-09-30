@@ -12,6 +12,9 @@ import type { ItemDef, StatKey } from '../types'
 import type { Session } from '../types/session'
 import { itemDef } from './inventory'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { ItemGlyph } from '../ui/ItemGlyph'
+import { itemSkinOf } from '../engine/skin'
+import { useSkinStore } from '../store/skin'
 
 function modChips(it: ItemDef): string[] {
   const mods = it.modifiers
@@ -39,6 +42,9 @@ export default function EquipPanel({
   const [open, setOpen] = useState<OpenSlot | null>(null)
   // 抽屉纸面底纹（`skin/03-window.md` §四）：抽屉里四张卡片同吃 `surfaces.drawer`
   const surface = useSurfaceStyle('drawer')
+  // 道具皮肤（`skin/06-item-building.md` §3.2）：穿戴行与更换气泡里的道具图标同吃 `item.icon`
+  const itemSkins = useSkinStore((s) => s.skin?.manifest.item)
+  const assets = useSkinStore((s) => s.assets)
 
   // 背包里、能穿进该部位、且还没穿的装备
   const candidatesFor = (slot: (typeof EQUIP_SLOTS)[number]): ItemDef[] =>
@@ -74,7 +80,7 @@ export default function EquipPanel({
                 ) : (
                   items.map((it) => (
                     <div key={it.id} className="equip-item">
-                      <span className="equip-ico">{it.icon}</span>
+                      <ItemGlyph skin={itemSkinOf(itemSkins, it.id)} assets={assets} icon={it.icon} className="equip-ico" />
                       <span className="equip-name">{it.name}</span>
                       <span className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
                         {modChips(it).map((m) => (
@@ -138,7 +144,7 @@ export default function EquipPanel({
                     setOpen(null)
                   }}
                 >
-                  <span className="equip-ico">{it.icon}</span>
+                  <ItemGlyph skin={itemSkinOf(itemSkins, it.id)} assets={assets} icon={it.icon} className="equip-ico" />
                   <span className="equip-name">{it.name}</span>
                   <span className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
                     {modChips(it).map((m) => (
