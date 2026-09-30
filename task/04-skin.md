@@ -12,17 +12,17 @@
 
 ## D0 类型与取图纯函数（无 IO）
 
-- [ ] `src/types/skin.ts`：manifest 顶层 **16 项**——`format` / `name` / `author` / `description` / `startup` / `lobby` / `extends` / `theme` / `background` / `road` / `role` / `item` / `building` / `window` / `misc` / `audio`（裁决 19：`version → format`、`meta` 三键上提、`pages → startup / lobby`；裁决 22：`resource` 键废除；[`skin/00-package.md`](../docs/design/skin/00-package.md) §三），并在 `src/types/index.ts` 导出
-- [ ] 素材字段三写法类型：`string | { img, rotate? } | string[]`；数组顺序固定 `N / E / S / W`，不得省略中间项（[`skin.md`](../docs/design/skin.md) §五）
-- [ ] 衬底三元组 `background: { fill?, stroke?, img? }`，**`img` 优先于 `fill`**（`fill` 作透明区兜底）；字符串写法等价于只写 `fill`；**描边为独立设置项，未给 `stroke` 即不渲染**（裁决 18；[`skin/06-item-building.md`](../docs/design/skin/06-item-building.md) §二）
-- [ ] 画布 `background` 为**数组即逐图清单**：**第 `i` 张地图取 `background[i]`（无匹配 key）**，**只渲染这一层**；**地图数多于层数时越界地图降级为最后一层**；采用层素材不可用则向更靠前的层回退，全部不可用则本节未接管（继续按皮肤优先级降级，最终为默认配置）；画布级 `color` 只取**采用层**的值（裁决 17，修订 23；[`skin/05-canvas.md`](../docs/design/skin/05-canvas.md)）
-- [ ] `theme` 类型：CSS 变量名 → 值的映射；**布局 token（`--gap` / `--topbar-h` / `--play-topbar-h`）不允许覆盖**（裁决 19，取舍 `S-23`；[`skin/00-package.md`](../docs/design/skin/00-package.md) §3.3）
-- [ ] 取图纯函数置于 `src/engine/skin/`：`(格子状态, 素材表) → 素材标识 | 程序绘制形态`，无副作用、可单测（[`00c-guidelines.md`](../docs/design/00c-guidelines.md) §三）
-- [ ] 确定性单测：同一格子状态恒取同一张素材；并列时按各节兜底顺序（道路样式标签优先级＝非空优先 → 命中标签数降序 → 声明顺序，[`skin/01-road.md`](../docs/design/skin/01-road.md) §六）
-- [ ] **立绘 `portraits`（裁决 24 / 25 / 26）**：`role` 下新增 `portraits` 子节点（`player` / `classes.<组件 id>` / `monsters.<组件 id>` / **`npcs.<组件 id>`**；字段 `img` ＋ 可选 `flip` ＋ 可选 **`hurt`**（受击图），**不接受数组**——**变体只认 `hurt` 一个具名字段、不做表情变体**）——**纯皮肤元素、`.pmod` 不设字段**；取图纯函数覆盖「职业立绘缺位 → 回退 `portraits.player` → 回退 emoji」链，怪物与 **NPC** 缺位**不跨同类借用**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §四）
-- [ ] **NPC 棋子形象 `role.npcs`（裁决 26）**：`role` 下新增 `npcs` 子节点（按 NPC id 查表；结构与 `monsters` 一致、**不接受数组**）；缺位回退该 NPC `icon` emoji；**地图上不绘制 NPC**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §三）
+- [x] `src/types/skin.ts`：manifest 顶层 **16 项**——`format` / `name` / `author` / `description` / `startup` / `lobby` / `extends` / `theme` / `background` / `road` / `role` / `item` / `building` / `window` / `misc` / `audio`（裁决 19：`version → format`、`meta` 三键上提、`pages → startup / lobby`；裁决 22：`resource` 键废除；[`skin/00-package.md`](../docs/design/skin/00-package.md) §三），并在 `src/types/index.ts` 导出
+- [x] 素材字段三写法类型：`string | { img, rotate? } | string[]`；数组顺序固定 `N / E / S / W`，不得省略中间项（[`skin.md`](../docs/design/skin.md) §五）
+- [x] 衬底三元组 `background: { fill?, stroke?, img? }`，**`img` 优先于 `fill`**（`fill` 作透明区兜底）；字符串写法等价于只写 `fill`；**描边为独立设置项，未给 `stroke` 即不渲染**（裁决 18；[`skin/06-item-building.md`](../docs/design/skin/06-item-building.md) §二）
+- [x] 画布 `background` 为**数组即逐图清单**：**第 `i` 张地图取 `background[i]`（无匹配 key）**，**只渲染这一层**；**地图数多于层数时越界地图降级为最后一层**；采用层素材不可用则向更靠前的层回退，全部不可用则本节未接管（继续按皮肤优先级降级，最终为默认配置）；画布级 `color` 只取**采用层**的值（裁决 17，修订 23；[`skin/05-canvas.md`](../docs/design/skin/05-canvas.md)）
+- [x] `theme` 类型：CSS 变量名 → 值的映射；**布局 token（`--gap` / `--topbar-h` / `--play-topbar-h`）不允许覆盖**（裁决 19，取舍 `S-23`；[`skin/00-package.md`](../docs/design/skin/00-package.md) §3.3）
+- [x] 取图纯函数置于 `src/engine/skin/`：`(格子状态, 素材表) → 素材标识 | 程序绘制形态`，无副作用、可单测（[`00c-guidelines.md`](../docs/design/00c-guidelines.md) §三）
+- [x] 确定性单测：同一格子状态恒取同一张素材；并列时按各节兜底顺序（道路样式标签优先级＝非空优先 → 命中标签数降序 → 声明顺序，[`skin/01-road.md`](../docs/design/skin/01-road.md) §六）
+- [x] **立绘 `portraits`（裁决 24 / 25 / 26）**：`role` 下新增 `portraits` 子节点（`player` / `classes.<组件 id>` / `monsters.<组件 id>` / **`npcs.<组件 id>`**；字段 `img` ＋ 可选 `flip` ＋ 可选 **`hurt`**（受击图），**不接受数组**——**变体只认 `hurt` 一个具名字段、不做表情变体**）——**纯皮肤元素、`.pmod` 不设字段**；取图纯函数覆盖「职业立绘缺位 → 回退 `portraits.player` → 回退 emoji」链，怪物与 **NPC** 缺位**不跨同类借用**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §四）
+- [x] **NPC 棋子形象 `role.npcs`（裁决 26）**：`role` 下新增 `npcs` 子节点（按 NPC id 查表；结构与 `monsters` 一致、**不接受数组**）；缺位回退该 NPC `icon` emoji；**地图上不绘制 NPC**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §三）
 - [ ] **受击两法（裁决 25）**：`hurt` 素材优先；未提供则**形变**——棋子以**格中心**为基准、立绘以**底边**为基准，横向 ×1.15 / 纵向 ×0.9、约 `120ms` 回弹；**参数写死、不做逐素材配置**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §4.4）
-- [ ] **立绘尺寸按窗口尺度（裁决 25）**：以**窗口短边** `W = min(视口宽, 视口高)` 为唯一尺度——底栏与状态面板 `6% W`、对战与 NPC 对话 VS 区 `18% W`、出身卡 `10% W`；宽度由素材宽高比推出并受「可用宽度 25%」上限约束；**固定像素档与 `@media` 断点均不再使用**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §4.2）
+- [ ] **立绘尺寸按窗口尺度（裁决 25）**：以**窗口短边** `W = min(视口宽, 视口高)` 为唯一尺度——底栏与状态面板 `6% W`、对战 VS 区 `18% W`、出身卡 `10% W`；宽度由素材宽高比推出并受「可用宽度 25%」上限约束；**固定像素档与 `@media` 断点均不再使用**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §4.2）
 
 ## D1 容器与加载（`.pp` / `.pgame`）
 
@@ -53,7 +53,7 @@
 > 覆盖清单逐屏对照 [`skin.md`](../docs/design/skin.md) §「覆盖清单（逐屏）」。每接入一屏，用同一份 `.pp` 验证「有素材 / 无素材」两种形态。
 
 - [ ] `road`：15 槽位 / 47 姿态 / 样式标签优先级（**已定稿**，按 [`skin/01-road.md`](../docs/design/skin/01-road.md) 实现）；缺图回退脚印 `src/ui/Footprint.tsx`
-- [ ] `role`：玩家棋子 / 职业形象 / 怪物形象 / **NPC 形象 `npcs`**（单格、无朝向；**地图上不绘制 NPC**，其形象唯一落点是对话弹层）＋ **立绘 `portraits`**（裁决 24 / 25 / 26）：底栏 hp/mp 左侧（**替代整个 `hud-face`**，缺位不占宽）、对战对话框顶部 **VS 区**（**任一方有立绘即渲染**，主角在左 / 怪物在右，缺侧留空、不补 emoji）、**NPC 对话弹层顶部 VS 区**（裁决 26，主角在左 / NPC 在右，取 `portraits.npcs.<id>`）、出身卡职业立绘（**居中**替代 `.class-icon`）、状态面板头部（与底栏**同源同图**）；遭遇 / 商店弹层**仅预留不渲染**（`S-29`）；立绘按**窗口短边 `W`** 的比例缩放、**底边对齐**（仅出身卡居中）、**不用 `CELL` 基准**、**不套手绘滤镜**、**不参与点击命中**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §四）
+- [ ] `role`：玩家棋子 / 职业形象 / 怪物形象 / **NPC 形象 `npcs`**（单格、无朝向；**地图上不绘制 NPC**，其形象唯一落点是对话弹层）＋ **立绘 `portraits`**（裁决 24 / 25 / 26）：底栏 hp/mp 左侧（**替代整个 `hud-face`**，缺位不占宽）、对战对话框顶部 **VS 区**（**任一方有立绘即渲染**，主角在左 / 怪物在右，缺侧留空、不补 emoji）、**对话弹层不设立绘区**（`S-29` 2026-09-29 修订，原裁决 26 的对话 VS 区作废；NPC 只占标题栏 `icon` 一格，取 `role.npcs.<id>`）、出身卡职业立绘（**居中**替代 `.class-icon`）、状态面板头部（与底栏**同源同图**）；遭遇 / 商店弹层**仅预留不渲染**（`S-29`）；立绘按**窗口短边 `W`** 的比例缩放、**底边对齐**（仅出身卡居中）、**不用 `CELL` 基准**、**不套手绘滤镜**、**不参与点击命中**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §四）
 - [ ] **受击表现**（裁决 25）：棋子与立绘**同一套规则**——有 `hurt` 素材即改显示 `hurt`，未提供则形变（基准：棋子＝格中心、立绘＝底边）；**`dead`（倒下）不设变体**（[`skin/02-role.md`](../docs/design/skin/02-role.md) §4.4）
 - [ ] `window`：对话框 / 抽屉 / 气泡 / 按钮 / 格子 / 条 / 提示条；**按钮四态**结构定稿、接入可后置——先只读 `normal`，其余三态暂由 CSS 表现并在清单提示 `KW-6`（裁决 13 / [`skin/03-window.md`](../docs/design/skin/03-window.md) §四.1）
 - [ ] `window` §四.2 **信息图标组合**（裁决 12）：`background` 衬底在下 ＋ `icon` 居中在上；名称与说明文字走**窗体自身**字体字色，**不读** `building.font` / `fontColor`
@@ -101,11 +101,11 @@
 - [ ] **目录结构自由（裁决 22）**：同一份 manifest 把素材整体移到其它目录名下（如 `assets/`）并同步改路径后，加载与渲染结果完全一致；含旧 `resource` 键的包照常加载并提示 `KP-10`
 - [ ] **立绘 · 底栏（裁决 24 / 25）**：配置 `portraits.player` 后，底栏 hp/mp 左侧显示立绘且**原 `hud-face`（职业 emoji ＋ 职业名）不再出现**；**未配置立绘时底栏渲染与现状逐像素一致**，立绘位**不占宽**（无空盒、无占位）；立绘高度＝**窗口短边 `6% W`**，**改变窗口尺寸时立绘等比跟随**
 - [ ] **立绘 · 对战 VS 区（裁决 24 / 25）**：**任一方有立绘即渲染**整个 VS 区（主角在左、怪物在右、中间「VS」为文字），缺失的一侧**留空且不回退 emoji**；**双方都无立绘时 VS 区整体不渲染**；写 `flip: true` 的立绘**左右翻转但不改变站位**；立绘高度＝ **`18% W`**、**底边对齐**
-- [ ] **立绘 · NPC 对话 VS 区（裁决 26）**：踩到 `encounter: talk` 建筑进入对话弹层时，顶部 VS 区展示**主角 ↔ NPC**（主角在左、NPC 在右、中间「VS」为文字）；NPC 侧取 `portraits.npcs.<id>`，**缺位留空且不回退 emoji**（与棋子形象相反）；**双方都无立绘时该区不渲染**
+- [ ] **对话弹层不设立绘区（`S-29` 2026-09-29 修订）**：踩到 `encounter: talk` 建筑进入对话弹层时，弹层只有**标题栏 ＋ 台词 ＋ 选项**——不出现任何立绘、不出现 VS 区；NPC 只占标题栏 `icon` 一格（`role.npcs.<id>`，缺位回退该 NPC `icon` emoji）
 - [ ] **立绘 · 其余落点（裁决 24 / 25）**：出身卡内职业立绘**居中替代** `.class-icon`（高度 `10% W`），缺位回退 `cls.icon` emoji；状态面板头部与底栏**同源同图**；**遭遇 / 商店弹层始终不出现立绘**（`S-29` 仅预留）；`portraits.*` 写成数组时按 `KR-7` 提示且不渲染
 - [ ] **受击两法（裁决 25）**：同一素材分别验证——提供 `hurt` 时受击瞬间显示受击图（与 `img` 不同宽高比时提示 `KR-9`）；**未提供 `hurt` 时发生形变**（棋子以格中心、立绘以底边为基准），幅度与时长**写死、不随素材变化**；`dead` 不设变体
-- [ ] **NPC 形象与立绘（裁决 26）**：`role.npcs` 生效时按 NPC id 取图，缺位回退该 NPC `icon` emoji；`portraits.npcs` 缺位时**对话弹层 NPC 侧留空、不回退 emoji**；拿 `hero_stand.png`（主人公图）冒充 NPC 立绘时提示 `KR-10`
-- [ ] **NPC 不占地图格（裁决 26）**：加载含 NPC 的 `.pmod` 与皮肤后，**地图上不出现 NPC 形象节点**——NPC 形象只出现在对话弹层顶部
+- [ ] **NPC 形象与立绘（裁决 26，`S-29` 修订）**：`role.npcs` 生效时按 NPC id 取图，缺位回退该 NPC `icon` emoji；`portraits.npcs` **当前无落点**（对话弹层不设立绘区），仍参与 `KR` 校验（拿 `hero_stand.png` 冒充 NPC 立绘提示 `KR-10`）
+- [ ] **NPC 不占地图格（裁决 26）**：加载含 NPC 的 `.pmod` 与皮肤后，**地图上不出现 NPC 形象节点**——NPC 形象只出现在对话弹层标题栏 `icon` 一格
 - [ ] `.pgame` 一次加载游戏与皮肤；缺 `pack.json` 时按约定文件名回退（`KP-7`）；缺少 `skin/` 子目录时按「无皮肤」启动
 - [ ] 皮肤库：导入两份 `.pp` 后列表有两条、包体在 IndexedDB；**切换皮肤后旧皮肤的解压结果被释放**（裁决 15）
 - [ ] 本局 `.pp` 与用户全局 pp 并存：被覆盖节点取本局，未覆盖节点取全局
@@ -158,3 +158,18 @@
 **2026-09-29 · V2.1 / V2.2 版本线**
 - 本里程碑拆为 **V2.1 ＝ SKIN 基础（D0–D3）** 与 **V2.2 ＝ SKIN 进阶 ＋ 音频（D4–D6）**，**排在 V2.0（新增 NPC）之后**——V1 口径（七大类 / 13 项 / 五选一）不受影响。
 - 「V1.1」字样一律读作 **V2.2**（音频播放 / 贴图 `nine` 策略 / 九宫格切片消费）。
+
+**2026-09-29 · D0 落地（类型与取图纯函数）**
+- 新增 `src/types/skin.ts`：manifest 顶层 16 键、三写法（`SkinSprite`）、图引用对象（`SkinImage`）、衬底三元组（`SkinGround`）、15 槽位常量 `ROAD_SLOTS`、音频键常量 `BGM_SCENES` / `SFX_EVENTS`、主题 token 白名单 `SKIN_THEME_TOKENS` / `SKIN_LAYOUT_TOKENS`、`.pgame` 容器 `PGamePack` 与约定缺省名；`src/types/index.ts` 已导出。
+- 新增 `src/engine/skin/`：`road-bits.ts`（位序与 15 槽位判定）、`road-style.ts`（样式集选取，非空优先 → 命中数降序 → 声明顺序）、`road.ts`（三写法合成取图，含 `base` 前缀与数组下标消解）、`canvas.ts`（按下标取层、越界 clamp、向前回退）、`lookup.ts`（形象 / 立绘 / 道具 / 建筑 / 衬底）、`theme.ts`（观感 token 过滤）；`src/engine/index.ts` 已导出。
+- 单测：`src/engine/skin/__tests__/`（`road.test.ts` / `road-style.test.ts` / `pick.test.ts`），覆盖位模式确定性、槽位与姿态、样式标签优先级、数组下标与纠偏角、背景取层与回退、token 过滤。
+
+**2026-09-29 · `S-29` 修订并入本清单（对话弹层不设立绘区）**
+- 设计侧已修订（[`../docs/design/skin.md`](../docs/design/skin.md) `S-29` / `Q30` / `Q31`，[`../docs/design/skin/02-role.md`](../docs/design/skin/02-role.md) §4.1），本清单随之改写：D0 立绘尺寸条目去掉「NPC 对话 VS 区」；D3 `role` 条目中该落点改为「对话弹层不设立绘区（NPC 只占标题栏 `icon` 一格）」；D7 原「立绘 · NPC 对话 VS 区」验收改为「对话弹层不设立绘区」，并修正「NPC 不占地图格」与「NPC 形象与立绘」两条的落点措辞。
+
+**2026-09-30 · 三条回执落地（角位口径与路径定义定稿）**
+- **角位改为「夹角」口径（已裁决）**：角位**只在该角两侧的边都有路时**才是**夹角角块**并计入角数 `c`，只挨一条路的**外侧角**一律忽略。据此 `corner` / `tee_corner_*` / `tee_full` 恢复为**运行期可达**槽位（不再是交付用死键），`n ≤ 3` 的角位判定由「夹角是否有路」给出：`n = 2` 相邻 → 有路即 `corner`、无路即 `bend`；`n = 3` → 夹角 0 / 1 / 2 个有路即 `tee` / `tee_corner_*` / `tee_full`。设计侧 [`../docs/design/skin/01-road.md`](../docs/design/skin/01-road.md) §五 整段改写（含判定口径表），§2.1 / §三 / §四 同步；代码 [`../src/engine/skin/road-bits.ts`](../src/engine/skin/road-bits.ts) 随之实现 `isAngleCorner` / `activeAngles`。
+- **基准姿态补全**：`tee_corner_nw` / `tee_corner_ne` 的基准姿态为**缺口朝南**（此时两个夹角分别落在西北与东北侧，绝对角名才区分得开），已写入 §四 与文件头注释；`tee` / `tee_full` 仍以缺口朝北为基准。
+- **`cross_*` 基准角位确认**：**西北角起、顺时针**（回执确认「左上角开始顺时针」即西北起始），`cross_three_corners` 以缺西南角为基准；文件内的「推算待校正」标注已移除。
+- **`base` 与 `tiles` 定义重申**：`styles[].base` 是**目录前缀**，`tiles` 的值是**相对文件名**，拼接即相对包根的路径；仅当样式集缺省 `base` 时，值才按相对包根的完整路径处理。§七 示例的 `tiles` 值已全部改为相对文件名，§十 待确认第 4 条（`base` 是否保留）随之删除。
+- 验证：`src/engine/skin/__tests__/road.test.ts` 补夹角用例（`corner` / `tee_corner_nw` / `tee_corner_ne` / `tee_full` 与外侧角忽略），皮肤测试 **35 项**全绿。

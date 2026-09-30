@@ -1,0 +1,442 @@
+/**
+ * 皮肤包（`.pp` / `.pgame`）类型（§skin：`docs/design/skin.md` 与 `docs/design/skin/` 各分节）。
+ *
+ * 三条贯穿本文件的口径：
+ * - 素材是**可选叠加层**：任何字段缺失都只意味着该节点回退程序绘制形态，不是错误。
+ * - 路径一律**相对包根**写全，由各字段自身给出；加载器不推断前缀、不假设目录约定。
+ * - `manifest.json` 顶层**16 键**（裁决 19 / 22；`resource` 已废除）。
+ */
+
+/** 包格式版本（缺省视为 1；读到更高版本照常渲染并警告一次） */
+export const SKIN_FORMAT = 1
+
+/** 九宫格切片，顺序固定 `[上, 右, 下, 左]`（顺时针，从顶部开始） */
+export type SkinSlice = [number, number, number, number]
+
+/** 素材路径：相对包根写全，如 `resource/road/straight.png` */
+export type SkinPath = string
+
+/** 颜色（`#rrggbb`） */
+export type SkinColor = string
+
+/** 封面 / 背景类图的填充方式（仅 `startup.bg` / `lobby.bg`），缺省 `cover` */
+export type SkinFit = 'cover' | 'contain' | 'tile'
+
+/**
+ * 图引用对象：`img` ＋ 全部可选修饰。
+ * 各节只用其中一部分（`slice` 归容器类、`fit` 归封面类、`rotate` 归可旋元素），
+ * 越界组合由各节校验项提示，不在类型层拆分。
+ */
+export interface SkinImage {
+  img: SkinPath
+  /** 硬性角度纠偏：素材基准朝向与规范基准朝向不一致时用，不表达「这一格该朝哪」 */
+  rotate?: number
+  /** 显式左右镜像（不默认启用） */
+  flip?: boolean
+  /** 九宫格切片；V1 不解析，按普通拉伸处理 */
+  slice?: SkinSlice
+  /** 填充方式，仅封面类背景使用 */
+  fit?: SkinFit
+}
+
+/** 单张图：字符串写法或图引用对象 */
+export type SkinTexture = SkinPath | SkinImage
+
+/**
+ * 素材字段三写法（`skin.md` §五）：一张 / 一张 ＋ 纠偏角 / 四张。
+ * 数组顺序固定 `N / E / S / W`，**不得省略中间项**（缺哪向即该节降级为程序绘制）。
+ */
+export type SkinSprite = SkinPath | SkinImage | SkinPath[]
+
+/** 衬底三元组：填充色 ＋ 描边色 ＋ 背景图；字符串写法等价于只写 `fill` */
+export interface SkinGround {
+  fill?: SkinColor
+  /** 独立设置项：未给即不绘制描边（既不跟随 `fill`，也不保留组件色） */
+  stroke?: SkinColor
+  /** 背景图，**优先于 `fill`**（`fill` 作其透明区的兜底） */
+  img?: SkinPath
+}
+
+/** 衬底字段：颜色简写或三元组 */
+export type SkinGroundField = SkinColor | SkinGround
+
+// ── 画布背景 `background` ───────────────────────────────────────────────
+
+/** 背景层：一张图 ＋ 该层自己的对齐参数与图外填充色 */
+export interface SkinBackgroundLayer {
+  /** 背景图 */
+  img?: SkinPath
+  /** 背景图上一个游戏格占多少像素（同时是地图层素材的出图基准） */
+  cellSize?: number
+  /** 图片上该点与地图格 `[0,0]` 的**中心**对齐（横向） */
+  startX?: number
+  /** 同上（纵向） */
+  startY?: number
+  /** 图片边界之外的填充色；**每层各自携带**，漏写即全局主题色，不做层级回退 */
+  color?: SkinColor
+}
+
+/** 逐图清单：下标即地图下标；单个对象视为单元素数组（所有地图共用） */
+export type SkinBackground = SkinBackgroundLayer | SkinBackgroundLayer[]
+
+// ── 道路 `road` ─────────────────────────────────────────────────────────
+
+/** 15 槽位名（与 `skin/01-road.md` §三 逐字一致；`tiles` 的键必须是其中之一） */
+export const ROAD_SLOTS = [
+  'isolated',
+  'dead_end',
+  'straight',
+  'bend',
+  'corner',
+  'tee',
+  'tee_corner_nw',
+  'tee_corner_ne',
+  'tee_full',
+  'cross',
+  'cross_one_corner',
+  'cross_adjacent',
+  'cross_diagonal',
+  'cross_three_corners',
+  'plaza',
+] as const
+
+export type RoadSlot = (typeof ROAD_SLOTS)[number]
+
+/** 样式集条目：一套素材的标签与共享路径前缀 */
+export interface SkinRoadStyle {
+  /** 该套素材的标签；空数组为通配底样 */
+  tags: string[]
+  /** 15 张图的共享路径前缀（可不用，直接写全路径） */
+  base?: SkinPath
+  /** 标签匹配方式，缺省 `any`（命中任意一个即候选） */
+  mode?: 'any' | 'all'
+}
+
+export interface SkinRoad {
+  styles?: SkinRoadStyle[]
+  /** 15 槽位 → 素材；缺键即该槽位回退脚印 */
+  tiles?: Partial<Record<RoadSlot, SkinSprite>>
+}
+
+// ── 形象与立绘 `role` ──────────────────────────────────────────────────
+
+/** 立绘对象：`img` ＋ 可选镜像 ＋ 可选受击图（**不接受数组**，变体只认 `hurt`） */
+export interface SkinPortraitObject {
+  img: SkinPath
+  flip?: boolean
+  /** 受击图；缺省则受击改用形变（横向 ×1.15 / 纵向 ×0.9，约 120ms） */
+  hurt?: SkinPath
+}
+
+/** 立绘：字符串简写或对象（**不接受数组**） */
+export type SkinPortrait = SkinPath | SkinPortraitObject
+
+/** 立绘分组：主人公 / 各职业 / 各怪物 / 各 NPC */
+export interface SkinPortraits {
+  player?: SkinPortrait
+  /** 职业立绘缺位时先回退 `player`，再回退 emoji */
+  classes?: Record<string, SkinPortrait>
+  /** 怪物立绘缺位时不渲染，且**不跨怪物借用** */
+  monsters?: Record<string, SkinPortrait>
+  /** NPC 立绘缺位时不渲染，且**不跨 NPC 借用**（当前 V1 无落点） */
+  npcs?: Record<string, SkinPortrait>
+}
+
+/** 形象分组：棋子与形象（无朝向，`classes` / `monsters` / `npcs` 不接受数组） */
+export interface SkinRole {
+  /** 玩家棋子；缺位回退职业 `icon` emoji → `🙂` */
+  player?: SkinSprite
+  classes?: Record<string, SkinSprite>
+  monsters?: Record<string, SkinSprite>
+  /** NPC 形象；缺位回退该 NPC `icon` emoji。地图上不绘制 NPC，其唯一落点是对话弹层标题栏 */
+  npcs?: Record<string, SkinSprite>
+  portraits?: SkinPortraits
+}
+
+// ── 道具 `item` 与建筑 `building` ───────────────────────────────────────
+
+/** 道具皮肤：只有图标与衬底（**不得**出现 `img` / `font` / `fontColor`） */
+export interface SkinItemSkin {
+  /** 覆盖组件定义中的 `icon` */
+  icon?: SkinTexture
+  background?: SkinGroundField
+}
+
+/** 建筑皮肤：在道具字段之上，另有地图贴图与地图名称字体字色 */
+export interface SkinBuildingSkin extends SkinItemSkin {
+  /** 地图节点的整体贴图，替换整个圆角矩形 */
+  img?: SkinPath
+  /** 地图上建筑名称的文字颜色（对话框内文字不读本字段） */
+  fontColor?: SkinColor
+  /** 地图上建筑名称的字体：包内字体路径或浏览器内置字体名 */
+  font?: string
+}
+
+/** 键一律为组件 `id` */
+export type SkinItem = Record<string, SkinItemSkin>
+export type SkinBuilding = Record<string, SkinBuildingSkin>
+
+// ── 容器与控件 `window` ────────────────────────────────────────────────
+
+/** 按钮四态（`normal` 为唯一必填；缺失即整颗按钮走程序绘制） */
+export interface SkinButtonStates {
+  normal: SkinTexture
+  hover?: SkinTexture
+  active?: SkinTexture
+  disabled?: SkinTexture
+}
+
+/** 按钮：单张字符串（等价于只写 `normal`）或四态对象 */
+export type SkinButton = SkinTexture | SkinButtonStates
+
+/** 血蓝条两件套 */
+export interface SkinBar {
+  track?: SkinTexture
+  fill?: SkinTexture
+}
+
+export interface SkinWindow {
+  /** 随视口族容器底纹：对话框 / 抽屉 / 气泡 */
+  surfaces?: {
+    dialog?: SkinTexture
+    drawer?: SkinTexture
+    popover?: SkinTexture
+  }
+  /** 按钮：`primary` / `danger` / `small` / `icon` / `close` 为既有键，允许自定义键 */
+  buttons?: Record<string, SkinButton>
+  /** 固定尺寸格子：技能格 / 奖励卡 / 背包格 / 部位标签 */
+  slots?: {
+    skill?: SkinTexture
+    reward?: SkinTexture
+    bag?: SkinTexture
+    equipLabel?: SkinTexture
+  }
+  bars?: {
+    hp?: SkinBar
+    mp?: SkinBar
+  }
+  /** 提示条三档 */
+  hints?: {
+    ok?: SkinTexture
+    warn?: SkinTexture
+    error?: SkinTexture
+  }
+  /** 单向族：手绘分隔线 */
+  rules?: {
+    line?: SkinTexture
+  }
+}
+
+// ── 标记与骰子 `misc` ──────────────────────────────────────────────────
+
+/** 骰面键：`d1`–`d6` 为点阵，`numeric` 为 >6 面的数字文本（可选） */
+export type SkinDieFace = 'd1' | 'd2' | 'd3' | 'd4' | 'd5' | 'd6' | 'numeric'
+
+export interface SkinMisc {
+  /** 地图标记：起点旗 / 终点藏宝图 X / 道路脚印 */
+  marks?: {
+    start?: SkinSprite
+    end?: SkinSprite
+    footprint?: SkinSprite
+  }
+  /** 建筑多格节点贴图（随格数拉伸，建议按九宫格交付） */
+  nodes?: {
+    building?: SkinTexture
+  }
+  /** 骰子：本体三档共用一张；`rolling` 为掷骰中动画态（可选） */
+  dice?: {
+    body?: SkinTexture
+    rolling?: SkinTexture
+    faces?: Partial<Record<SkinDieFace, SkinTexture>>
+  }
+  /** lucide 图标按名替换 */
+  icons?: Record<string, SkinTexture>
+  /** 每 10 格的坐标参照线（平铺策略，素材须四边可拼接） */
+  guides?: {
+    grid?: SkinTexture
+  }
+}
+
+// ── 音频 `audio`（V1 只解析与校验，不播放） ─────────────────────────────
+
+/** BGM 场景键 */
+export const BGM_SCENES = ['home', 'map', 'battle'] as const
+export type BgmScene = (typeof BGM_SCENES)[number]
+
+/** 音效事件键（键名即唯一契约，改名视为不兼容变更） */
+export const SFX_EVENTS = [
+  'dice_roll',
+  'dice_land',
+  'hit',
+  'pickup',
+  'coin',
+  'open',
+  'close',
+  'error',
+] as const
+export type SfxEvent = (typeof SFX_EVENTS)[number]
+
+export interface SkinBgm {
+  file: SkinPath
+  /** 是否循环，缺省 `true` */
+  loop?: boolean
+  /** 该曲默认音量 0–1，缺省 `0.5`（可被用户偏好覆盖） */
+  volume?: number
+}
+
+export interface SkinSfxObject {
+  file: SkinPath
+  /** 该音效默认音量 0–1，缺省 `0.8` */
+  volume?: number
+}
+
+export interface SkinAudio {
+  bgm?: Partial<Record<BgmScene, SkinBgm>>
+  sfx?: Partial<Record<SfxEvent, SkinTexture | SkinSfxObject>>
+}
+
+// ── 欢迎页与游戏首页 `startup` / `lobby` ───────────────────────────────
+
+/** APP 欢迎页：封面图归皮肤侧（`.pmod` 不设字段） */
+export interface SkinStartup {
+  /** 全屏背景（即该屏封面图） */
+  bg?: SkinImage
+  /** 标题图形，只替换字形、不改文案 */
+  title?: SkinImage
+  /** 主视觉图形，替换洞穴手绘 SVG */
+  cover?: SkinImage
+  /** 主视觉上的装饰骰子贴图 */
+  dice?: SkinImage
+}
+
+/** 出身卡选中态差异：`img` 缺省时只改描边 */
+export interface SkinCardSelected {
+  img?: SkinPath
+  slice?: SkinSlice
+  stroke?: SkinColor
+}
+
+/** 出身卡片底 */
+export interface SkinLobbyCard extends SkinImage {
+  selected?: SkinCardSelected
+}
+
+/** 游戏首页／选角页面 */
+export interface SkinLobby {
+  bg?: SkinImage
+  /** 「这一局的世界」正文面板的底 */
+  panel?: SkinImage
+  /** 出身卡片底 */
+  card?: SkinLobbyCard
+}
+
+// ── 主题 token ─────────────────────────────────────────────────────────
+
+/**
+ * `theme` 允许覆盖的**观感** token（`skin/00-package.md` §3.3）。
+ * 未列出的键名视为未知 token，忽略并提示 `KP-9`。
+ */
+export const SKIN_THEME_TOKENS = [
+  '--paper',
+  '--paper-deep',
+  '--paper-card',
+  '--ink',
+  '--ink-soft',
+  '--ink-faint',
+  '--line',
+  '--line-soft',
+  '--red',
+  '--amber',
+  '--green',
+  '--blue',
+  '--radius',
+  '--radius-rough',
+  '--font-hand',
+  '--font-cn',
+] as const
+
+/** **布局** token：不可由皮肤覆盖（取舍 `S-23`，越权写入忽略并提示 `KP-9`） */
+export const SKIN_LAYOUT_TOKENS = ['--gap', '--topbar-h', '--play-topbar-h'] as const
+
+/** 全局 token → CSS 变量值 */
+export type SkinTheme = Record<string, string>
+
+// ── manifest 顶层 ──────────────────────────────────────────────────────
+
+/**
+ * `.pp` 的 `manifest.json` 顶层 **16 键**（裁决 19 / 22）。
+ * 16 键中除本处的 `extends` / `format` 等元信息外，其余各节均可整体缺省。
+ */
+export interface SkinManifest {
+  /** 包格式版本，整数，缺省 `1` */
+  format?: number
+  /** 皮肤名（缺失时皮肤列表显示文件名） */
+  name?: string
+  author?: string
+  description?: string
+  /** APP 欢迎页 */
+  startup?: SkinStartup
+  /** 游戏首页／选角页面 */
+  lobby?: SkinLobby
+  /** 包内继承：相对包根的 manifest 路径（**禁止跨包**） */
+  extends?: SkinPath
+  /** 全局 token → CSS 变量 */
+  theme?: SkinTheme
+  /** 画布背景（逐图清单） */
+  background?: SkinBackground
+  road?: SkinRoad
+  role?: SkinRole
+  item?: SkinItem
+  building?: SkinBuilding
+  window?: SkinWindow
+  misc?: SkinMisc
+  /** 音频字段（V1 只解析与校验，不播放） */
+  audio?: SkinAudio
+}
+
+/** manifest 顶层键清单（用于校验「已废除的 `resource` 键」等，裁决 22） */
+export const SKIN_MANIFEST_KEYS = [
+  'format',
+  'name',
+  'author',
+  'description',
+  'startup',
+  'lobby',
+  'extends',
+  'theme',
+  'background',
+  'road',
+  'role',
+  'item',
+  'building',
+  'window',
+  'misc',
+  'audio',
+] as const
+
+export type SkinManifestKey = (typeof SKIN_MANIFEST_KEYS)[number]
+
+// ── `.pgame` 容器 ──────────────────────────────────────────────────────
+
+/** `.pgame` 的 `pack.json` 固定标识 */
+export const PGAME_KIND = 'poprpg.pgame'
+
+/** `.pgame` 容器描述文件；缺失时按约定文件名回退（`KP-7`） */
+export interface PGamePack {
+  /** 容器格式版本，缺省 `1`（不与 `pmod` / `manifest` 的版本合并计） */
+  format?: number
+  /** 固定 `"poprpg.pgame"` */
+  kind?: string
+  /** 该整体分发的显示名，缺省取文件名 */
+  name?: string
+  /** `.pmod` 条目路径，缺省 `game.pmod` */
+  pmod?: SkinPath
+  /** 皮肤目录，缺省 `skin/`；其中为一份 `.pp` 内容 */
+  skin?: SkinPath
+  /** 入口标识；留空即走默认开局流程 */
+  entry?: string
+}
+
+/** `.pgame` 的约定缺省名（`pack.json` 缺失时的回退依据） */
+export const PGAME_DEFAULT_PMOD = 'game.pmod'
+export const PGAME_DEFAULT_SKIN_DIR = 'skin/'

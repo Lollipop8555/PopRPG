@@ -28,7 +28,7 @@
 |---|---|---|---|
 | **V1** | Phase 0 基座 / Phase A BUILD / Phase B PLAY | **已冻结口径**：七大类 · 13 项配置 · `encounter` 五选一 | **已完成**（A 首轮 ＋ B 全部 58 项勾选；全量 197 项单测绿） |
 | **V2.0** | **新增 NPC 与对话**（第 8 类组件 ＋ **进入建筑后的 NPC 触发节点**） | **追加设定 / 结构改造**（不属于 V1 的阶段性设计） | **已完成**（编辑器侧 E0–E3 ＋ 运行时 E4 ＋ 19 项原子验收；E5 皮肤落点并入 **V2.1**） |
-| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | V2.0 之后 |
+| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数已落地；D1–D3 待做） |
 | **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 九宫格切片消费 / 皮肤校验 / 音频播放 | 叠加层 | V2.1 之后 |
 
 > **V1 口径冻结、不改写**：`task/00-foundation.md` / `task/01-build.md` 里的「七大类 / 13 项 / 五选一」是 **V1 史实**；
@@ -65,7 +65,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 | [task/01-build.md](task/01-build.md) | Phase A BUILD（构建页） | 信息架构/数据模型/布局/图层/组件库/模式/画布/属性编辑/引擎纯函数/校验/预设/导入导出 | **已完成首轮实现**（build + 78 项单测全绿） |
 | [task/02-play.md](task/02-play.md) | Phase B PLAY（游玩页） | 框架加载/开局/移动回合/战斗UI/骰子公示/技能交互/状态/遭遇/商店/装备背包/存档 | **已完成**（B0–B10 与 B 验收 1–14 全部勾选） |
 | [task/03-polish.md](task/03-polish.md) | Phase C 收尾 | 视觉打磨 / GitHub Pages 部署 | 部分已完成 |
-| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | 待做（**优先级 ②**；端到端依赖 B；D0–D2 可提前） |
+| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 类型与取图纯函数已落地，D1–D3 待做；**优先级 ②**；端到端依赖 B） |
 | [task/05-npc.md](task/05-npc.md) | **V2.0** 新增 NPC 与对话（跨 A / B） | NPC 数据模型与对话树（**全树同一个结构**；给道具 `give`；本层掷骰 `dice` / 各项 `hit`）/ 组件库与组件页 / **NPC 模组面板（思维导图，命中覆盖检查）** / 建筑实例页与校验 / 运行时抽取与弹层（掷定锁死 / **重入三选项 ＋ 三标记** / `give` 一次性交付）/ 皮肤侧接口约定 | **已完成**（E0–E3 编辑器侧 ＋ E4 运行时 ＋ 19 项原子验收；E5 皮肤侧接口约定并入 [task/04-skin.md](task/04-skin.md)） |
 
 ---
@@ -267,3 +267,10 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 - **`⋯` 菜单补回「复制成新组件」**：行内 `复制` 与它**是同一个动作**（`duplicateOf` 做**整条深拷贝**，NPC 连整套 `dialogs` 一起带走，复制出来的是一条可独立编辑、可独立挂到建筑上的完整 NPC），两个入口都保留，菜单项序恢复与 §5.3 一致（`复制成新组件` · `删除` · `恢复默认`，NPC 另加 `编辑对话`）。代码 [`src/build/KitPanel.tsx`](src/build/KitPanel.tsx)。
 - 文档同步：[`docs/design/04-editor.md`](docs/design/04-editor.md) §5.3（菜单项按实现的项序写、补复制整条的语义）、[`docs/design/05-mvp.md`](docs/design/05-mvp.md) §6.1 ①（补重名口径）、[`docs/DESIGN.md`](docs/DESIGN.md) 进度同步。
 - 验证：新增单测 [`src/store/__tests__/library.test.ts`](src/store/__tests__/library.test.ts) 3 项（空库全量播种 / 同名自建顶掉同名预设 / 改过的预设不被覆盖）；`npx tsc --noEmit` 无错，`npx vitest run` **17 个文件 / 211 项**全绿。
+
+**2026-09-29 · `S-29` 修订同步（对话弹层不设立绘区）＋ V2.1 D0 落地**
+- **`S-29` 修订**（设计侧已改，本次同步任务侧）：NPC 对话弹层**不设立绘区**——原裁决 26「对话弹层启用 `[主角] VS [NPC]`」作废；弹层只有**标题栏 ＋ 台词 ＋ 选项**，NPC 只占标题栏 `icon` 一格（`role.npcs.<id>`，缺位回退该 NPC `icon` emoji）。`portraits.npcs` 当前**无落点**、仍参与 `KR` 校验；遭遇 / 商店弹层的「仅预留」口径不变。立绘高度档随之收敛为**底栏与状态面板 `6% W` / 对战 VS 区 `18% W` / 出身卡 `10% W`**。
+- **V2.1 D0 落地**：新增 `src/types/skin.ts`（manifest **16 键** / 三写法 / 衬底三元组 / 15 槽位常量 / 音频键常量 / 主题 token 白名单 / `.pgame` 容器描述）与 `src/engine/skin/`（`road-bits` 位序与槽位、`road-style` 样式集选取、`road` 三写法合成、`canvas` 背景取层、`lookup` 形象与立绘、`theme` token 过滤）；`src/types/index.ts` 与 `src/engine/index.ts` 均已导出。取图全为纯函数，确定性单测见 `src/engine/skin/__tests__/`。
+- **角位口径定稿（三条待校正已全部裁决）**：① `cross_*` 系**基准角位确认**为「西北角起、顺时针」（`cross_three_corners` 以缺西南角为基准）；② [`docs/design/skin/01-road.md`](docs/design/skin/01-road.md) §七 **重申路径定义**——`styles[].base` 是**目录前缀**、`tiles` 值是**相对文件名**，示例已改，§十 待确认第 4 条删除；③ 角位改为**「夹角」口径**：某角**两侧的边都有路**才是夹角角块并计入角数 `c`，只挨一条路的**外侧角**忽略，故 `corner` / `tee_corner_*` / `tee_full` 是**运行期可达**槽位（§五 整段改写、§2.1 / §三 / §四 同步）；`tee_corner_nw` / `tee_corner_ne` 基准姿态为**缺口朝南**。代码见 [`src/engine/skin/road-bits.ts`](src/engine/skin/road-bits.ts)。
+- 文档同步：[`docs/design/skin.md`](docs/design/skin.md) `S-29` / `Q30` / `Q31`（设计侧修订原文）、[`docs/design/skin/02-role.md`](docs/design/skin/02-role.md) §4.1、[`task/04-skin.md`](task/04-skin.md)（D0 八项勾选、D3 / D7 落点改写、进度同步三条）；本文件任务表中 V2.1 行状态改为**进行中**。
+- 验证：`npx tsc --noEmit` 无错，`npx vitest run` **21 个文件 / 258 项**全绿。

@@ -126,7 +126,7 @@
 
 **2026-09-29 · 新增素材皮肤模块（skin）**
 - 新增 [`design/skin.md`](design/skin.md)（总纲索引）与 [`design/skin/01-road.md`](design/skin/01-road.md)（道路分节）：素材是可选增强、缺位回退程序绘制；旋转 / 镜像 / 九宫格复用三件套；贴图渲染器 `drawTexture` 统一接口；道路 15 槽位 / 47 姿态 / 15 张素材；样式标签优先级（空标签通配、非空优先、命中数降序、声明顺序兜底）。
-- 三条用户已确认取舍同步登记到 [`design/07-decisions.md`](design/07-decisions.md) §8.1：素材定位、`tee` 系列定名（`tee_corner_nw` / `tee_corner_ne`）、`n ≤ 3` 忽略外侧角、道路样式优先级。
+- 三条用户已确认取舍同步登记到 [`design/07-decisions.md`](design/07-decisions.md) §8.1：素材定位、`tee` 系列定名（`tee_corner_nw` / `tee_corner_ne`）、角位只认夹角（外侧角不细分）、道路样式优先级。
 - `skin/02-role.md` / `03-window.md` / `04-misc.md` 三节按其覆盖范围补齐（依据为对 `src/play/*` 与 `src/ui/*` 的只读调研），游玩态可见 UI 已在 `design/skin.md`「覆盖清单（游玩态逐屏）」中逐屏对齐；九项待确认汇总于 `design/skin.md` §八 与各分节末节。
 - 按原始需求「主题模式」整理并新增六节：`skin/00-package.md`（`.pp` / `.pgame` 包结构、manifest 顶层、三层优先级「游戏 ＞ 用户 ＞ 缺省」、五条加载入口）、`skin/05-canvas.md`（背景**数组下标即地图下标、逐图对应、单层渲染**与多地图适配、坐标映射）、`skin/06-item-building.md`（道具与建筑**分节**、衬底三元组、建筑地图贴图与地图文字）、`skin/07-audio.md`（BGM 与音效事件钩子，V1 只预留）、`skin/08-pages.md`（欢迎页与游戏首页 `startup` / `lobby`）、`skin/09-creative.md`（Creative 模式：构建、九宫格切分、命中检查与预览 `.pp`）。
 - 2026-09-29 用户裁决 10 项已全部并入：`tag` 匹配按现有算法、`tee_corner_nw` 正向命名、`dpi → cellSize`、`item` / `building` 拆开、用户配置＝本地全局 pp、`background` 落点为背包与信息视图、衬底升级为 `{fill, stroke, img}`、`background` 升级为数组、build 模式可加载 pp 预览、新增 Creative 模式；原始需求笔误修正留档于 `design/skin.md` §九。
