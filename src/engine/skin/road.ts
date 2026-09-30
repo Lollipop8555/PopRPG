@@ -8,7 +8,7 @@
  * 返回结果的 `rotate` 恒为 `0`，姿态已体现在所选的那张图上。
  */
 
-import type { RoadSlot, SkinPath, SkinRoad } from '../../types'
+import { joinSkinPath, type RoadSlot, type SkinPath, type SkinRoad } from '../../types'
 import { roadTileOf } from './road-bits'
 import { pickRoadStyle } from './road-style'
 
@@ -20,11 +20,6 @@ export interface RoadPick {
   rotate: number
   /** 数组写法时的下标（`0`–`3` 对应 `N / E / S / W`），对象与字符串写法为 `undefined` */
   index?: 0 | 1 | 2 | 3
-}
-
-function join(base: SkinPath | undefined, file: SkinPath): SkinPath {
-  if (!base) return file
-  return `${base.replace(/\/+$/, '')}/${file.replace(/^\/+/, '')}`
 }
 
 /**
@@ -48,20 +43,20 @@ export function roadSprite(
   const base = pickRoadStyle(tags, road.styles)?.base
 
   if (typeof entry === 'string') {
-    return { slot: tile.slot, src: join(base, entry), rotate: tile.rotate }
+    return { slot: tile.slot, src: joinSkinPath(base, entry), rotate: tile.rotate }
   }
 
   if (Array.isArray(entry)) {
     const index = (tile.rotate / 90) as 0 | 1 | 2 | 3
     const file = entry[index]
     if (file === undefined) return undefined
-    return { slot: tile.slot, src: join(base, file), rotate: 0, index }
+    return { slot: tile.slot, src: joinSkinPath(base, file), rotate: 0, index }
   }
 
   const fix = ((entry.rotate ?? 0) % 360 + 360) % 360
   return {
     slot: tile.slot,
-    src: join(base, entry.img),
+    src: joinSkinPath(base, entry.img),
     rotate: (tile.rotate + fix) % 360,
   }
 }

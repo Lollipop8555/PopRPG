@@ -26,19 +26,19 @@
 
 ## D1 容器与加载（`.pp` / `.pgame`）
 
-- [ ] zip 读写能力：**引入 `fflate`**（裁决 14，`zipSync` / `unzipSync`，约 8 KB gzip，浏览器端零 Node 依赖）；**不自实现 deflate**；依赖边界登记于 [`../docs/design/08-deploy.md`](../docs/design/08-deploy.md) §9
-- [ ] `.pp` 解析：**强制项只有** `manifest.json`（**必须在包根**）与可选 `preview.png`（存在时须在包根）；**包内目录名 / 层级 / 文件名一律自由**，加载器按 manifest 各字段所写的**相对包根**路径逐条取条目（如 `resource/road/x.png`，仅为示例写法）——**不推断前缀、不假设目录约定**（裁决 19 / 22；[`00a-formats.md`](../docs/design/00a-formats.md) §2.1）
-- [ ] `.pgame` 解析：`pack.json`（`format` / `kind` / `name` / `pmod` / `skin` / `entry`）＋ `game.pmod` ＋ `skin/`；**缺 `pack.json`** 时按约定文件名回退并提示 `KP-7`；缺少 `skin/` 时按「无皮肤」处理（裁决 19；§2.2 / §2.3）
-- [ ] `extends`：**仅包内继承**（值为包内相对包根的 manifest 路径），逐节点覆盖，支持链式；环或路径不存在时忽略并提示 `KP-8`（§3.2）
-- [ ] `theme` 注入：加载时以最高优先级写入 `:root`，卸载时还原；未知 token 与布局 token 忽略并提示 `KP-9`（§3.3）
-- [ ] 路径约束校验 `KP-4`：拒绝绝对路径 / `..` / `http(s)://` 外部地址
-- [ ] 版本迁移：`manifest.format` 为整数、缺省视为 `1`；读到更高版本照常渲染并在控制台警告一次（对齐 `src/io/pmod.ts` 的 `PMOD_VERSION` 处理）
-- [ ] 其余校验项：`KP-1`（包根无 manifest → 整包忽略）、`KP-2`（路径不存在 → 逐节点降级）、`KP-3`（`format` 过高）、`KP-5`（组件 id 无效键）、`KP-6`（无 `preview.png` / 无法解码 → 回退文件名）、`KP-10`（含已废除的 `resource` 键 → 忽略该键，路径以各字段自身为准，裁决 22）
-- [ ] 降级链按**单个素材节点**回落：本局 `.pp` → 用户全局 pp（裁决 5）→ 程序绘制；同屏混用素材与程序绘制**不算缺陷**
-- [ ] **皮肤库（裁决 15）**：用户**导入过**的 `.pp` 入库（条目索引进 `localStorage`：`poprpg_skins`；**包体（二进制）进 IndexedDB**）；**游戏自带（`.pgame` 内）皮肤不入库**
-- [ ] **一次只解压一套（裁决 15 / 19）**：内存中只保留当前生效皮肤的解压结果；**切换皮肤时先释放当前解压结果**再解压目标包
-- [ ] 二进制选择与导出：`src/io/download.ts` 的 `pickTextFile` 只读文本，新增二进制选择入口；导出走 `Blob` 下载
-- [ ] 皮肤**不写入** `.psave`（皮肤是渲染层；**不记录皮肤名**，裁决 15）（[`skin/00-package.md`](../docs/design/skin/00-package.md) §4.3）
+- [x] zip 读写能力：**引入 `fflate`**（裁决 14，`zipSync` / `unzipSync`，约 8 KB gzip，浏览器端零 Node 依赖）；**不自实现 deflate**；收口在 `src/io/zip.ts`（唯一接触 `fflate` 的文件），依赖边界登记于 [`../docs/design/08-deploy.md`](../docs/design/08-deploy.md) §9
+- [x] `.pp` 解析（`src/io/pp.ts` 的 `readSkin`）：**强制项只有** `manifest.json`（**必须在包根**）与可选 `preview.png`（存在时须在包根）；**包内目录名 / 层级 / 文件名一律自由**，加载器按 manifest 各字段所写的**相对包根**路径逐条取条目——**不推断前缀、不假设目录约定**（裁决 19 / 22；[`00a-formats.md`](../docs/design/00a-formats.md) §2.1）
+- [x] `.pgame` 解析（`src/io/pgame.ts` 的 `readPGame`）：`pack.json`（`format` / `kind` / `name` / `pmod` / `skin` / `entry`）＋ `game.pmod` ＋ `skin/`；**缺 `pack.json`** 时按约定文件名回退并提示 `KP-7`；缺少 `skin/` 时按「无皮肤」处理（裁决 19；§2.2 / §2.3）
+- [x] `extends`（`pp.ts` 的 `manifestChain`）：**仅包内继承**（值为包内相对包根的 manifest 路径），逐节点覆盖（深合并、数组与标量整体替换），支持链式；环或路径不存在时忽略并提示 `KP-8`（§3.2）
+- [x] `theme` 注入（`src/io/skin-theme.ts` 的 `applySkinTheme`）：加载时写到 `document.documentElement` 的内联样式（最高优先级），卸载时**逐键移除**；未知 token 与布局 token 忽略并提示 `KP-9`（§3.3）
+- [x] 路径约束校验 `KP-4`（`src/io/skin-paths.ts`）：拒绝绝对路径 / `..` / `http(s)://` 外部地址；违规路径不再重复计入 `KP-2`
+- [x] 版本迁移：`manifest.format` 为整数、缺省视为 `1`；读到更高版本照常渲染并在控制台警告一次（对齐 `src/io/pmod.ts` 的 `PMOD_VERSION` 处理）
+- [x] 其余校验项：`KP-1`（包根无 manifest → 整包忽略）、`KP-2`（路径不存在 → 逐节点降级）、`KP-3`（`format` 过高）、`KP-6`（`preview.png` 无法解码 → 回退文件名）、`KP-9`（`theme` 无效键）、`KP-10`（含已废除的 `resource` 键 → 忽略该键，路径以各字段自身为准，裁决 22）；**`KP-5` 待 D6**——它需要「本局启用组件 id」，属跨模块上下文
+- [x] 降级链按**单个素材节点**回落（`src/io/skin-runtime.ts`）：本局 `.pp` → 用户全局 pp（裁决 5）→ 程序绘制；同屏混用素材与程序绘制**不算缺陷**
+- [x] **皮肤库（裁决 15）**：`src/io/skin-library.ts`（条目索引进 `localStorage`：`poprpg_skins`）＋ `src/io/idb.ts`（**包体二进制进 IndexedDB**，无 IndexedDB 时降级内存）；**游戏自带（`.pgame` 内）皮肤不入库**
+- [x] **一次只解压一套（裁决 15 / 19）**：`skin-runtime.ts` 激活时先释放上一套，两层解压后立刻合并成**一份**条目表，中间结果不再被引用；切换即丢弃
+- [x] 二进制选择与导出：`src/io/download.ts` 新增 `pickBinaryFile`（与 `pickTextFile` 共用一次弹窗）与 `downloadBlob`；导出走 `Blob` 下载
+- [x] 皮肤**不写入** `.psave`（皮肤是渲染层；**不记录皮肤名**，裁决 15）（[`skin/00-package.md`](../docs/design/skin/00-package.md) §4.3）——D7 回归项
 
 ## D2 贴图渲染器
 

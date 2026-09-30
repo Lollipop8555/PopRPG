@@ -60,6 +60,17 @@ export interface SkinGround {
 /** 衬底字段：颜色简写或三元组 */
 export type SkinGroundField = SkinColor | SkinGround
 
+/**
+ * 拼接「目录前缀 ＋ 相对文件名」得到相对包根的路径（`skin/01-road.md` §七 路径定义）。
+ *
+ * `base` 缺省（或空串）即原样返回文件名——此时该字段的值按**完整路径**处理；
+ * 两侧多余斜杠各归一化一次，因此 `base` 带不带尾斜杠都合法。
+ */
+export function joinSkinPath(base: SkinPath | undefined, file: SkinPath): SkinPath {
+  if (!base) return file
+  return `${base.replace(/\/+$/, '')}/${file.replace(/^\/+/, '')}`
+}
+
 // ── 画布背景 `background` ───────────────────────────────────────────────
 
 /** 背景层：一张图 ＋ 该层自己的对齐参数与图外填充色 */
@@ -440,3 +451,46 @@ export interface PGamePack {
 /** `.pgame` 的约定缺省名（`pack.json` 缺失时的回退依据） */
 export const PGAME_DEFAULT_PMOD = 'game.pmod'
 export const PGAME_DEFAULT_SKIN_DIR = 'skin/'
+
+// ── 校验项 `KP-1`~`KP-10`（`skin/00-package.md` §六） ────────────────────
+
+/** 加载期校验项编号；全部为**提示**，不阻断加载与导出 */
+export const SKIN_ISSUE_CODES = [
+  'KP-1',
+  'KP-2',
+  'KP-3',
+  'KP-4',
+  'KP-5',
+  'KP-6',
+  'KP-7',
+  'KP-8',
+  'KP-9',
+  'KP-10',
+] as const
+
+export type SkinIssueCode = (typeof SKIN_ISSUE_CODES)[number]
+
+/** 标题与 §六 总表逐条对应（明细进 `detail`） */
+export const SKIN_ISSUE_TITLES: Record<SkinIssueCode, string> = {
+  'KP-1': '缺少可解析的 manifest.json',
+  'KP-2': '素材路径在包内不存在',
+  'KP-3': '包格式版本高于实现版本',
+  'KP-4': '路径违反纯静态约束',
+  'KP-5': '组件 id 不在本局启用范围内',
+  'KP-6': 'preview.png 无法解码',
+  'KP-7': '.pgame 缺少 pack.json',
+  'KP-8': 'extends 路径不存在或形成环',
+  'KP-9': 'theme 含未知 token 或布局 token',
+  'KP-10': '含已废除的 resource 键',
+}
+
+/**
+ * 一条加载期提示。
+ *
+ * 与 `.pmod` 的校验集合（`src/check/validate.ts` 的 `Issue`）**刻意分开**：
+ * 皮肤校验只在加载了 `.pp` 时出现，D6 再把它汇入构建页清单。
+ */
+export interface SkinIssue {
+  code: SkinIssueCode
+  detail: string
+}
