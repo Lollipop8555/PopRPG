@@ -14,6 +14,7 @@ import { itemDef } from './inventory'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useButtonStyle } from '../ui/useButtonStyle'
 import { ItemGlyph } from '../ui/ItemGlyph'
+import { GameIcon } from '../ui/GameIcon'
 import { itemSkinOf } from '../engine/skin'
 import { useSkinStore } from '../store/skin'
 
@@ -71,7 +72,7 @@ export default function EquipPanel({
               onClick={onClose}
               style={{ padding: '0 6px', ...closeBtn }}
             >
-              <X size={14} />
+              <GameIcon name="X" size={14} icon={X} />
             </button>
           )}
         </span>

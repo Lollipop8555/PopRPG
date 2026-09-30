@@ -124,6 +124,16 @@
 
 ## 进度同步
 
+**2026-09-30 · D3 第十屏：图标按名替换接入（[`design/skin/04-misc.md`](design/skin/04-misc.md) §四 / §十）**
+- **承接 `misc` 的地图标记 ＋ 骰子那一批**：本批落 §四 的 **lucide 图标按名替换**——键即 lucide 图标名，清单 `ICON_NAMES` 九个（`Sword` / `Hammer` / `FileDown` / `FileUp` / `LibraryBig` / `Menu` / `Flag` / `StepForward` / `X`），正好是游玩态实际写到的那九个；**构建页不接**。
+- **取图**：[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `ICON_NAMES` / `IconName` 与 `iconOf(misc, name)`——**按名各查自己的名、不跨名借用**（配了 `Sword` 不会让同屏的 `Hammer` 跟着出图）；`misc` 整节缺位不抛；**清单外的名字**照样照读但静默搁置（清单声明的是落点，不是白名单）。
+- **入口组件**：[`src/ui/GameIcon.tsx`](../src/ui/GameIcon.tsx) 把各处原来直接写的 `<Sword size={22} />` 统一成 `<GameIcon name="Sword" size={22} icon={Sword} />`——配了该名就出素材，没配 / 缺图 / 未启用皮肤就原样交给 `icon` 那一个 lucide 元件，**业务代码不判断素材类型**。
+- **落图**走**行内层** `InlineTexture`（与「内容 emoji」同一档）：**不套手绘滤镜**（位图，不给画笔加滤镜）、**不加衬底**（§四；与组件库的圆角矩形衬底区分开）。素材按 lucide 那档的 `size` 占 `size × size` 的盒、`object-fit: contain` 等比内缩，**换与不换都不动布局**。接线 [`src/ui/useIconSkin.ts`](../src/ui/useIconSkin.ts) 的 `useIconTexture(name)`（`iconOf()` → `textureRef()` → `textureProps()`，与各链同一条底线）。
+- **落点**（八个文件、九个名字）：[`LoadScreen.tsx`](../src/play/LoadScreen.tsx)（`Sword` 22 / `Hammer` 16 / `FileDown` 14、13 / `FileUp` 14 / `LibraryBig` 13）、[`GameScreen.tsx`](../src/play/GameScreen.tsx)（`Menu` 18 菜单入口 / `Flag` 16 结算弹层标题）、[`DiceHud.tsx`](../src/play/DiceHud.tsx)（`StepForward` 13）、[`DiceLog.tsx`](../src/play/DiceLog.tsx) / [`BagPanel.tsx`](../src/play/BagPanel.tsx) / [`EquipPanel.tsx`](../src/play/EquipPanel.tsx) / [`StatusPanel.tsx`](../src/play/StatusPanel.tsx)（`X` 14 关闭）。
+- **两处明确不归这里**（§四）：**内容 emoji**（职业 / 道具 / 怪物 / 技能）由组件定义驱动、走 `role` / `item` 各节替换；**兜底字形**（`🙂` / `✦` / `❔` / `🎲` / `🔒`）是素材缺失时的最终保底，**永远不可覆盖**——可覆盖就失去保底意义。故给它们配 `misc.icons` 也没有落点。
+- **未接**：`node.building`（**必须九宫格**，`KM-1` → V1.1，与容器衬底同批）、引导线（属**平铺** `tile`，V1 无该策略 → V2.2）、`die.rolling`（待确认 2 未裁决）；`KM-1`–`KM-3` 的清单提示等校验层（`SkinIssueCode` 现只有 `KP-*`）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **49 个文件 / 561 项**全绿（本轮新增 2 个用例文件 / 17 项：[`src/engine/skin/__tests__/misc-icons.test.ts`](../src/engine/skin/__tests__/misc-icons.test.ts) 6 项纯函数——按名读、不跨名借用、`misc` 缺位不抛、清单外的名照样照读、`ICON_NAMES` 定序、兜底字形与内容 emoji 都不在清单里；[`src/play/__tests__/miscIcons.test.tsx`](../src/play/__tests__/miscIcons.test.tsx) 11 项落点——封面两键各取各的、折叠区三种图标、素材按 `size` 占盒且走行内层、不跨名借用、HUD `StepForward` 与菜单 `Menu`、面板 `X` 一处配置三处生效、结算 `Flag`、没配 / 缺图 / 未启用皮肤一律回退 lucide、清单外的名没有落点）。里程碑状态：[`task/04-skin.md`](../task/04-skin.md) 的 `misc` 条拆出「图标（按名索引）」并勾选；设计侧 [`design/skin/04-misc.md`](design/skin/04-misc.md) §四 补接入说明、§十 补「图标」取图 / 落图 / 落点，并把「未接部分」的图标一条改写为「内容 emoji 与兜底字形不归 `misc.icons`」。
+
 **2026-09-30 · D3 第九屏：按钮 `normal` 态接入（[`design/skin/03-window.md`](design/skin/03-window.md) §四 / §四.1 / §八）**
 - **承接容器衬底那一批**：`window` 的「随视口族」（容器）已落，本批落 §四 的**七个按钮键**——`plain` / `primary` / `danger` / `ghost` / `small` / `icon` / `close`，**按元素角色给、不按类名给**；按钮属「随内容族」（盒随文字量变，§二），V1 与容器同档走**整体拉伸**。
 - **取图**：[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `ButtonKind` 与 `BUTTON_KINDS`（七键的定序清单，清单 / 遍历用）、`buttonOf(win, kind)`——**七键各查自己的键、不跨键借用**；四态对象**只取 `normal`**，**缺 `normal` 即整颗按钮算没配**（老包 / 手写配置不会因为只写了 `hover` 就凭空多出一张底图），字符串写法等价于只写 `normal`。

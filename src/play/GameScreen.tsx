@@ -32,6 +32,7 @@ import { portraitOf, roleSprite } from '../engine/skin'
 import { RoleGlyph } from '../ui/RoleGlyph'
 import { Portrait, portraitHurtTile, portraitTile } from '../ui/Portrait'
 import { useHitPulse } from '../ui/useHitPulse'
+import { GameIcon } from '../ui/GameIcon'
 import { navigate } from '../app/router'
 
 type Drawer = 'status' | 'bag' | 'log' | 'equip' | null
@@ -236,7 +237,7 @@ export default function GameScreen({ session }: { session: Session }) {
             {/* 底栏最右：菜单入口（点击弹出独立对话框） */}
             <div className="hud-menu">
               <button className="btn small" style={iconBtn} title="菜单" onClick={() => setMenuOpen(true)}>
-                <Menu size={18} />
+                <GameIcon name="Menu" size={18} icon={Menu} />
               </button>
             </div>
           </div>
@@ -290,7 +291,7 @@ export default function GameScreen({ session }: { session: Session }) {
         <Overlay>
           <div className="modal" style={dialogSurface}>
             <div className="panel-head">
-              <Flag size={16} /> <span className="hand">{session.phase === 'won' ? '走到终点 —— 这一局完成了' : '这一局到此为止'}</span>
+              <GameIcon name="Flag" size={16} icon={Flag} /> <span className="hand">{session.phase === 'won' ? '走到终点 —— 这一局完成了' : '这一局到此为止'}</span>
             </div>
             <p className="muted">
               {session.phase === 'won'

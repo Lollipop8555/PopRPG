@@ -16,6 +16,7 @@ import { Portrait, portraitHurtTile, portraitTile } from '../ui/Portrait'
 import { useHitPulse } from '../ui/useHitPulse'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useButtonStyle } from '../ui/useButtonStyle'
+import { GameIcon } from '../ui/GameIcon'
 
 export default function StatusPanel({
   session,
@@ -69,7 +70,7 @@ export default function StatusPanel({
               onClick={onClose}
               style={{ padding: '0 6px', ...closeBtn }}
             >
-              <X size={14} />
+              <GameIcon name="X" size={14} icon={X} />
             </button>
           )}
         </span>

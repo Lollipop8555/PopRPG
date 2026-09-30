@@ -13,6 +13,7 @@ import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useButtonStyle } from '../ui/useButtonStyle'
 import { ItemGlyph } from '../ui/ItemGlyph'
 import { groundStyle } from '../ui/Texture'
+import { GameIcon } from '../ui/GameIcon'
 import { groundPaint, itemSkinOf } from '../engine/skin'
 import { fallbackColor } from '../lib/color'
 import { useSkinStore } from '../store/skin'
@@ -54,7 +55,7 @@ export default function BagPanel({
               onClick={onClose}
               style={{ padding: '0 6px', ...closeBtn }}
             >
-              <X size={14} />
+              <GameIcon name="X" size={14} icon={X} />
             </button>
           )}
         </span>

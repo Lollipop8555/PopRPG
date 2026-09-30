@@ -21,6 +21,7 @@ import { useButtonStyle } from '../ui/useButtonStyle'
 import { useStartupArt, useStartupBgStyle, useStartupDiceBody } from '../ui/usePageSkin'
 import { useDieFace } from '../ui/useDieSkin'
 import { CSS_SIZED_BOX, InlineTexture, SvgTexture } from '../ui/Texture'
+import { GameIcon } from '../ui/GameIcon'
 
 /** 洞穴手绘 SVG 的坐标盒（`viewBox`）：主视觉素材也按这个盒落位（`08-pages.md` §2.1） */
 const CAVE_BOX = { x: 0, y: 0, w: 120, h: 92 }
@@ -145,10 +146,10 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
 
         <div className="cover-actions">
           <button className="btn primary cover-start" style={startBtn} onClick={fromBuild}>
-            <Sword size={22} /> 开始冒险
+            <GameIcon name="Sword" size={22} icon={Sword} /> 开始冒险
           </button>
           <button className="btn cover-build" style={plainBtn} onClick={() => navigate('build')}>
-            <Hammer size={16} /> 构建世界
+            <GameIcon name="Hammer" size={16} icon={Hammer} /> 构建世界
           </button>
         </div>
 
@@ -160,19 +161,19 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
             <>
               <div className="cover-more-body">
                 <button className="btn" style={plainBtn} onClick={fromFile}>
-                  <FileDown size={14} /> 选一份 .pmod
+                  <GameIcon name="FileDown" size={14} icon={FileDown} /> 选一份 .pmod
                 </button>
                 <button className="btn" style={plainBtn} onClick={fromSave}>
-                  <FileUp size={14} /> 载入 .psave 存档
+                  <GameIcon name="FileUp" size={14} icon={FileUp} /> 载入 .psave 存档
                 </button>
               </div>
               <div className="sketch-line" style={{ width: 220, margin: '2px 0' }} />
               <div className="cover-more-body">
                 <button className="btn small" style={smallBtn} onClick={exportLibrary}>
-                  <LibraryBig size={13} /> 导出组件库
+                  <GameIcon name="LibraryBig" size={13} icon={LibraryBig} /> 导出组件库
                 </button>
                 <button className="btn small" style={smallBtn} onClick={importLibrary}>
-                  <FileDown size={13} /> 导入组件库
+                  <GameIcon name="FileDown" size={13} icon={FileDown} /> 导入组件库
                 </button>
               </div>
               <div className="cover-lib">组件库可整体导出或导入。</div>

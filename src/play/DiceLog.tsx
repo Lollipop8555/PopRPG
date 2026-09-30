@@ -10,6 +10,7 @@ import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useButtonStyle } from '../ui/useButtonStyle'
 import { useDieBodyStyle, useDieFace } from '../ui/useDieSkin'
 import { InlineTexture } from '../ui/Texture'
+import { GameIcon } from '../ui/GameIcon'
 
 /** 骰面：1–6 用点阵，更大的点数值（如 2D6=7）回退为数字；配了素材则素材优先（`04-misc.md` §三） */
 export function DieFace({ pips }: { pips: number }) {
@@ -105,7 +106,7 @@ export default function DiceLog({ session, onClose }: { session: Session; onClos
               onClick={onClose}
               style={{ padding: '0 6px', ...closeBtn }}
             >
-              <X size={14} />
+              <GameIcon name="X" size={14} icon={X} />
             </button>
           )}
         </span>

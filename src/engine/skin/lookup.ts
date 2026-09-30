@@ -13,6 +13,7 @@
  * - 按钮：七个键各查 `window.buttons` 自己的键，**互不借用**；V1 只取 `normal` 态。
  * - 地图标记：起点 / 终点 / 脚印三键各查 `misc.marks` 自己的键，**互不借用**（缺了照旧画程序图形）。
  * - 骰子：本体与骰面各一张；骰面 1–6 取点阵 `d1`–`d6`、其余点数取数字面 `numeric`。
+ * - 图标：按 **lucide 图标名**查 `misc.icons`，缺位即该处照旧用 lucide 元件。
  * - 道具 / 建筑：键一律为**组件 `id`**，不跨键借用；建筑贴图 `building.img` 缺位才回退
  *   `misc.nodes.building`（`06-item-building.md` §2.3，全篇唯一的一处跨节回退）。
  * - 欢迎页 / 游戏首页：两屏各查自己的 `bg`，**不互相借用**；出身卡 `selected.img` 缺位沿用卡底。
@@ -155,6 +156,37 @@ export function dieFaceOf(misc: SkinMisc | undefined, pips: number): SkinTexture
   const faces = misc?.dice?.faces
   if (faces === undefined) return undefined
   return faces[pips >= 1 && pips <= 6 ? (`d${pips}` as SkinDieFace) : 'numeric']
+}
+
+/**
+ * **图标名清单**（`skin/04-misc.md` §四）：V1 游玩态实际用到的那几个 lucide 图标。
+ *
+ * 键名即 lucide 的图标名（PascalCase），`misc.icons[<图标名>]` 提供替换素材；
+ * 清单只列**有落点**的名字，配了清单外的名字静默搁置（与各节一致，不报错、不回退到别的名字）。
+ */
+export const ICON_NAMES = [
+  'Sword',
+  'Hammer',
+  'FileDown',
+  'FileUp',
+  'LibraryBig',
+  'Menu',
+  'Flag',
+  'StepForward',
+  'X',
+] as const
+
+export type IconName = (typeof ICON_NAMES)[number]
+
+/**
+ * 取按名索引的图标素材；未配该名即 `undefined`，该处照旧渲染 lucide 元件。
+ *
+ * 三处**不归这里**（§四）：**内容 emoji**（职业 / 道具 / 怪物 / 技能）由各自的节替换
+ * （`role` / `item`），**兜底字形**（`🙂` / `✦` / `❔` / `🎲` / `🔒`）**永远不可覆盖**——
+ * 它是素材缺失时的最终保底，因此不走 `misc.icons`。
+ */
+export function iconOf(misc: SkinMisc | undefined, name: IconName | string): SkinTexture | undefined {
+  return misc?.icons?.[name]
 }
 
 /** 规整衬底字段：字符串写法等价于只写 `fill` */

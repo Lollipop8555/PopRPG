@@ -9,6 +9,7 @@ import type { Session } from '../types/session'
 import { useDieBodyStyle } from '../ui/useDieSkin'
 import { useButtonStyle } from '../ui/useButtonStyle'
 import { DieFace } from './DiceLog'
+import { GameIcon } from '../ui/GameIcon'
 
 export default function DiceHud({
   session,
@@ -73,7 +74,7 @@ export default function DiceHud({
         onClick={onRoll}
         style={{ whiteSpace: 'nowrap', ...primaryBtn }}
       >
-        <StepForward size={13} />{' '}
+        <GameIcon name="StepForward" size={13} icon={StepForward} />{' '}
         {session.awaitingEncounter ? '掷骰' : session.stepsLeft > 0 ? '下一回合' : '投掷前进'}
       </button>
     </div>
