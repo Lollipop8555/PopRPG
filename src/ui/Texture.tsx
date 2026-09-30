@@ -81,7 +81,7 @@ export function textureProps(
 export type SurfaceFit = 'stretch' | 'contain'
 
 /**
- * **衬底 / 本体**：与上三层同吃「取图结果 → 可用地址」，差别在落法——
+ * **衬底 / 本体**：与上三层共用「取图结果 → 可用地址」，差别在落法——
  * 不摆到坐标、不量盒，而是把图**铺在所在元素的背景**上（铺法由 `fit` 定）。
  *
  * 尺寸交给 CSS：随视口族容器（对话框 / 抽屉 / 气泡，`03-window.md` §二）与骰子盒
@@ -349,7 +349,7 @@ export function DomTexture({ src, x, y, w, h, rotate, flip, opacity, className, 
 /**
  * 行内层：**跟文字同排**的形象格（职业 / 怪物 / NPC 形象，`skin/02-role.md` §三）。
  *
- * 与另两层同吃一份 `TextureProps`，差别只在「盒从哪来」：本层**不摆到绝对坐标**，
+ * 与另两层共用一份 `TextureProps`，差别只在「盒从哪来」：本层**不摆到绝对坐标**，
  * 尺寸由**所在处 CSS** 决定（`.inline-texture` 是 `1em` 方框，跟着字号走、与它换掉的 emoji 同高）；
  * `rotate` / `flip` 照旧生效（`02-role.md` §二：立绘用 `flip` 表达左右）。
  * 非正方形素材靠 `object-fit: contain` 等比内缩，**绝不拉伸**（`KR-1` 只提示、不改行为）。

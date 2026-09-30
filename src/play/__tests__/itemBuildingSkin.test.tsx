@@ -2,7 +2,7 @@
  * 道具 / 建筑的**落图**（`skin/06-item-building.md` §3）：取值链已在
  * `engine/skin/__tests__/item-building.test.ts` 验过，这里只看**画到屏上是什么**。
  *
- * - 道具：背包格 / 穿戴格吃「图标 ＋ 衬底三件套」，更换气泡里的候选同吃一份皮肤；
+ * - 道具：背包格 / 穿戴格使用「图标 ＋ 衬底三件套」，更换气泡里的候选共用一份皮肤；
  * - 建筑：地图节点整图替换 `rect`（保留 3px 内缩与 -0.6° 倾斜），名称的字色 / 字体单给。
  *
  * 两边的底线一致：没配该键、或包里缺这张图，就退回程序绘制形态（emoji / 圆角矩形）——
@@ -154,7 +154,7 @@ describe('背包格的衬底三件套（§3.2 / §二）', () => {
     expect(cell.getAttribute('style')).toBeNull()
   })
 
-  it('穿戴中的格子同吃一份皮肤（同一件道具、同一个键）', () => {
+  it('穿戴中的格子共用一份皮肤（同一件道具、同一个键）', () => {
     paint({ item: { iron_sword: { background: { fill: FILL, stroke: STROKE } } } })
     const cell = drawBag(withItems([], [itemOf('iron_sword')])).container.querySelector(
       '.bag-cell',
@@ -185,7 +185,7 @@ describe('道具图标（§3.2）：有图出图、没图回字形', () => {
     expect(container.querySelector('span.bag-ico')?.textContent).toBe(itemOf('red_potion').icon)
   })
 
-  it('更换气泡里的候选同吃一份皮肤（`.equip-ico` 走的是同一个 `ItemGlyph`）', () => {
+  it('更换气泡里的候选共用一份皮肤（`.equip-ico` 走的是同一个 `ItemGlyph`）', () => {
     paint({ item: { fire_boots: { icon: 'art/item/fire_boots.png' } } })
     const { container } = render(
       <EquipPanel session={withItems([{ id: 'fire_boots', count: 1 }])} onEquip={() => {}} />,

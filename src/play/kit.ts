@@ -104,7 +104,7 @@ export function gateSummary(gate: Gate): string {
 
 /**
  * 玩家属性重算（加点 / 换装备之后）：
- * 属性 = 职业 base_stats + 已分配（**不摇**，§4.0.2）；资源上限跟着变，当前值按增量同步（§4.2.2）。
+ * 属性 = 职业 base_stats + 已分配（**不摇**，§4.0.2）；资源上限随之变化，当前值按增量同步（§4.2.2）。
  */
 export function syncPlayer(player: PlayerUnit): PlayerUnit {
   if (!player.cls) return player

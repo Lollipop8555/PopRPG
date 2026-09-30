@@ -90,7 +90,7 @@ const bgColorOf = (el: Element | null) => (el as HTMLElement | null)?.style.back
 /** 行内那份 CSS 变量（`--sk-*`，三态走它进 `theme.css` 的伪类规则；没配就是空串） */
 const skVarOf = (el: Element | null, name: string) =>
   (el as HTMLElement | null)?.style.getPropertyValue(name) ?? ''
-/** 按文字找按钮：盯的是「哪一颗按钮」，排布改动不至于让断言失效 */
+/** 按文字找按钮：盯的是「哪一个按钮」，排布改动不至于让断言失效 */
 const byText = (text: string) =>
   [...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === text) ?? null
 
@@ -102,13 +102,13 @@ function inCombat() {
 }
 
 describe('落点 1：交锋对话框的操作区（§四）', () => {
-  it('攻击与防御同吃 `primary`，不防御走 `danger`', () => {
+  it('攻击与防御共用 `primary`，不防御走 `danger`', () => {
     paint({ buttons: { primary: PRIMARY, danger: DANGER } })
     const battle = inCombat()
     usePlayStore.setState({ session: battle })
     const { rerender } = render(<BattleDialog session={battle} />)
 
-    // 攻击阶段：先选招那一颗
+    // 攻击阶段：先选招那一个
     expect(bgOf(document.querySelector('.modal.battle .btn.primary'))).toContain(`blob:${PRIMARY}`)
 
     // 反击阶段：防御（primary）与不防御（danger）同屏，各取各的键
@@ -121,7 +121,7 @@ describe('落点 1：交锋对话框的操作区（§四）', () => {
     expect(bgOf(byText('不防御'))).not.toContain(PRIMARY)
   })
 
-  it('没配 `danger`：不防御那颗一个 `style` 都不传，`primary` 的图不借给它', () => {
+  it('没配 `danger`：不防御那个一个 `style` 都不传，`primary` 的图不借给它', () => {
     paint({ buttons: { primary: PRIMARY } })
     const battle = playerAttack(inCombat(), 'basic_attack', () => 0.5)
     usePlayStore.setState({ session: battle })
@@ -266,7 +266,7 @@ describe('落点 5：按钮三态（§4.1）', () => {
 })
 
 describe('底线（§四）', () => {
-  it('没配任何按钮键：一颗按钮都不传 `style`，纸面底色也不动', () => {
+  it('没配任何按钮键：一个按钮都不传 `style`，纸面底色也不动', () => {
     paint({ surfaces: { dialog: 'art/window/dialog.png' } })
     const battle = inCombat()
     usePlayStore.setState({ session: battle })
@@ -277,7 +277,7 @@ describe('底线（§四）', () => {
     expect(bgColorOf(attack)).toBe('')
   })
 
-  it('配了但包里缺这张图：同样算没配 → 一颗按钮都不传 `style`', () => {
+  it('配了但包里缺这张图：同样算没配 → 一个按钮都不传 `style`', () => {
     paint({ buttons: { primary: PRIMARY } }, [PRIMARY])
     usePlayStore.setState({ session })
     const { container } = render(<StartScreen scenario={scenario} onStart={() => {}} onCancel={() => {}} />)

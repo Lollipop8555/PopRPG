@@ -64,7 +64,7 @@ function poolIds(pool: { source: 'ids' | 'filter'; ids?: (string | { id: string;
 /* NPC / 对话树的遍历（§4.9）                                           */
 /* ------------------------------------------------------------------ */
 
-/** 遍历一堆对话记录及其全部子树（§4.9.2：全树同一个结构，`items` 递归指向自己） */
+/** 遍历全部对话记录及其子树（§4.9.2：全树同一个结构，`items` 递归指向自己） */
 export function walkDialogItems(nodes: DialogNode[] | undefined, visit: (node: DialogNode) => void): void {
   for (const node of nodes ?? []) {
     visit(node)
@@ -203,7 +203,7 @@ export function tallyUsage(library: Library, enabledIds: string[], project?: Pro
 
 /**
  * 项目里出现过的所有标签（去重排序）—— 给「标签条件 / 权限 / 标签」输入框做联想，
- * 免得用户凭记忆手打、打错对不上。
+ * 避免用户凭记忆手动输入、写错后对不上。
  */
 export function collectKnownTags(library: Library): string[] {
   const set = new Set<string>()

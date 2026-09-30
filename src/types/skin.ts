@@ -189,7 +189,7 @@ export type SkinBuilding = Record<string, SkinBuildingSkin>
 
 // ── 容器与控件 `window` ────────────────────────────────────────────────
 
-/** 按钮四态（`normal` 为唯一必填；缺失即整颗按钮走程序绘制） */
+/** 按钮四态（`normal` 为唯一必填；缺失即整个按钮走程序绘制） */
 export interface SkinButtonStates {
   normal: SkinTexture
   hover?: SkinTexture

@@ -34,7 +34,7 @@ export default function StatusPanel({
   // 职业形象（`skin/02-role.md` §三）：有素材出图，缺位就是原来的 `icon` emoji
   const assets = useSkinStore((s) => s.assets)
   const role = useSkinStore((s) => s.skin?.manifest.role)
-  // 抽屉纸面底纹（`skin/03-window.md` §四）：三个面板 ＋ 骰日志同吃 `surfaces.drawer`
+  // 抽屉纸面底纹（`skin/03-window.md` §四）：三个面板 ＋ 骰日志共用 `surfaces.drawer`
   const surface = useSurfaceStyle('drawer')
   // 按钮（§四）：属性行的加点按钮走 `small`，标题栏的关闭走 `close`
   const smallBtn = useButtonStyle('small')

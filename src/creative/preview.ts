@@ -1,5 +1,5 @@
 /**
- * 封面生成（`skin/09-creative.md` §2.5）：导出 `.pp` / `.pgame` 时顺手画一张 `preview.png`。
+ * 封面生成（`skin/09-creative.md` §2.5）：导出 `.pp` / `.pgame` 时顺带生成一张 `preview.png`。
  *
  * 规则很小：**画布背景 ＋ 皮肤名**。取不到背景图就退成纯纸色 —— 生成失败一律返回 `undefined`，
  * 打包时只是少写一条 `preview.png`（`KP-6` 的提示口径），绝不因为画不出封面而挡住导出。

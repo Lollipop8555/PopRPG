@@ -4,7 +4,7 @@
  * 两个入口：
  * - `useCreativeSkin()` —— 把「manifest ＋ 素材字节」临时装成一份 `LoadedSkin`，再建素材源；
  *   预览与九宫格面板都靠它取图，**与游玩页走同一套取图代码**（不另写渲染）。
- * - `useCreativeSlots()` —— 当前槽位表（已按靶子筛选并含兜底项）。
+ * - `useCreativeSlots()` —— 当前图片位置表（已按参照的游戏筛选并含默认画法项）。
  */
 
 import { useEffect, useMemo } from 'react'
@@ -39,7 +39,7 @@ export function useCreativeSkin(): { skin: LoadedSkin; assets: SkinAssets } {
   return { skin, assets }
 }
 
-/** 当前槽位表 */
+/** 当前图片位置表 */
 export function useCreativeSlots(): CreativeSlot[] {
   const target = useCreativeStore((s) => s.target)
   const manifest = useCreativeStore((s) => s.manifest)
@@ -49,7 +49,7 @@ export function useCreativeSlots(): CreativeSlot[] {
   )
 }
 
-/** 单个槽位（按路径查，查不到返回 `undefined`） */
+/** 单个图片位置（按路径查，查不到返回 `undefined`） */
 export function useSelectedSlot(slots: readonly CreativeSlot[]): CreativeSlot | undefined {
   const path = useCreativeStore((s) => s.selectedPath)
   return useMemo(() => slots.find((slot) => slot.path === path), [slots, path])

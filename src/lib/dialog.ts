@@ -41,7 +41,7 @@ export function formatHit(lo: number, hi: number): string {
 
 /**
  * 命中区间给玩家看的那一格：`'1~2'` → `'1-2'`（归一）、`'6'` → `'6'`；
- * **缺省 / 非法 → `'—'`**（这一条没被任何点数认领）。
+ * **缺省 / 非法 → `'—'`**（没有任何点数指向这一条）。
  * 掷骰层每条答复前都标它 —— 玩家先看见"哪几个点数落在这条上"，再掷。
  */
 export function hitLabel(hit: string | undefined | null): string {

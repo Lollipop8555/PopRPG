@@ -116,7 +116,7 @@ describe('落点 1：对话框（§四）', () => {
 })
 
 describe('落点 2：抽屉里的四张卡片（§四）', () => {
-  it('配了 `surfaces.drawer`：状态 / 背包 / 装备 / 流水四张卡片同吃一张底纹', () => {
+  it('配了 `surfaces.drawer`：状态 / 背包 / 装备 / 流水四张卡片共用一张底纹', () => {
     paint({ surfaces: { drawer: DRAWER } })
     const status = render(<StatusPanel session={session} onAllocate={() => {}} onClose={() => {}} />)
     const bag = render(

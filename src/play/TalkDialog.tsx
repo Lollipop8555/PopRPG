@@ -83,7 +83,7 @@ export default function TalkDialog({
   const role = useSkinStore((s) => s.skin?.manifest.role)
   // 对话框纸面底纹（`skin/03-window.md` §四）：两个分支（重入菜单 / 正常对话）共用一个壳
   const surface = useSurfaceStyle('dialog')
-  // 骰子本体（`skin/04-misc.md` §三）：对话里那枚骰子与底栏那枚同吃一张
+  // 骰子本体（`skin/04-misc.md` §三）：对话里那枚骰子与底栏那枚共用一张
   const dieBody = useDieBodyStyle()
   // 按钮（`skin/03-window.md` §四）：带方向的主项（继续对话 / 继续）走 `primary`，其余走 `plain`
   const primaryBtn = useButtonStyle('primary')

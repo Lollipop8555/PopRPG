@@ -1,5 +1,5 @@
 /**
- * 九宫格切分工具（`skin/09-creative.md` §2.3；裁决 21）。
+ * 九宫格拉伸（切九块，四角不拉伸）工具（`skin/09-creative.md` §2.3；裁决 21）。
  *
  * 四根参考线可以**拖**也可以**填数**，两者写的是同一个 `slice`。
  * 辅助三件：**黑边识别**（`.9.png` 的 1px 标记，只读不写）、**成对校验**（中区被吃穿时当场标红）、
@@ -10,11 +10,12 @@
  * **不写进 manifest**（不给格式加没有裁决的字段）。
  */
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { Download, Scan, Undo2 } from 'lucide-react'
 import { downloadBlob } from '../io/download'
 import { useCreativeStore } from '../store/creative'
 import { loadImageFromBytes } from './preview'
+import { useBytesUrl } from './useBytesUrl'
 import {
   NO_LINES,
   SLICE_PARTS,
@@ -40,6 +41,9 @@ export interface NineSlicePanelProps {
 
 const EDGES: Edge[] = ['top', 'right', 'bottom', 'left']
 
+/** 四边的中文名（参考线与输入框都显示中文） */
+const EDGE_LABEL: Record<Edge, string> = { top: '上', right: '右', bottom: '下', left: '左' }
+
 function baseName(path: string): string {
   return path.replace(/\\/g, '/').split('/').pop() ?? path
 }
@@ -55,16 +59,7 @@ export default function NineSlicePanel({ path, lines, onChange }: NineSlicePanel
   const linesRef = useRef(lines)
   linesRef.current = lines
 
-  const url = useMemo(() => {
-    if (bytes === undefined || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') return undefined
-    return URL.createObjectURL(new Blob([bytes as BlobPart]))
-  }, [bytes])
-
-  useEffect(() => {
-    return () => {
-      if (url !== undefined) URL.revokeObjectURL(url)
-    }
-  }, [url])
+  const url = useBytesUrl(bytes)
 
   const regions = size.w > 0 && size.h > 0 ? nineRegions(size.w, size.h, lines) : undefined
   const valid = size.w > 0 && size.h > 0 ? validLines(size.w, size.h, lines) : true
@@ -155,7 +150,7 @@ export default function NineSlicePanel({ path, lines, onChange }: NineSlicePanel
     <div style={{ marginTop: 6 }}>
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <div className="panel-title" style={{ fontSize: 13 }}>
-          九宫格切分
+          九宫格拉伸（切九块，四角不拉伸）
         </div>
         <span className="faint">{size.w > 0 ? `${size.w} × ${size.h}` : '读图中…'}</span>
       </div>
@@ -183,7 +178,7 @@ export default function NineSlicePanel({ path, lines, onChange }: NineSlicePanel
           />
         ) : (
           <div className="hintbox warn" style={{ margin: 8 }}>
-            这个槽位还没有素材字节，读不到图就无法切分
+            这一处还没有图：读不到图就没法切
           </div>
         )}
 
@@ -197,7 +192,7 @@ export default function NineSlicePanel({ path, lines, onChange }: NineSlicePanel
               <div
                 key={edge}
                 onPointerDown={startDrag(edge)}
-                title={`拖动 ${edge} 线`}
+                title={`拖动${EDGE_LABEL[edge]}边这条线`}
                 style={{
                   position: 'absolute',
                   ...(vertical
@@ -223,7 +218,7 @@ export default function NineSlicePanel({ path, lines, onChange }: NineSlicePanel
       <div className="grid2" style={{ marginTop: 6 }}>
         {EDGES.map((edge) => (
           <label className="field" key={edge} style={{ marginBottom: 0 }}>
-            <span className="faint">{edge === 'top' ? '上' : edge === 'right' ? '右' : edge === 'bottom' ? '下' : '左'}</span>
+            <span className="faint">{EDGE_LABEL[edge]}</span>
             <input
               className="input"
               type="number"
@@ -235,7 +230,44 @@ export default function NineSlicePanel({ path, lines, onChange }: NineSlicePanel
         ))}
       </div>
 
-      {!valid && <div className="hintbox error" style={{ marginTop: 6 }}>中区被吃穿了（上 ＋ 下 ≥ 图高，或左 ＋ 右 ≥ 图宽）。仍可导出，但渲染会退化。</div>}
+      {!valid && <div className="hintbox error" style={{ marginTop: 6 }}>中间那块被挤没了（上＋下 超过图高，或 左＋右 超过图宽）。还能导出，但游戏里会被拉伸变形。</div>}
+
+      <div style={{ marginTop: 8 }}>
+        <div className="faint">
+          四根线把图切成九块。拉大以后长这样：<b>四个角保持原样</b>（不拉伸），上下两条边只横向拉、左右两条边只纵向拉，
+          中间那块两个方向都在拉。
+        </div>
+        <div className="row" style={{ gap: 10, marginTop: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          {[
+            { w: 112, h: 36 },
+            { w: 176, h: 54 },
+            { w: 248, h: 76 },
+          ].map((box) => (
+            <div key={`${box.w}x${box.h}`}>
+              {url !== undefined && size.w > 0 ? (
+                <div
+                  aria-label={`拉成 ${box.w} × ${box.h} 的样子`}
+                  style={{
+                    width: box.w,
+                    height: box.h,
+                    borderImageSource: `url(${url})`,
+                    borderImageSlice: `${lines.top} ${lines.right} ${lines.bottom} ${lines.left} fill`,
+                    borderImageWidth: `${lines.top}px ${lines.right}px ${lines.bottom}px ${lines.left}px`,
+                    borderImageRepeat: 'stretch',
+                  }}
+                />
+              ) : (
+                <div className="hintbox warn" style={{ margin: 0 }}>
+                  还没有图
+                </div>
+              )}
+              <div className="faint" style={{ fontSize: 10.5, textAlign: 'center' }}>
+                拉成 {box.w} × {box.h}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="row" style={{ marginTop: 6 }}>
         <button className="btn small" onClick={() => void detect()}>
@@ -250,7 +282,7 @@ export default function NineSlicePanel({ path, lines, onChange }: NineSlicePanel
       </div>
       <label className="row" style={{ marginTop: 4 }}>
         <input type="checkbox" checked={withCenter} onChange={(e) => setWithCenter(e.target.checked)} />
-        <span className="faint">另存时含中心块（V1 渲染恒定带 `fill`，此项只影响导出的切片文件）</span>
+        <span className="faint">另存时也导出中间那块（只影响导出的切片文件，不影响游戏里的显示）</span>
       </label>
     </div>
   )

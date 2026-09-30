@@ -43,9 +43,9 @@ export default function EquipPanel({
   const equipped = session.player.equipped
   const equippedIds = new Set(equipped.map((e) => e.id))
   const [open, setOpen] = useState<OpenSlot | null>(null)
-  // 抽屉纸面底纹（`skin/03-window.md` §四）：抽屉里四张卡片同吃 `surfaces.drawer`
+  // 抽屉纸面底纹（`skin/03-window.md` §四）：抽屉里四张卡片共用 `surfaces.drawer`
   const surface = useSurfaceStyle('drawer')
-  // 道具皮肤（`skin/06-item-building.md` §3.2）：穿戴行与更换气泡里的道具图标同吃 `item.icon`
+  // 道具皮肤（`skin/06-item-building.md` §3.2）：穿戴行与更换气泡里的道具图标共用 `item.icon`
   const itemSkins = useSkinStore((s) => s.skin?.manifest.item)
   const assets = useSkinStore((s) => s.assets)
   // 按钮（`skin/03-window.md` §四）：部位行的「更换 / 装备」走 `small`，标题栏的关闭走 `close`

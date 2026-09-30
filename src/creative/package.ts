@@ -167,7 +167,7 @@ export function readSkinPackage(bytes: Uint8Array, source = ''): SkinLoadResult 
   return readSkin(bytes, source)
 }
 
-/** 读一份 `.pgame`（拿它的 `.pmod` 当靶子） */
+/** 读一份 `.pgame`（拿它的 `.pmod` 当参照的游戏） */
 export function readGamePackage(bytes: Uint8Array, source = ''): LoadedPGame {
   return readPGame(bytes, source)
 }

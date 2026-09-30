@@ -1,8 +1,8 @@
 /**
- * 靶子 `.pmod` 的读取与骨架生成（`skin/09-creative.md` §2.1 / §2.4）。
+ * 参照的游戏 `.pmod` 的读取与要准备的图生成（`skin/09-creative.md` §2.1 / §2.4）。
  *
- * 「靶子」＝ Creative 里用来对照的那一份 `.pmod`：它决定
- * **有哪些槽位值得填**（该局启用了哪些组件、地图上铺了哪些道路姿态）。
+ * 「参照的游戏」＝ Creative 里用来对照的那一份 `.pmod`：它决定
+ * **有哪些图片位置值得填**（该局启用了哪些组件、地图上铺了哪些道路朝向）。
  * 读取只做两件事：把启用范围摊平成键集合、把地图摊平成用到的道路 flag。
  */
 
@@ -13,7 +13,7 @@ import { roadNeighbors } from '../play/road'
 import { roadFlag, roadTileOf, type RoadRotation } from '../engine/skin'
 import { COMMON_ICON_NAMES, emptySlotKeys, type SlotKeys } from './slots'
 
-/** 一个 flag 的判定结果（flag 矩阵视图与命中检查共用） */
+/** 一个 flag 的判定结果（flag 矩阵视图与还缺哪些图共用） */
 export interface TargetPose {
   /** 8 位邻接标记，`0`–`255` */
   flag: number
@@ -21,7 +21,7 @@ export interface TargetPose {
   rotate: RoadRotation
 }
 
-/** 读出的一份靶子 */
+/** 读出的一份参照的游戏 */
 export interface PmodTarget {
   /** 显示名（`.pmod` 文件名或工程名） */
   name: string
@@ -32,11 +32,11 @@ export interface PmodTarget {
   keys: SlotKeys
   /** 地图上用到的全部 flag（升序去重） */
   flags: number[]
-  /** 用到的道路槽位（按 `ROAD_SLOTS` 的固定次序） */
+  /** 用到的道路图片位置（按 `ROAD_SLOTS` 的固定次序） */
   slots: RoadSlot[]
-  /** 每个 flag 的槽位与姿态 */
+  /** 每个 flag 的图片位置与朝向 */
   poses: TargetPose[]
-  /** 道路样式集的候选底样（`road.styles`；靶子的道路组件带标签时用它组织素材） */
+  /** 道路样式集的候选底样（`road.styles`；参照的游戏的道路组件带标签时用它组织素材） */
   roadStyles: SkinRoadStyle[]
 }
 
@@ -46,7 +46,7 @@ function labelOf(def: { id: string; name?: string }): string {
 }
 
 /**
- * 读一份靶子。
+ * 读一份参照的游戏。
  *
  * 两点口径：
  * - `items` / `classes` / `monsters` / `npcs` 取**该局组件的全部 id**——`.pmod` 里出现即视为启用
@@ -97,7 +97,7 @@ export function readPmodTarget(parsed: ParsedPmod, name?: string): PmodTarget {
   const used = new Set(poses.map((pose) => pose.slot))
   const slots = ROAD_SLOTS.filter((slot) => used.has(slot))
 
-  // 道路样式集：靶子的道路组件带标签时，把标签集合登记成候选底样（不自建 base 前缀）
+  // 道路样式集：参照的游戏的道路组件带标签时，把标签集合登记成候选底样（不自建 base 前缀）
   const tagSet = new Set<string>()
   for (const def of parsed.components.roads) for (const tag of def.tags ?? []) tagSet.add(tag)
   const roadStyles: SkinRoadStyle[] = tagSet.size > 0 ? [{ tags: [...tagSet] }] : []
@@ -115,9 +115,9 @@ export function readPmodTarget(parsed: ParsedPmod, name?: string): PmodTarget {
 }
 
 /**
- * 由靶子生成**待填骨架**（§2.1「从 `.pmod` 生成骨架」）。
+ * 由参照的游戏生成**要准备的图**（§2.1「从 `.pmod` 生成图片清单」）。
  *
- * 每个槽位写**空字符串**占位——它是「这里还缺图」的显式记号，
+ * 每个图片位置写**空字符串**占位——它是「这里还还没给图」的显式记号，
  * 导出后由 `KP-2` 逐条提示（提示但不阻断），与设计一致。
  */
 export function skeletonManifest(target: PmodTarget, name?: string): SkinManifest {
@@ -169,12 +169,12 @@ export function skeletonManifest(target: PmodTarget, name?: string): SkinManifes
   return manifest
 }
 
-/** 空白骨架（§2.1「从空白骨架开始」）：只有格式版本与名字 */
+/** 空白清单（§2.1「从空白清单开始」）：只有格式版本与名字 */
 export function blankManifest(name = '未命名皮肤'): SkinManifest {
   return { format: 1, name }
 }
 
-/** 靶子键集合的展示项（名称优先，供 UI 列表） */
+/** 参照的游戏键集合的展示项（名称优先，供 UI 列表） */
 export function keyLabels(target: PmodTarget, source: keyof SlotKeys): { id: string; label: string }[] {
   return target.keys[source].map((id) => ({ id, label: target.labels[id] ?? id }))
 }

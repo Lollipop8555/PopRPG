@@ -42,7 +42,7 @@ describe('window.buttons 取值（§四）', () => {
       danger: 'art/window/btn-danger.png',
       // 四态对象：`normal` 是唯一必填项，其余三态各查自己的态
       small: { normal: 'art/window/btn-small.png', hover: 'art/window/btn-small-hover.png' },
-      // 老包 / 手写配置可能漏掉 `normal`，此时整颗按钮算没配
+      // 老包 / 手写配置可能漏掉 `normal`，此时整个按钮算没配
       ghost: { hover: 'art/window/btn-ghost-hover.png' } as unknown as SkinButton,
     },
   }
@@ -52,7 +52,7 @@ describe('window.buttons 取值（§四）', () => {
     expect(buttonOf(win, 'small')).toBe('art/window/btn-small.png')
   })
 
-  it('四态对象缺 `normal` 即取不到：`hover` 不代表这颗按钮有图', () => {
+  it('四态对象缺 `normal` 即取不到：`hover` 不代表这个按钮有图', () => {
     expect(buttonOf(win, 'ghost')).toBeUndefined()
   })
 
@@ -82,7 +82,7 @@ describe('window.buttons 四态取值（§4.1）', () => {
         active: 'art/window/btn-small-active.png',
       },
       danger: { normal: 'art/window/btn-danger.png', disabled: 'art/window/btn-danger-off.png' },
-      // 缺 `normal`：整颗按钮算没配，`hover` 写了也一并作废
+      // 缺 `normal`：整个按钮算没配，`hover` 写了也一并作废
       ghost: { hover: 'art/window/btn-ghost-hover.png' } as unknown as SkinButton,
     },
   }

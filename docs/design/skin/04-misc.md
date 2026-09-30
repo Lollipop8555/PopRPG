@@ -120,7 +120,7 @@
 |---|---|---|---|
 | 起点 / 终点 | `mark.start` / `mark.end` | [`MapView.tsx`](../../../src/play/MapView.tsx) | 游玩态地图；缺图回退手绘旗 / 藏宝图 X |
 | 道路脚印 | `mark.footprint` | 同上 | **只在 `road` 素材缺失时**顶替程序脚印（[`01-road.md`](01-road.md) §一）；该格有道路图就轮不到它 |
-| 骰子本体 | `die.body` | [`DiceHud.tsx`](../../../src/play/DiceHud.tsx)（46）、[`BattleDialog.tsx`](../../../src/play/BattleDialog.tsx)（38 掷骰中 / 30 定格）、[`TalkDialog.tsx`](../../../src/play/TalkDialog.tsx)（34）、[`DiceLog.tsx`](../../../src/play/DiceLog.tsx)（34 流水） | 五处 `.die` 盒同吃一张；`🎲` 兜底时**也铺**（本体属于那个空骰盒，不属于某一次点数） |
+| 骰子本体 | `die.body` | [`DiceHud.tsx`](../../../src/play/DiceHud.tsx)（46）、[`BattleDialog.tsx`](../../../src/play/BattleDialog.tsx)（38 掷骰中 / 30 定格）、[`TalkDialog.tsx`](../../../src/play/TalkDialog.tsx)（34）、[`DiceLog.tsx`](../../../src/play/DiceLog.tsx)（34 流水） | 五处 `.die` 盒共用一张；`🎲` 兜底时**也铺**（本体属于那个空骰盒，不属于某一次点数） |
 | 骰面 | `die.face.d1`–`d6` / `numeric` | [`DiceLog.tsx`](../../../src/play/DiceLog.tsx) 的 `DieFace` | 四个调用处（HUD / 对话 / 对战 / 流水）共用同一份骰面逻辑，换面只此一处 |
 | lucide 图标 | `misc.icons.<图标名>` | 入口 [`GameIcon.tsx`](../../../src/ui/GameIcon.tsx)；调用 [`LoadScreen.tsx`](../../../src/play/LoadScreen.tsx)（`Sword` 22 / `Hammer` 16 / `FileDown` 14、13 / `FileUp` 14 / `LibraryBig` 13）、[`GameScreen.tsx`](../../../src/play/GameScreen.tsx)（`Menu` 18 / `Flag` 16）、[`DiceHud.tsx`](../../../src/play/DiceHud.tsx)（`StepForward` 13）、[`DiceLog.tsx`](../../../src/play/DiceLog.tsx) / [`BagPanel.tsx`](../../../src/play/BagPanel.tsx) / [`EquipPanel.tsx`](../../../src/play/EquipPanel.tsx) / [`StatusPanel.tsx`](../../../src/play/StatusPanel.tsx)（`X` 14） | 键即 **lucide 图标名**（清单 `ICON_NAMES` 九个，[`lookup.ts`](../../../src/engine/skin/lookup.ts)）；缺图 / 缺位一律回退 lucide 原件 |
 

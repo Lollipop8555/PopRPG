@@ -1,8 +1,8 @@
 /**
  * 创意模式（`skin/09-creative.md`）验收：
  * - 路由第三支 `#/creative` 真能到；
- * - 靶子 → 骨架 → 绑定 → 命中 → 打包 这条主线走得通；
- * - 页面三栏 ＋ 中栏三页都在，载入靶子后预览画的是**真地图**（不是示意图）。
+ * - 样例游戏 → 待填清单 → 绑定 → 命中 → 打包 这条主线走得通；
+ * - 页面三栏 ＋ 中栏三页都在，载入样例游戏后预览画的是**真地图**（不是示意图）。
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -19,7 +19,7 @@ import { unzipEntries } from '../../io/zip'
 import CreativeApp from '../CreativeApp'
 import { navigate, useRoute } from '../../app/router'
 
-/** 夹具导出的 `.pmod`：既是最小可用的靶子，也是创意模式的真实输入 */
+/** 夹具导出的 `.pmod`：既是最小可用的样例游戏，也是创意模式的真实输入 */
 const PMOD = exportPmod(presetLibrary(), fixtureProject()).text
 
 function resetStore(): void {
@@ -32,7 +32,6 @@ function resetStore(): void {
     targetPmod: '',
     targetSource: '',
     selectedPath: '',
-    roadView: 'flag',
     onlyAssets: false,
     notes: [],
   })
@@ -69,8 +68,8 @@ describe('路由：第三支进创意模式', () => {
   })
 })
 
-describe('靶子 → 骨架 → 绑定 → 命中 → 打包', () => {
-  it('载入靶子后按它生成骨架，道路槽位待填', () => {
+describe('样例游戏 → 待填清单 → 绑定 → 命中 → 打包', () => {
+  it('载入样例游戏后按它生成待填清单，路面位置待填', () => {
     useCreativeStore.getState().loadTarget(PMOD, 'fixture.pmod')
     const target = useCreativeStore.getState().target
     expect(target).toBeTruthy()
@@ -79,7 +78,7 @@ describe('靶子 → 骨架 → 绑定 → 命中 → 打包', () => {
     useCreativeStore.getState().buildSkeleton()
     const manifest = useCreativeStore.getState().manifest
     expect(Object.keys(manifest.road?.tiles ?? {}).length).toBeGreaterThan(0)
-    expect(useCreativeStore.getState().notes[useCreativeStore.getState().notes.length - 1]).toContain('骨架')
+    expect(useCreativeStore.getState().notes[useCreativeStore.getState().notes.length - 1]).toContain('要准备的图')
   })
 
   it('绑定一份素材：写进 manifest 的包内路径，并登记字节', () => {
@@ -116,7 +115,7 @@ describe('靶子 → 骨架 → 绑定 → 命中 → 打包', () => {
     expect(state.unbound.map((file) => file.name)).toEqual(['not-a-slot-at-all.bin'])
   })
 
-  it('缺图清单能列出来；补齐后该槽位转「已命中」', () => {
+  it('缺图清单能列出来；补齐后该位置转「已命中」', () => {
     useCreativeStore.getState().loadTarget(PMOD, 'fixture.pmod')
     useCreativeStore.getState().buildSkeleton()
     const target = useCreativeStore.getState().target!
@@ -179,33 +178,39 @@ describe('靶子 → 骨架 → 绑定 → 命中 → 打包', () => {
 describe('创意页外壳（§2.1）', () => {
   it('三栏与中栏三页都在', () => {
     render(<CreativeApp />)
-    expect(screen.getByText('槽位')).toBeTruthy()
+    expect(screen.getByText('要准备哪些图')).toBeTruthy()
     expect(screen.getAllByText('预览').length).toBeGreaterThan(0)
-    expect(screen.getByText('检视器')).toBeTruthy()
-    for (const tab of ['预览', '命中检查', '道路矩阵']) {
+    expect(screen.getByText('这一处怎么填')).toBeTruthy()
+    for (const tab of ['预览', '还缺哪些图', '路面填图板']) {
       expect(screen.getAllByText(tab).length).toBeGreaterThan(0)
     }
   })
 
-  it('中栏切页：道路矩阵与命中检查都能切过去', () => {
+  it('中栏切页：路面填图板与还缺哪些图都能切过去', () => {
     render(<CreativeApp />)
-    fireEvent.click(screen.getByText('道路矩阵'))
-    expect(screen.getByText('道路 flag 矩阵')).toBeTruthy()
-    // 切到命中检查后，页面上除了 tab 之外还多出这一页自己的标题
-    expect(screen.getAllByText('命中检查').length).toBe(1)
-    fireEvent.click(screen.getByText('命中检查'))
-    expect(screen.getAllByText('命中检查').length).toBeGreaterThan(1)
+    fireEvent.click(screen.getByText('路面填图板'))
+    // 页签 ＋ 这一页自己的标题
+    expect(screen.getAllByText('路面填图板').length).toBeGreaterThan(1)
+    expect(screen.getByText(/同一个形状换个方向，只是把图转一下/)).toBeTruthy()
+    // 图例：四种符号都在
+    for (const text of [/粗框方块 ＝ 这一格/, /虚线连出去 ＝ 那边有路/, /空心虚线框 ＝ 那边没有路/, /角上的小块 ＝ 斜对面的格子也有路/]) {
+      expect(screen.getByText(text)).toBeTruthy()
+    }
+    // 切到还缺哪些图后，页面上除了 tab 之外还多出这一页自己的标题
+    expect(screen.getAllByText('还缺哪些图').length).toBe(1)
+    fireEvent.click(screen.getByText('还缺哪些图'))
+    expect(screen.getAllByText('还缺哪些图').length).toBeGreaterThan(1)
   })
 
-  it('载入靶子后预览画的是真地图（复用游玩页的 .mapview）', () => {
+  it('载入样例游戏后预览画的是真地图（复用游玩页的 .mapview）', () => {
     useCreativeStore.getState().loadTarget(PMOD, 'fixture.pmod')
     render(<CreativeApp />)
     expect(document.querySelector('.mapview')).toBeTruthy()
   })
 
-  it('没载入靶子时预览给提示，不画地图', () => {
+  it('没载入样例游戏时预览给提示，不画地图', () => {
     render(<CreativeApp />)
-    expect(screen.getByText('载入靶子 `.pmod` 后在这里预览')).toBeTruthy()
+    expect(screen.getByText('先选一份游戏包（.pmod），这里才会画出地图预览')).toBeTruthy()
     expect(document.querySelector('.mapview')).toBeNull()
   })
 
@@ -227,7 +232,32 @@ describe('创意页外壳（§2.1）', () => {
   it('「只看素材」开关回写进 store', () => {
     render(<CreativeApp />)
     expect(useCreativeStore.getState().onlyAssets).toBe(false)
-    fireEvent.click(screen.getByTitle('脱掉程序绘制的兜底，只留这份皮肤真正给到的贴图'))
+    fireEvent.click(screen.getByTitle(/只显示你真正给了图的部分/))
     expect(useCreativeStore.getState().onlyAssets).toBe(true)
+  })
+})
+
+describe('画图窗口（图片编辑）', () => {
+  it('右栏每一行都有「画一张 / 改图」，点开就是画图窗口', () => {
+    useCreativeStore.getState().loadTarget(PMOD, 'fixture.pmod')
+    useCreativeStore.getState().buildSkeleton()
+    const target = useCreativeStore.getState().target!
+    const slots = enumerateSlots(target.keys, useCreativeStore.getState().manifest)
+    const slot = slots.find((item) => item.suggest !== '' && item.kind === 'sprite')!
+    useCreativeStore.getState().selectSlot(slot.path)
+
+    render(<CreativeApp />)
+    fireEvent.click(screen.getByTitle('在这里直接画 / 改这张图'))
+
+    // 窗口标题带上这一处的名字，两组工具都在
+    expect(screen.getByText(`画图 · ${slot.label}`)).toBeTruthy()
+    for (const name of ['画笔', '橡皮', '油漆桶', '吸管', '直线', '矩形', '椭圆']) {
+      expect(screen.getByText(name)).toBeTruthy()
+    }
+    expect(screen.getByText('撤销')).toBeTruthy()
+    expect(screen.getByText('重做')).toBeTruthy()
+    // 没图时画完会写到这一处的建议交付名
+    const hints = screen.getAllByText(/包内路径/).map((node) => node.textContent ?? '')
+    expect(hints.some((text) => text.includes(slot.suggest))).toBe(true)
   })
 })

@@ -35,7 +35,7 @@ export default function BagPanel({
 }) {
   const entries = session.player.inventory
   const equipped = session.player.equipped
-  // 抽屉纸面底纹（`skin/03-window.md` §四）：抽屉里四张卡片同吃 `surfaces.drawer`
+  // 抽屉纸面底纹（`skin/03-window.md` §四）：抽屉里四张卡片共用 `surfaces.drawer`
   const surface = useSurfaceStyle('drawer')
   // 道具皮肤（`skin/06-item-building.md` §3.2）：键是组件 `id`，图标与衬底都按格子逐个查
   const itemSkins = useSkinStore((s) => s.skin?.manifest.item)
@@ -109,7 +109,7 @@ export default function BagPanel({
           </div>
           <div className="bag-grid">
             {equipped.map((item: ItemDef) => {
-              // 穿戴中的格子与背包格同吃一份道具皮肤（§3.2 的「背包／穿戴格子」）
+              // 穿戴中的格子与背包格共用一份道具皮肤（§3.2 的「背包／穿戴格子」）
               const skin = itemSkinOf(itemSkins, item.id)
               const cell = groundStyle(groundPaint(skin?.background, item.color ?? fallbackColor(item.id)), assets)
               return (

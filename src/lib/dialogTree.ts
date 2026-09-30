@@ -202,7 +202,7 @@ function estimateHeight(node: DialogNode, collapsed: boolean, isRoot: boolean): 
 }
 
 /**
- * 树形分栏布局：**列 ＝ 层深**、**行按书写顺序往下排**，顺手把**后续连线**也配好。
+ * 树形分栏布局：**列 ＝ 层深**、**行按书写顺序往下排**，一并配好**后续连线**。
  * 折叠的卡片整棵子树都不排版（只影响显示，§5.6.1）。
  *
  * `prefix` / `offset` 给「未连接」那一组用：路径 key 前缀不同、整体平移一段距离。

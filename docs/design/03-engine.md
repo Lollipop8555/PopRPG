@@ -582,7 +582,7 @@ class_pool: [knight, mage]
 | **道路** | `cost`（消耗）+ `gate`（权限） | 沼泽（慢）/ 河流（没船过不去）/ 火焰山（没火抗掉血） |
 | **建筑** | `cost` + `gate` + `encounter` + `event` + `reward_pool` / `monster_pool` / `stock` + `mimic` | 宝箱屋 / 怪物房 / **事件（上锁的门、陷阱、抉择）** / **商店** / 有宝箱怪物的屋子 |
 | **怪物** | `stats`（6 属性区间）+ `attack_weights`（会哪些技能）+ `effects`（命中施状态）+ `reward_pool` + `point_reward` | 小怪（低区间、给 1 点）/ 精英（高区间 + `tags:[精英]`、给 5 点）/ **毒牙哥布林（会 `poison_bite`，打中你 → 中毒）** |
-| **技能** | **`dim`（取哪一维）+ `target`（攻击目标）+ `vs`（对手拿哪一维防）+ `bonus`（加值）+ `apply`（作用到 hp/mp/无）+ `effects`（挂啥）** | **普通攻击（0 加成）/ 治疗术（`target: self`）/ 力量祝福（`apply: none` + `modifiers`）/ 虚弱诅咒（`target: opponent` + 减益）/ 吸血（伤害 + 挂状态）** |
+| **技能** | **`dim`（取哪一维）+ `target`（攻击目标）+ `vs`（对手拿哪一维防）+ `bonus`（加值）+ `apply`（作用到 hp/mp/无）+ `effects`（施加何种状态）** | **普通攻击（0 加成）/ 治疗术（`target: self`）/ 力量祝福（`apply: none` + `modifiers`）/ 虚弱诅咒（`target: opponent` + 减益）/ 吸血（伤害 + 挂状态）** |
 | **装备** | `slots` + `modifiers` + `tags` | 铁剑（物攻 +5）/ 火抗鞋（`tags:[火抗]`）/ 小船（`tags:[渡河]`，但占手） |
 | **消耗品** | `usable` + `effects` | 红瓶（回 `hp`）/ 蓝瓶（回 `mp`）/ 解毒剂（`remove_tag`）/ 御火符（临时 `火抗`） |
 | **职业** | `base_stats` + `free_points` + `buffs`（百分比）+ `tags` + `inventory_size` + `starting_items` | 骑士（`patk:120`，物理向）/ 法师（`matk:130` 且 `patk:80`——**物理攻击终生按 ×0.8 计算**）。**职业没有 `skills`**（§4.2.3） |

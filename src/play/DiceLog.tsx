@@ -65,7 +65,7 @@ export default function DiceLog({ session, onClose }: { session: Session; onClos
     if (box) box.scrollTop = box.scrollHeight
   }, [session.log.length])
 
-  // 抽屉纸面底纹（`skin/03-window.md` §四）：流水也在抽屉里，与三个面板同吃 `surfaces.drawer`
+  // 抽屉纸面底纹（`skin/03-window.md` §四）：流水也在抽屉里，与三个面板共用 `surfaces.drawer`
   const surface = useSurfaceStyle('drawer')
   // 骰子本体（`skin/04-misc.md` §三）：铺进 `.die` 盒，三档尺寸共用一张
   const dieBody = useDieBodyStyle()

@@ -2,7 +2,7 @@
  * Creative 模式的工程 store（`skin/09-creative.md` §三）。
  *
  * 存两样东西，**分开存放**：
- * - **描述**（manifest ＋ 靶子 `.pmod` 文本 ＋ 素材路径清单）与 build 项目同级走 `localStorage`；
+ * - **描述**（manifest ＋ 参照的游戏 `.pmod` 文本 ＋ 素材路径清单）与 build 项目同级走 `localStorage`；
  * - **素材字节** 走 IndexedDB（与皮肤库同一套 `BlobStore` 约定，`io/idb.ts`）。
  *
  * 这样刷新不丢，且 `.pp` 常见的十几兆素材不会把 `localStorage` 撑爆。
@@ -12,13 +12,15 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { SkinManifest } from '../types'
 import { SKIN_MANIFEST_ENTRY, SKIN_PREVIEW_ENTRY, mergeManifest, type LoadedSkin } from '../io/pp'
-import { parsePmod } from '../io/pmod'
+import { exportPmod, parsePmod } from '../io/pmod'
 import { createIndexedDbBlobStore, createMemoryBlobStore, type BlobStore } from '../io/idb'
 import { clearSlot, emptySlotKeys, enumerateSlots, matchSlot, writeSlot, type CreativeSlot } from '../creative/slots'
 import { blankManifest, readPmodTarget, skeletonManifest, type PmodTarget } from '../creative/target'
 import { pickStorage } from './storage'
+import { librarySnapshot } from './library'
+import { projectSnapshot } from './project'
 
-/** 拖入但没匹配上槽位的素材（§2.2：先落暂存区） */
+/** 拖入但没匹配上图片位置的素材（§2.2：先落未绑定素材暂存区） */
 export interface UnboundAsset {
   name: string
   bytes: Uint8Array
@@ -29,20 +31,18 @@ export interface CreativeStore {
   manifest: SkinManifest
   /** 已绑定素材：包内路径 → 字节（不进 `localStorage`，字节在 IndexedDB） */
   assets: Record<string, Uint8Array>
-  /** 素材路径清单（**进** `localStorage`：刷新后据此从 IndexedDB 把字节回捞） */
+  /** 素材路径清单（**进** `localStorage`：刷新后据此从 IndexedDB 把字节回读） */
   assetPaths: string[]
-  /** 未绑定素材暂存区 */
+  /** 未绑定素材暂存区：文件名匹配不上任何图片位置的素材 */
   unbound: UnboundAsset[]
-  /** 靶子（未载入时为 `undefined`，此时槽位表只列固定项） */
+  /** 参照的游戏（未载入时为 `undefined`，此时图片位置表只列固定项） */
   target?: PmodTarget
-  /** 靶子的 `.pmod` 原文本（导出 `.pgame` 与刷新后重建靶子都靠它） */
+  /** 参照的游戏的 `.pmod` 原文本（导出 `.pgame` 与刷新后重建参照的游戏都靠它） */
   targetPmod: string
-  /** 靶子来源名（文件名） */
+  /** 参照的游戏来源名（文件名） */
   targetSource: string
-  /** 左栏选中的槽位路径 */
+  /** 左栏选中的图片位置路径 */
   selectedPath: string
-  /** 道路视图：`flag` 是 16 × 16 矩阵，`pose` 是按姿态归并 */
-  roadView: 'flag' | 'pose'
   /** 预览：只看素材（脱掉程序绘制的部分） */
   onlyAssets: boolean
   /** 最近若干条操作提示 */
@@ -52,28 +52,32 @@ export interface CreativeStore {
   setMeta: (patch: Partial<Pick<SkinManifest, 'name' | 'author' | 'description'>>) => void
   setSlotValue: (path: string, value: unknown) => void
   clearSlotValue: (path: string) => void
-  /** 只登记素材字节（四态按钮 / 四向写法这类「一个槽位多张图」的场合动手写值） */
+  /** 只登记素材字节（四态按钮 / 四向写法这类「一个图片位置多张图」的场合动手写值） */
   putAsset: (path: string, bytes: Uint8Array) => void
-  /** 绑定一份素材到某槽位：值写成「包内路径」，字节登记进 `assets` */
+  /** 绑定一份素材到某图片位置：值写成「包内路径」，字节登记进 `assets` */
   bindAsset: (slot: CreativeSlot, fileName: string, bytes: Uint8Array) => void
-  /** 拖入一批素材：能匹配上槽位的直接绑定，其余进暂存区 */
+  /** 拖入一批素材：能匹配上图片位置的直接绑定，其余进未绑定素材暂存区 */
   dropFiles: (files: UnboundAsset[]) => void
-  /** 把暂存区的第 `index` 份绑到某槽位 */
+  /** 把未绑定素材里的第 `index` 份绑到某图片位置 */
   bindUnbound: (index: number, slot: CreativeSlot) => void
   removeUnbound: (index: number) => void
-  /** 清掉某槽位的引用（字节留在工程里，导出时提示未引用） */
+  /** 清空某图片位置的引用（字节留在工程里，导出时提示未引用） */
   unbindSlot: (path: string) => void
-  /** 载入靶子 */
+  /** 选一份游戏包 */
   loadTarget: (pmodText: string, source: string) => void
+  /**
+   * 用**构建页当前工程**导出 `.pmod` 当靶子（`skin/09-creative.md` §五 待确认 1 的「取当前工程」那一半）。
+   * 工程里既没启用组件、地图上也没铺任何件时返回 `false`，靶子保持不变。
+   */
+  loadTargetFromProject: () => boolean
   clearTarget: () => void
-  /** 按靶子重建骨架 */
+  /** 按参照的游戏重建清单 */
   buildSkeleton: () => void
-  /** 从空白骨架重来 */
+  /** 清空，全部重来 */
   resetManifest: () => void
   /** 导入一份已加载的皮肤：**逐节点合并**（同名以导入者为准） */
   mergeSkin: (skin: LoadedSkin) => void
   selectSlot: (path: string) => void
-  setRoadView: (view: 'flag' | 'pose') => void
   toggleOnlyAssets: () => void
   note: (text: string) => void
   clearNotes: () => void
@@ -101,7 +105,7 @@ function pushNote(notes: readonly string[], text: string): string[] {
 }
 
 /**
- * 素材落到包内的哪个路径：**优先该槽位的建议文件名**（`resource/<元素>/<变体>.<ext>`），
+ * 素材落到包内的哪个路径：**优先该图片位置的建议文件名**（`resource/<元素>/<变体>.<ext>`），
  * 没有建议值时退回 `resource/<节>/<原文件名>`，最后才用原文件名。
  */
 export function assetPathFor(slot: CreativeSlot, fileName: string): string {
@@ -116,7 +120,7 @@ function isAssetEntry(path: string): boolean {
   return /\.[a-z0-9]+$/i.test(path)
 }
 
-/** 素材表与路径清单一起更新（清单是刷新后回捞字节的唯一依据） */
+/** 素材表与路径清单一起更新（清单是刷新后回读字节的唯一依据） */
 function withAssets(
   current: Record<string, Uint8Array>,
   add: Record<string, Uint8Array>,
@@ -135,7 +139,6 @@ export const useCreativeStore = create<CreativeStore>()(
       targetPmod: '',
       targetSource: '',
       selectedPath: '',
-      roadView: 'flag',
       onlyAssets: false,
       notes: [],
 
@@ -159,7 +162,7 @@ export const useCreativeStore = create<CreativeStore>()(
           manifest: writeSlot(s.manifest, slot.path, path),
           ...withAssets(s.assets, { [path]: bytes }),
           selectedPath: slot.path,
-          notes: pushNote(s.notes, `已绑定 ${fileName} → ${slot.path}（包内路径 ${path}）`),
+          notes: pushNote(s.notes, `已把 ${fileName} 绑定到 ${slot.path}`),
         }))
       },
 
@@ -185,12 +188,12 @@ export const useCreativeStore = create<CreativeStore>()(
           bound += 1
           notes = pushNote(
             notes,
-            `已绑定 ${file.name} → ${hit.slot.path}（${hit.strength === 'exact' ? '按建议文件名' : '按槽位名'}）`,
+            `已把 ${file.name} 绑定到 ${hit.slot.path}（${hit.strength === 'exact' ? '按文件名匹配' : '按所在目录匹配'}）`,
           )
         }
 
-        if (unbound.length > 0) notes = pushNote(notes, `${unbound.length} 份素材未匹配到槽位，已放进暂存区`)
-        else if (bound > 0) notes = pushNote(notes, `共绑定 ${bound} 份素材`)
+        if (unbound.length > 0) notes = pushNote(notes, `${unbound.length} 份素材未能匹配图片位置，已进入左栏「未绑定素材」`)
+        else if (bound > 0) notes = pushNote(notes, `已按文件名自动绑定 ${bound} 份素材`)
 
         set({
           manifest,
@@ -211,7 +214,7 @@ export const useCreativeStore = create<CreativeStore>()(
           ...withAssets(state.assets, { [path]: file.bytes }),
           unbound: state.unbound.filter((_, i) => i !== index),
           selectedPath: slot.path,
-          notes: pushNote(state.notes, `已把暂存素材 ${file.name} 绑到 ${slot.path}`),
+          notes: pushNote(state.notes, `已把「${file.name}」绑定到 ${slot.path}`),
         })
       },
 
@@ -220,7 +223,7 @@ export const useCreativeStore = create<CreativeStore>()(
       unbindSlot: (path) =>
         set((s) => ({
           manifest: clearSlot(s.manifest, path),
-          notes: pushNote(s.notes, `已解绑 ${path}（素材字节仍留在工程里）`),
+          notes: pushNote(s.notes, `已清空 ${path}（素材文件仍在工程内，可随时重新绑定）`),
         })),
 
       loadTarget: (pmodText, source) => {
@@ -233,12 +236,26 @@ export const useCreativeStore = create<CreativeStore>()(
             targetSource: source,
             notes: pushNote(
               s.notes,
-              `已载入靶子 ${source}：${target.maps.length} 张地图，用到 ${target.slots.length} 个道路姿态`,
+              `已选定参照的游戏「${source}」：包内 ${target.maps.length} 张地图，用到 ${target.slots.length} 种路面朝向`,
             ),
           }))
         } catch (error) {
-          set((s) => ({ notes: pushNote(s.notes, `靶子读取失败：${String(error)}`) }))
+          set((s) => ({ notes: pushNote(s.notes, `游戏包读不出来：${String(error)}`) }))
         }
+      },
+
+      loadTargetFromProject: () => {
+        const project = projectSnapshot()
+        const hasContent = project.enabledIds.length > 0 || project.maps.some((map) => map.nodes.length > 0)
+        if (!hasContent) return false
+        const { text, missing } = exportPmod(librarySnapshot(), project)
+        get().loadTarget(text, `构建页工程：${project.name}`)
+        if (missing.length > 0) {
+          set((s) => ({
+            notes: pushNote(s.notes, `工程引用了 ${missing.length} 个库里已不存在的组件，导出时已跳过：${missing.join('、')}`),
+          }))
+        }
+        return true
       },
 
       clearTarget: () => set({ target: undefined, targetPmod: '', targetSource: '' }),
@@ -246,12 +263,16 @@ export const useCreativeStore = create<CreativeStore>()(
       buildSkeleton: () => {
         const { target } = get()
         if (!target) {
-          set((s) => ({ manifest: blankManifest(), notes: pushNote(s.notes, '尚未载入靶子，已改为空白骨架') }))
+          set((s) => ({ manifest: blankManifest(), notes: pushNote(s.notes, '还没选游戏包：已给出空白清单') }))
           return
         }
         const manifest = skeletonManifest(target, target.name)
         const tileCount = Object.keys(manifest.road?.tiles ?? {}).length
-        set((s) => ({ manifest, selectedPath: '', notes: pushNote(s.notes, `已按靶子生成骨架：${tileCount} 个道路槽位待填`) }))
+        set((s) => ({
+          manifest,
+          selectedPath: '',
+          notes: pushNote(s.notes, `已按游戏包列出要准备的图：${tileCount} 种路面图片位置待填`),
+        }))
       },
 
       resetManifest: () => set({ manifest: blankManifest(), selectedPath: '' }),
@@ -270,14 +291,12 @@ export const useCreativeStore = create<CreativeStore>()(
           ...withAssets(state.assets, added),
           notes: pushNote(
             state.notes,
-            `已并入 ${skin.source || '导入包'}：${Object.keys(added).length} 份素材（同名以导入者为准）`,
+            `已导入 ${skin.source || '导入包'}：${Object.keys(added).length} 张图（同名的以你导入的为准）`,
           ),
         })
       },
 
       selectSlot: (path) => set({ selectedPath: path }),
-
-      setRoadView: (view) => set({ roadView: view }),
 
       toggleOnlyAssets: () => set((s) => ({ onlyAssets: !s.onlyAssets })),
 
@@ -287,7 +306,7 @@ export const useCreativeStore = create<CreativeStore>()(
 
       hydrate: async () => {
         const state = get()
-        // 靶子：拿存下来的 `.pmod` 文本重建（`PmodTarget` 本身不入库）
+        // 参照的游戏：拿存下来的 `.pmod` 文本重建（`PmodTarget` 本身不入库）
         if (state.targetPmod !== '' && state.target === undefined) {
           state.loadTarget(state.targetPmod, state.targetSource)
         }
@@ -304,13 +323,12 @@ export const useCreativeStore = create<CreativeStore>()(
     {
       name: 'poprpg_creative',
       storage: createJSONStorage(pickStorage),
-      // 只存描述与素材清单；素材字节与暂存区不入 `localStorage`
+      // 只存描述与素材清单；素材字节与未绑定素材暂存区不入 `localStorage`
       partialize: (state) => ({
         manifest: state.manifest,
         targetPmod: state.targetPmod,
         targetSource: state.targetSource,
         selectedPath: state.selectedPath,
-        roadView: state.roadView,
         onlyAssets: state.onlyAssets,
         assetPaths: state.assetPaths,
       }),

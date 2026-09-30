@@ -227,7 +227,7 @@ export default function DialogCanvas({
     const parent = nodeAt(parentList, fromPath)
     if (!parent) return
 
-    // ③ 新的父层没有骰子 → 这条的 `hit` 已失去意义，顺手摘掉
+    // ③ 新的父层没有骰子 → 这条的 `hit` 已失去意义，一并摘掉
     if (!parent.dice) delete moved.hit
 
     const attached = appendChild(parentList, fromPath, cleanNode(moved))

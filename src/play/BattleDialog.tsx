@@ -72,7 +72,7 @@ export default function BattleDialog({ session }: { session: Session }) {
   const role = useSkinStore((s) => s.skin?.manifest.role)
   // 对话框纸面底纹（`skin/03-window.md` §四）：未配 `surfaces.dialog` 即不传 `style`，CSS 纸面照旧
   const surface = useSurfaceStyle('dialog')
-  // 骰子本体（`skin/04-misc.md` §三）：战中那两枚（定格 30 / 掷骰中 38）同吃一张
+  // 骰子本体（`skin/04-misc.md` §三）：战中那两枚（定格 30 / 掷骰中 38）共用一张
   const dieBody = useDieBodyStyle()
   // 技能格底纹（`skin/03-window.md` §四）：与 HUD 底栏的 `SkillBar` 同为「技能格」，
   // 走同一个键 `window.slots.skill`（两处不是两套素材）

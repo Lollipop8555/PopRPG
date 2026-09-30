@@ -98,7 +98,7 @@ describe('技能格（§四）', () => {
     expect(bgOf(container.querySelector('.skill-slot'))).toContain(`blob:${SKILL}`)
   })
 
-  it('交锋弹层里的技能格同吃一个键（两处不是两套素材）', () => {
+  it('交锋弹层里的技能格共用一个键（两处不是两套素材）', () => {
     paint({ window: { slots: { skill: SKILL } } })
     const battle = inCombat()
     usePlayStore.setState({ session: battle })
@@ -188,7 +188,7 @@ describe('背包格的交叠：道具衬底优先、格位底纹兜底（§四�
     expect(bgOf(cell)).not.toContain(BAG)
   })
 
-  it('穿戴格与背包格同吃一个键：没配道具衬底时同样铺 `slots.bag`', () => {
+  it('穿戴格与背包格共用一个键：没配道具衬底时同样铺 `slots.bag`', () => {
     paint({ window: { slots: { bag: BAG } } })
     const cell = drawBag(withItems([], [itemOf('iron_sword')])).container.querySelector('.bag-cell')
 

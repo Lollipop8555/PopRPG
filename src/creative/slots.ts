@@ -1,17 +1,17 @@
 /**
- * Creative 模式的**槽位登记表**（`skin/09-creative.md` §2.2 / §2.4）。
+ * Creative 模式的**图片位置登记表**（`skin/09-creative.md` §2.2 / §2.4）。
  *
- * 「槽位」＝ manifest 里**一个可以被素材（或颜色 / 字体）填上的位置**，例如
+ * 「图片位置」＝ manifest 里**一个可以被素材（或颜色 / 字体）填上的位置**，例如
  * `road.tiles.straight`、`window.buttons.primary`、`item.<id>.icon`。
  * 本文件把散在 16 个顶层键里的这些位置**一次性列全**，供三处共用：
- * - 待填清单（骨架生成，§2.1「新建」）；
- * - 素材绑定（§2.2：拖入图片 → 匹配槽位 → 写回 manifest）；
- * - 命中检查（§2.4：已命中 / 走通用 / 程序绘制）。
+ * - 要准备的图（由参照的游戏生成，§2.1「新建」）；
+ * - 素材绑定（§2.2：拖入图片 → 匹配图片位置 → 写回 manifest）；
+ * - 还缺哪些图（§2.4：已给图 / 用通用图 / 程序默认画法）。
  *
  * 三条口径：
- * - 槽位**只为编辑服务**，与运行期取图无关——运行期仍按各节字段自行回退（素材是可选叠加层）。
- * - 槽位的 `path` 是「点路径」，动态键段（组件 `id`、图标名）**在枚举时**才展开成具体键。
- * - `suggest` 给出**建议交付文件名**：既作缺图清单的提示，也作拖入素材的自动匹配依据。
+ * - 图片位置**只为编辑服务**，与运行期取图无关——运行期仍按各节字段自行回退（素材是可选叠加层）。
+ * - 图片位置的 `path` 是「点路径」，动态键段（组件 `id`、图标名）**在枚举时**才展开成具体键。
+ * - `suggest` 给出**建议交付文件名**：既作还缺的图的提示，也作拖入素材的自动匹配依据。
  */
 
 import {
@@ -19,22 +19,24 @@ import {
   ROAD_SLOTS,
   SFX_EVENTS,
   SKIN_THEME_TOKENS,
+  type BgmScene,
   type RoadSlot,
+  type SfxEvent,
   type SkinManifest,
   type SkinManifestKey,
 } from '../types'
 
-/** 槽位可填的内容类型 */
+/** 图片位置可填的内容类型 */
 export type SlotKind =
   /** 图引用对象（`img` ＋ `rotate` / `flip` / `slice` / `fit`），`startup` / `lobby` / `background` 各字段 */
   | 'image'
   /** 单张图（字符串或图引用对象），`item.icon` / `window.slots.*` 等 */
   | 'texture'
-  /** 三写法素材（一张 / 一张＋纠偏角 / 四张），`road.tiles.*` 与 `role.*` */
+  /** 三写法素材（一张 / 一张＋额外旋转 / 四张），`road.tiles.*` 与 `role.*` */
   | 'sprite'
-  /** 立绘（**不接受数组**，多一个 `hurt`），`role.portraits.*` */
+  /** 大图（**不接受数组**，多一个 `hurt`），`role.portraits.*` */
   | 'portrait'
-  /** 衬底三元组（`fill` / `stroke` / `img`） */
+  /** 底板三元组（`fill` / `stroke` / `img`） */
   | 'ground'
   /** 按钮（`normal` 必填，四态可选） */
   | 'button'
@@ -45,10 +47,10 @@ export type SlotKind =
   /** 字体：包内字体路径或浏览器内置字体名 */
   | 'font'
 
-/** 动态键槽位的键来源（靶子 `.pmod` 的启用组件，或工程里已有的键） */
+/** 动态键图片位置的键来源（参照的游戏 `.pmod` 的启用组件，或工程里已有的键） */
 export type SlotKeySource = 'items' | 'buildings' | 'classes' | 'monsters' | 'npcs' | 'icons'
 
-/** 一条槽位 */
+/** 一条图片位置 */
 export interface CreativeSlot {
   /** 点路径；动态键段写作 `*`，枚举时替换成具体键 */
   path: string
@@ -59,9 +61,9 @@ export interface CreativeSlot {
   kind: SlotKind
   /** 建议交付文件名（相对包根） */
   suggest: string
-  /** 动态键槽位：本槽位由哪个来源的键展开而来 */
+  /** 动态键图片位置：本图片位置由哪个来源的键展开而来 */
   keySource?: SlotKeySource
-  /** 展开后的具体键（静态槽位为空） */
+  /** 展开后的具体键（静态图片位置为空） */
   key?: string
 }
 
@@ -91,7 +93,7 @@ export const SECTION_LABEL: Record<SkinManifestKey, string> = {
   theme: '主题',
   background: '画布背景',
   road: '道路',
-  role: '形象与立绘',
+  role: '形象与大图',
   item: '道具',
   building: '建筑',
   window: '容器与控件',
@@ -99,12 +101,25 @@ export const SECTION_LABEL: Record<SkinManifestKey, string> = {
   audio: '音频',
 }
 
-/** 是否属于「绑定素材」的槽位（颜色与字体另有编辑器） */
+/** 图片位置可填内容的类型名（右栏「这一处该填什么」） */
+export const KIND_LABEL: Record<SlotKind, string> = {
+  image: '一张图（可另设旋转、左右翻转、九宫格切片）',
+  texture: '一张图（按容器尺寸拉伸）',
+  sprite: '一张图，或四张图（分四个朝向）',
+  portrait: '一张大图（每个角色一张）',
+  ground: '底板（填充色、描边、背景图）',
+  button: '按钮的四个状态图（normal 必给）',
+  audio: '音频文件',
+  color: '颜色值',
+  font: '字体',
+}
+
+/** 是否属于「绑定素材」的图片位置（颜色与字体另有编辑器） */
 export function isBindable(kind: SlotKind): boolean {
   return kind !== 'color'
 }
 
-/** 15 个道路槽位的中文名（`skin/01-road.md` §三 逐条对应） */
+/** 15 个道路图片位置的中文名（`skin/01-road.md` §三 逐条对应） */
 export const ROAD_SLOT_LABEL: Record<RoadSlot, string> = {
   isolated: '孤立',
   dead_end: '尽端路',
@@ -129,6 +144,45 @@ const BUTTON_KEYS = ['primary', 'danger', 'small', 'icon', 'close'] as const
 /** 骰面键（点阵六面 ＋ 数字面） */
 const DIE_FACES = ['d1', 'd2', 'd3', 'd4', 'd5', 'd6', 'numeric'] as const
 
+/** 按钮键的中文名（界面上不出现英文键名） */
+const BUTTON_LABEL: Record<(typeof BUTTON_KEYS)[number], string> = {
+  primary: '主要按钮',
+  danger: '危险按钮（红）',
+  small: '小号按钮',
+  icon: '图标按钮',
+  close: '关闭按钮',
+}
+
+/** 骰面中文名 */
+const DIE_LABEL: Record<(typeof DIE_FACES)[number], string> = {
+  d1: '1 点',
+  d2: '2 点',
+  d3: '3 点',
+  d4: '4 点',
+  d5: '5 点',
+  d6: '6 点',
+  numeric: '数字面',
+}
+
+/** 背景乐场景中文名 */
+const BGM_LABEL: Record<BgmScene, string> = {
+  home: '首页',
+  map: '地图上',
+  battle: '战斗中',
+}
+
+/** 音效事件中文名 */
+const SFX_LABEL: Record<SfxEvent, string> = {
+  dice_roll: '骰子滚动中',
+  dice_land: '骰子落定',
+  hit: '被击中',
+  pickup: '拾取道具',
+  coin: '获得金币',
+  open: '打开面板',
+  close: '关闭面板',
+  error: '操作出错',
+}
+
 /** 常用 lucide 图标名（`misc.icons` 的可选键；其余键可手输添加） */
 export const COMMON_ICON_NAMES = [
   'heart',
@@ -149,7 +203,7 @@ function suggestFile(dir: string, file: string): string {
 }
 
 /**
- * 静态槽位表：键固定的槽位全在这里。
+ * 静态图片位置表：键固定的图片位置全在这里。
  * 顺序即 UI 分组内的顺序（按节聚合后仍保持此相对次序）。
  */
 const STATIC_SLOTS: readonly Omit<CreativeSlot, 'keySource' | 'key'>[] = [
@@ -187,7 +241,7 @@ const STATIC_SLOTS: readonly Omit<CreativeSlot, 'keySource' | 'key'>[] = [
 
   // ── 形象 ────────────────────────────────────────────────
   { path: 'role.player', label: '玩家棋子', section: 'role', kind: 'sprite', suggest: suggestFile('role', 'player.png') },
-  { path: 'role.portraits.player', label: '主人公立绘', section: 'role', kind: 'portrait', suggest: suggestFile('role', 'portrait_player.png') },
+  { path: 'role.portraits.player', label: '主人公大图', section: 'role', kind: 'portrait', suggest: suggestFile('role', 'portrait_player.png') },
 
   // ── 窗体 ────────────────────────────────────────────────
   { path: 'window.surfaces.dialog', label: '对话框底纹', section: 'window', kind: 'texture', suggest: suggestFile('window', 'surface_dialog.png') },
@@ -195,7 +249,7 @@ const STATIC_SLOTS: readonly Omit<CreativeSlot, 'keySource' | 'key'>[] = [
   { path: 'window.surfaces.popover', label: '气泡底纹', section: 'window', kind: 'texture', suggest: suggestFile('window', 'surface_popover.png') },
   ...BUTTON_KEYS.map<Omit<CreativeSlot, 'keySource' | 'key'>>((key) => ({
     path: `window.buttons.${key}`,
-    label: `按钮 · ${key}`,
+    label: BUTTON_LABEL[key],
     section: 'window',
     kind: 'button',
     // 建议名**不带状态后缀**：四态各自落在 `button_<键>_<状态>.<ext>`（`variationPath`）
@@ -205,13 +259,13 @@ const STATIC_SLOTS: readonly Omit<CreativeSlot, 'keySource' | 'key'>[] = [
   { path: 'window.slots.reward', label: '奖励卡', section: 'window', kind: 'texture', suggest: suggestFile('window', 'slot_reward.png') },
   { path: 'window.slots.bag', label: '背包格', section: 'window', kind: 'texture', suggest: suggestFile('window', 'slot_bag.png') },
   { path: 'window.slots.equipLabel', label: '部位标签', section: 'window', kind: 'texture', suggest: suggestFile('window', 'slot_equip_label.png') },
-  { path: 'window.bars.hp.track', label: '血条 · 轨', section: 'window', kind: 'texture', suggest: suggestFile('window', 'bar_hp_track.png') },
-  { path: 'window.bars.hp.fill', label: '血条 · 条', section: 'window', kind: 'texture', suggest: suggestFile('window', 'bar_hp_fill.png') },
-  { path: 'window.bars.mp.track', label: '蓝条 · 轨', section: 'window', kind: 'texture', suggest: suggestFile('window', 'bar_mp_track.png') },
-  { path: 'window.bars.mp.fill', label: '蓝条 · 条', section: 'window', kind: 'texture', suggest: suggestFile('window', 'bar_mp_fill.png') },
-  { path: 'window.hints.ok', label: '提示条 · 通', section: 'window', kind: 'texture', suggest: suggestFile('window', 'hint_ok.png') },
-  { path: 'window.hints.warn', label: '提示条 · 警', section: 'window', kind: 'texture', suggest: suggestFile('window', 'hint_warn.png') },
-  { path: 'window.hints.error', label: '提示条 · 错', section: 'window', kind: 'texture', suggest: suggestFile('window', 'hint_error.png') },
+  { path: 'window.bars.hp.track', label: '血条底色（轨道）', section: 'window', kind: 'texture', suggest: suggestFile('window', 'bar_hp_track.png') },
+  { path: 'window.bars.hp.fill', label: '血条填充（会缩短的那条）', section: 'window', kind: 'texture', suggest: suggestFile('window', 'bar_hp_fill.png') },
+  { path: 'window.bars.mp.track', label: '蓝条底色（轨道）', section: 'window', kind: 'texture', suggest: suggestFile('window', 'bar_mp_track.png') },
+  { path: 'window.bars.mp.fill', label: '蓝条填充（会缩短的那条）', section: 'window', kind: 'texture', suggest: suggestFile('window', 'bar_mp_fill.png') },
+  { path: 'window.hints.ok', label: '提示条（普通）', section: 'window', kind: 'texture', suggest: suggestFile('window', 'hint_ok.png') },
+  { path: 'window.hints.warn', label: '提示条（警告）', section: 'window', kind: 'texture', suggest: suggestFile('window', 'hint_warn.png') },
+  { path: 'window.hints.error', label: '提示条（出错）', section: 'window', kind: 'texture', suggest: suggestFile('window', 'hint_error.png') },
   { path: 'window.rules.line', label: '手绘分隔线', section: 'window', kind: 'texture', suggest: suggestFile('window', 'rule_line.png') },
 
   // ── 标记与骰子 ──────────────────────────────────────────
@@ -223,7 +277,7 @@ const STATIC_SLOTS: readonly Omit<CreativeSlot, 'keySource' | 'key'>[] = [
   { path: 'misc.dice.rolling', label: '骰子 · 掷骰中', section: 'misc', kind: 'texture', suggest: suggestFile('misc', 'dice_rolling.png') },
   ...DIE_FACES.map<Omit<CreativeSlot, 'keySource' | 'key'>>((face) => ({
     path: `misc.dice.faces.${face}`,
-    label: `骰面 · ${face}`,
+    label: DIE_LABEL[face],
     section: 'misc',
     kind: 'texture',
     suggest: suggestFile('misc', `dice_face_${face}.png`),
@@ -233,14 +287,14 @@ const STATIC_SLOTS: readonly Omit<CreativeSlot, 'keySource' | 'key'>[] = [
   // ── 音频（V1 只解析与校验，不播放） ──────────────────────
   ...BGM_SCENES.map<Omit<CreativeSlot, 'keySource' | 'key'>>((scene) => ({
     path: `audio.bgm.${scene}`,
-    label: `背景乐 · ${scene}`,
+    label: `背景乐：${BGM_LABEL[scene]}`,
     section: 'audio',
     kind: 'audio',
     suggest: suggestFile('audio', `bgm_${scene}.ogg`),
   })),
   ...SFX_EVENTS.map<Omit<CreativeSlot, 'keySource' | 'key'>>((event) => ({
     path: `audio.sfx.${event}`,
-    label: `音效 · ${event}`,
+    label: `音效：${SFX_LABEL[event]}`,
     section: 'audio',
     kind: 'audio',
     suggest: suggestFile('audio', `sfx_${event}.ogg`),
@@ -249,25 +303,25 @@ const STATIC_SLOTS: readonly Omit<CreativeSlot, 'keySource' | 'key'>[] = [
   // ── 主题 token（观感 token 可覆盖，布局 token 不可；取舍 S-23） ──
   ...SKIN_THEME_TOKENS.map<Omit<CreativeSlot, 'keySource' | 'key'>>((token) => ({
     path: `theme.${token}`,
-    label: `观感 token ${token}`,
+    label: `界面观感变量 ${token}`,
     section: 'theme',
     kind: 'color',
     suggest: '',
   })),
 ]
 
-/** 动态键槽位模板：`*` 会在枚举时替换为该来源的每个键 */
+/** 动态键图片位置模板：`*` 会在枚举时替换为该来源的每个键 */
 const DYNAMIC_SLOTS: readonly Omit<CreativeSlot, 'key'>[] = [
   { path: 'role.classes.*', label: '职业形象', section: 'role', kind: 'sprite', suggest: '', keySource: 'classes' },
   { path: 'role.monsters.*', label: '怪物形象', section: 'role', kind: 'sprite', suggest: '', keySource: 'monsters' },
   { path: 'role.npcs.*', label: 'NPC 形象', section: 'role', kind: 'sprite', suggest: '', keySource: 'npcs' },
-  { path: 'role.portraits.classes.*', label: '职业立绘', section: 'role', kind: 'portrait', suggest: '', keySource: 'classes' },
-  { path: 'role.portraits.monsters.*', label: '怪物立绘', section: 'role', kind: 'portrait', suggest: '', keySource: 'monsters' },
-  { path: 'role.portraits.npcs.*', label: 'NPC 立绘', section: 'role', kind: 'portrait', suggest: '', keySource: 'npcs' },
+  { path: 'role.portraits.classes.*', label: '职业大图', section: 'role', kind: 'portrait', suggest: '', keySource: 'classes' },
+  { path: 'role.portraits.monsters.*', label: '怪物大图', section: 'role', kind: 'portrait', suggest: '', keySource: 'monsters' },
+  { path: 'role.portraits.npcs.*', label: 'NPC 大图', section: 'role', kind: 'portrait', suggest: '', keySource: 'npcs' },
   { path: 'item.*.icon', label: '道具图标', section: 'item', kind: 'texture', suggest: '', keySource: 'items' },
-  { path: 'item.*.background', label: '道具衬底', section: 'item', kind: 'ground', suggest: '', keySource: 'items' },
+  { path: 'item.*.background', label: '道具底板', section: 'item', kind: 'ground', suggest: '', keySource: 'items' },
   { path: 'building.*.icon', label: '建筑图标', section: 'building', kind: 'texture', suggest: '', keySource: 'buildings' },
-  { path: 'building.*.background', label: '建筑衬底', section: 'building', kind: 'ground', suggest: '', keySource: 'buildings' },
+  { path: 'building.*.background', label: '建筑底板', section: 'building', kind: 'ground', suggest: '', keySource: 'buildings' },
   { path: 'building.*.img', label: '建筑地图贴图', section: 'building', kind: 'image', suggest: '', keySource: 'buildings' },
   { path: 'building.*.fontColor', label: '建筑名称字色', section: 'building', kind: 'color', suggest: '', keySource: 'buildings' },
   { path: 'building.*.font', label: '建筑名称字体', section: 'building', kind: 'font', suggest: '', keySource: 'buildings' },
@@ -292,7 +346,7 @@ function dynamicSuggest(slot: Omit<CreativeSlot, 'key'>, key: string): string {
   return ''
 }
 
-/** 用具体键展开一条模板槽位 */
+/** 用具体键展开一条模板图片位置 */
 function expand(template: Omit<CreativeSlot, 'key'>, key: string): CreativeSlot {
   const path = template.path.replace('*', key)
   return {
@@ -303,7 +357,7 @@ function expand(template: Omit<CreativeSlot, 'key'>, key: string): CreativeSlot 
   }
 }
 
-/** 该槽位的值是否为「已填」（空串 / 空对象 / `undefined` 都算未填） */
+/** 该图片位置的值是否为「已填」（空串 / 空对象 / `undefined` 都算未填） */
 export function isFilled(value: unknown): boolean {
   if (value === undefined || value === null) return false
   if (typeof value === 'string') return value.trim() !== ''
@@ -316,9 +370,9 @@ export function isFilled(value: unknown): boolean {
 }
 
 /**
- * 枚举全部槽位：静态表 ＋ 动态键展开 ＋ **manifest 里已有但表里没有的路径**（兜底）。
+ * 枚举全部图片位置：静态表 ＋ 动态键展开 ＋ **manifest 里已有但表里没有的路径**（默认画法）。
  *
- * 兜底那条很重要：用户手改 `manifest.json` 写进自定义键（如自建按钮 `window.buttons.myBtn`）后，
+ * 默认画法那条很重要：用户手改 `manifest.json` 写进自定义键（如自建按钮 `window.buttons.myBtn`）后，
  * 编辑器仍要能绑定它，不能因为「表里没有」就把它藏起来。
  */
 export function enumerateSlots(keys: SlotKeys, manifest?: SkinManifest): CreativeSlot[] {
@@ -342,7 +396,7 @@ export function enumerateSlots(keys: SlotKeys, manifest?: SkinManifest): Creativ
   return out
 }
 
-/** 兜底槽位的归属节：取点路径的第一段（不是 16 键之一时归 `misc`） */
+/** 默认画法图片位置的归属节：取点路径的第一段（不是 16 键之一时归 `misc`） */
 function sectionOfPath(path: string): SkinManifestKey {
   const head = path.split('.')[0]
   const sections = Object.keys(SECTION_LABEL) as SkinManifestKey[]
@@ -374,7 +428,7 @@ function extraPaths(manifest: SkinManifest): string[] {
 /** 视为素材路径的扩展名（与 `src/io/skin-paths.ts` 同一口径） */
 const ASSET_EXT = /\.(png|jpe?g|webp|gif|svg|bmp|avif|mp3|ogg|wav|m4a|aac|flac|ttf|otf|woff2?)$/i
 
-/** 槽位分组（UI 左栏按此渲染） */
+/** 图片位置分组（UI 左栏按此渲染） */
 export interface SlotGroup {
   section: SkinManifestKey
   label: string
@@ -453,7 +507,7 @@ function deleteIn(container: unknown, segments: string[]): unknown {
   return base
 }
 
-/** 读一个槽位当前的值 */
+/** 读一个图片位置当前的值 */
 export function readSlot(manifest: SkinManifest, path: string): unknown {
   let node: unknown = manifest
   for (const segment of split(path)) {
@@ -463,12 +517,12 @@ export function readSlot(manifest: SkinManifest, path: string): unknown {
   return node
 }
 
-/** 写一个槽位（不可变；中间层不存在则按段类型新建） */
+/** 写一个图片位置（不可变；中间层不存在则按段类型新建） */
 export function writeSlot(manifest: SkinManifest, path: string, value: unknown): SkinManifest {
   return setIn({ ...(manifest as Record<string, unknown>) }, split(path), value) as SkinManifest
 }
 
-/** 清掉一个槽位（导出时该字段整体缺失，运行期回退程序绘制） */
+/** 清空一个图片位置（导出时该字段整体缺失，运行期回退程序默认画法） */
 export function clearSlot(manifest: SkinManifest, path: string): SkinManifest {
   return deleteIn({ ...(manifest as Record<string, unknown>) }, split(path)) as SkinManifest
 }
@@ -504,7 +558,7 @@ function stemOf(name: string): string {
 }
 
 /**
- * 同一个槽位要放多张图时的路径：`<建议名主干>_<区分后缀>.<ext>`。
+ * 同一个图片位置要放多张图时的路径：`<建议名主干>_<区分后缀>.<ext>`。
  *
  * 用在两处：**按钮四态**（后缀 `hover` / `active` / `disabled`）与**精灵四向**（后缀 `n` / `e` / `s` / `w`）。
  * 文件名本身已经带该后缀时不重复叠加，避免出现 `player_n_n.png`。
@@ -518,7 +572,7 @@ export function variationPath(suggest: string, fileName: string, suffix: string)
 }
 
 /**
- * 按文件名在槽位表里找归属：先比建议文件名的主干（`exact`），再比槽位路径尾名（`loose`）。
+ * 按文件名在图片位置表里找归属：先比建议文件名的主干（`exact`），再比图片位置路径尾名（`loose`）。
  * 都找不到返回 `undefined`——该素材进「未绑定素材」暂存区（§2.2）。
  */
 export function matchSlot(fileName: string, slots: readonly CreativeSlot[]): SlotMatch | undefined {

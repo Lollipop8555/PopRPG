@@ -40,7 +40,13 @@ export default function DiceInput({
       label={label}
       hint={
         <>
-          {range ? <span>点数范围 {range}（{count} 枚 {faces} 面骰）</span> : <span>留空表示该项不掷骰</span>}
+          {range ? (
+            <span>
+              点数范围 {range}（{count} 枚骰子，每枚 {faces} 面）
+            </span>
+          ) : (
+            <span>留空表示该项不掷骰</span>
+          )}
           {hint ? <span> · {hint}</span> : null}
         </>
       }

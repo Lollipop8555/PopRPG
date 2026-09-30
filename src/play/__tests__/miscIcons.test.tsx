@@ -69,12 +69,12 @@ function paint(icons?: Record<string, string>, unpacked: string[] = []) {
 const imgIn = (root: Element | null) => root?.querySelector('img.inline-texture') as HTMLImageElement | null
 /** 这一处回退的 lucide 元件（换了素材就是 `null`） */
 const svgIn = (root: Element | null) => root?.querySelector('svg.lucide')
-/** 按文字找按钮：盯的是「哪一颗按钮」，排布改动不至于让断言失效 */
+/** 按文字找按钮：盯的是「哪一个按钮」，排布改动不至于让断言失效 */
 const byText = (text: string) =>
   [...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === text) ?? null
 
 describe('落点 1：欢迎页封面（§四）', () => {
-  it('按名替换：配了 `Sword` / `Hammer`，两颗按钮各出各的素材', () => {
+  it('按名替换：配了 `Sword` / `Hammer`，两个按钮各出各的素材', () => {
     paint({ Sword: SWORD, Hammer: HAMMER })
     render(<LoadScreen onLoaded={() => {}} />)
 
@@ -96,7 +96,7 @@ describe('落点 1：欢迎页封面（§四）', () => {
     expect(imgIn(byText('选一份 .pmod'))?.getAttribute('src')).toBe(`blob:${FILE_DOWN}`)
     expect(imgIn(byText('导入组件库'))?.getAttribute('src')).toBe(`blob:${FILE_DOWN}`)
     expect(imgIn(byText('导出组件库'))?.getAttribute('src')).toBe(`blob:${LIBRARY}`)
-    // 没配 `FileUp`：同一片折叠区里只有它那颗照旧走 lucide
+    // 没配 `FileUp`：同一片折叠区里只有它那个照旧走 lucide
     const up = byText('载入 .psave 存档')
     expect(imgIn(up)).toBeNull()
     expect(svgIn(up)).not.toBeNull()
@@ -113,7 +113,7 @@ describe('落点 1：欢迎页封面（§四）', () => {
     expect(img.className).toContain('inline-texture')
   })
 
-  it('名字之间不互相借用：只配 `Sword`，「构建世界」那颗仍是 lucide', () => {
+  it('名字之间不互相借用：只配 `Sword`，「构建世界」那个仍是 lucide', () => {
     paint({ Sword: SWORD })
     render(<LoadScreen onLoaded={() => {}} />)
 

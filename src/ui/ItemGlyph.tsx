@@ -26,7 +26,7 @@ export function ItemGlyph({
   assets: SkinAssets
   /** 素材缺位时的原样回退：组件定义里的 `icon` 字形 */
   icon: string
-  /** 所在处的图标类名（`bag-ico` / `equip-ico`）：**素材与字形同吃**，尺寸只此一处 */
+  /** 所在处的图标类名（`bag-ico` / `equip-ico`）：**素材与字形共用**，尺寸只此一处 */
   className?: string
 }) {
   const tile = textureProps(textureRef(skin?.icon), assets, CSS_SIZED_BOX, { className })

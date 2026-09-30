@@ -1,10 +1,10 @@
 /**
  * 创意模式预览（`skin/09-creative.md` §2.5）。
  *
- * 预览画的**不是示意图**，而是「当前工程 ＋ 靶子」真跑起来的那张地图：
+ * 预览画的**不是示意图**，而是「当前工程 ＋ 参照的游戏」真跑起来的那张地图：
  * 复用游玩页的 `MapView`，把本工程的 manifest 与素材源**顶进去**（不写全局皮肤，故不影响游玩页）。
  *
- * 「只看素材」开关把程序绘制的兜底一并脱掉（纸面 / 圆角矩形 / 脚印 / 旗标 / emoji / 定位环），
+ * 「只看素材」开关把程序默认画法的默认画法一并脱掉（纸面 / 圆角矩形 / 脚印 / 旗标 / emoji / 定位环），
  * 于是画面上剩下的就恰好是**这份皮肤真正提供了什么** —— 缺哪儿一眼就能看出来。
  */
 
@@ -23,7 +23,7 @@ export default function CreativePreview() {
   const onlyAssets = useCreativeStore((s) => s.onlyAssets)
   const toggleOnlyAssets = useCreativeStore((s) => s.toggleOnlyAssets)
 
-  // 靶子 `.pmod` → 场景 → 一局（复用开局的初始化，不做第二套解释）
+  // 参照的游戏 `.pmod` → 场景 → 一局（复用开局的初始化，不做第二套解释）
   const session = useMemo(() => {
     if (targetPmod === '') return undefined
     const { scenario } = scenarioFromPmod(targetPmod)
@@ -38,7 +38,7 @@ export default function CreativePreview() {
         <button
           className={`btn small${onlyAssets ? ' primary' : ''}`}
           onClick={toggleOnlyAssets}
-          title="脱掉程序绘制的兜底，只留这份皮肤真正给到的贴图"
+          title="只显示你真正给了图的部分：没给图的地方，连程序画的默认图形也一起藏起来，一眼看出还缺什么"
           aria-pressed={onlyAssets}
         >
           {onlyAssets ? <Eye size={13} /> : <EyeOff size={13} />} 只看素材
@@ -46,15 +46,15 @@ export default function CreativePreview() {
       </div>
       <div className="faint" style={{ flex: '0 0 auto', marginTop: 2 }}>
         {target
-          ? `靶子 ${target.name} · 与游玩页同一套渲染，改完素材即时可见`
-          : '尚未载入靶子：载入 `.pmod` 后在这里跑出它那一局的地图'}
+          ? `参照的游戏 ${target.name} · 与游玩页同一套渲染，改完素材即时可见`
+          : '尚未选一份游戏包：载入 `.pmod` 后在这里跑出它那一局的地图'}
       </div>
 
       <div style={{ position: 'relative', flex: '1 1 auto', minHeight: 0, marginTop: 6 }}>
         {session ? (
           <MapView session={session} manifest={skin.manifest} assets={assets} onlyAssets={onlyAssets} guides={false} />
         ) : (
-          <div className="hintbox">载入靶子 `.pmod` 后在这里预览</div>
+          <div className="hintbox">先选一份游戏包（.pmod），这里才会画出地图预览</div>
         )}
       </div>
     </div>

@@ -14,7 +14,7 @@ import { useEffect } from 'react'
 import type { SkinPath } from '../types'
 import { useSkinStore } from '../store/skin'
 
-/** 认得出的字体扩展名；**只有**带这几种扩展名的才算包内字体 */
+/** 可识别的字体扩展名；**只有**带这几种扩展名的才算包内字体 */
 const FONT_EXT = /\.(?:ttf|otf|ttc|woff2?)$/i
 
 /** 是不是包内字体文件（按扩展名判：`hand.ttf` 是，`serif` 不是） */

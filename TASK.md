@@ -131,9 +131,15 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 
 ## 进度同步
 
+**2026-09-30 · D4 靶子来源补齐 ＋ 创意模式文案回到设计名词（铁律零复查）**
+- **靶子来源**（补齐 [`docs/design/skin/09-creative.md`](docs/design/skin/09-creative.md) §五·待确认 1 的另一半）：此前只落地「在 Creative 内临时选择一份 `.pmod`」；现 [`src/store/creative.ts`](src/store/creative.ts) 新增 `loadTargetFromProject()` —— 本工程没存过靶子时，把**构建页当前工程**经 `exportPmod()` 导出成 `.pmod` 当靶子（工程里没启用组件、地图上也没铺任何件时**不接管**）；顶栏更多菜单另有「用当前构建工程当靶子」可随时改回。**Creative 自己存下的靶子优先**。
+- **文案回到设计名词（铁律零）**：「没认领的图 / 放到选中位置」→「**未绑定素材 / 绑定到选中位置**」（§2.2 原文）；左栏行尾徽章与中栏三类名统一为「**已命中 / 走通用 / 程序绘制 / 可留空**」（§2.4 原文）；右栏改「**本图片位置可填：一张图（可另设旋转、左右翻转、九宫格切片）**」；拖放提示写明 `<元素>_<变体>.<扩展名>` 命名约定；删掉与徽章说明重复的三步口水提示。全量复查 `颗` / `面骰` / `认领` / `放好` / `认得出` / `回捞` / `顶替` / `顺手` / `跟着变` 等口语，`src/` 内已无残留。
+- 验证：`npx tsc --noEmit` 无错；`npx vitest run` **55 个文件 / 669 项**全绿；真浏览器（Playwright）实测：预置一份「构建页已有内容」的工程后进 `#/creative`，靶子自动变为「构建页工程：探针工程」，左栏出现「未绑定素材」，中栏三类名正确，无 console 报错。
+- 设计侧同步：[`docs/design/skin/09-creative.md`](docs/design/skin/09-creative.md) §五·待确认 1 标注两侧均已落地、§六 改写并新增「靶子来源」实现落点一行；任务侧同步 [`task/04-skin.md`](task/04-skin.md)。
+
 **2026-09-30 · D4 Creative 模式接线（第三个顶层模式可用）**
 - **补上「最后一段」**：`src/creative/*`（11 个文件）与 `src/store/creative.ts` 此前已写好但**无页面装配、无路由**；本批接上——[`src/app/router.ts`](src/app/router.ts) 扩为 `Route = 'play' | 'build' | 'creative'`（`#/creative`），[`src/app/App.tsx`](src/app/App.tsx) 三支渲染，入口挂[构建页顶栏](src/build/TopBar.tsx)菜单。
-- **三栏 ＋ 三页**：[`src/creative/CreativeApp.tsx`](src/creative/CreativeApp.tsx)（顶栏 / 槽位 / 中栏「预览 · 命中检查 · 道路矩阵」/ 检视器 ＋ 提示条）；**预览复用游玩页渲染**：[`src/creative/CreativePreview.tsx`](src/creative/CreativePreview.tsx) 把靶子 `.pmod` 起一局后以**入参覆盖**顶进 [`src/play/MapView.tsx`](src/play/MapView.tsx)（不写全局皮肤）——`MapView` 新增三个**可选**入参 `manifest` / `assets` / `onlyAssets`，`onStep` 改可省（省掉即只读预览），缺省全走原路径。
+- **三栏 ＋ 三页**：[`src/creative/CreativeApp.tsx`](src/creative/CreativeApp.tsx)（顶栏 / 槽位 / 中栏「预览 · 还缺哪些图 · 路面填图板」/ 检视器 ＋ 提示条）；**预览复用游玩页渲染**：[`src/creative/CreativePreview.tsx`](src/creative/CreativePreview.tsx) 把靶子 `.pmod` 起一局后以**入参覆盖**顶进 [`src/play/MapView.tsx`](src/play/MapView.tsx)（不写全局皮肤）——`MapView` 新增三个**可选**入参 `manifest` / `assets` / `onlyAssets`，`onStep` 改可省（省掉即只读预览），缺省全走原路径。
 - **补齐两处 D4 缺口**：「打开**本地目录**」（`pickDirectory()` ＋ `readSkinDirectory()`，剥公共顶层目录后走同一条 `readSkinEntries()`）；「导入即入皮肤库」（裁决 15，`createSkinLibrary().add()`，不自动启用）。检视器补缩略图 ＋ 原始尺寸。
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **54 个文件 / 658 项**全绿；`npm run build` 通过；真浏览器实测三路由无 console 报错。
 - **两处留白（不臆造数据 / 不越设计）**：① 检视器「目标尺寸 / 是否成整倍数」需设计侧一份**目标尺寸表**（文档只有尺寸行、无机器可读数据）；② 九宫格面板的**分区高亮实时预览**与「可拖尺寸的拉伸预览框」未落地。两项已记于 [`task/04-skin.md`](task/04-skin.md) D4 顶部、[`docs/design/skin/09-creative.md`](docs/design/skin/09-creative.md) §六「已知边界」与 [`docs/DESIGN.md`](docs/DESIGN.md) 进度同步。
@@ -156,7 +162,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 **2026-09-30 · D3 第十二屏（固定族格子 `window.slots` 接入）**
 - 四个**固定族格子**键接入 `window.slots`：技能格 / 奖励卡 / 背包格 / 部位标签。固定族尺寸写死（技能格 54 / 奖励卡 92 / 部位标签 44），V1 走**整图等比拉伸**，不需要九宫格 → 该条能在 V2.1 内收口。
 - 取图 [`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `SLOT_KINDS` / `slotOf(win, kind)`（四键不跨键借用）；接线 [`src/ui/useSlotStyle.ts`](src/ui/useSlotStyle.ts) 的 `useSlotStyle(kind)` **复用容器那份 `surfaceStyle()`**——V1.1 接九宫格时容器 / 按钮 / 格子一处改完。
-- 落点四处：[`SkillBar.tsx`](src/play/SkillBar.tsx) 与 [`BattleDialog.tsx`](src/play/BattleDialog.tsx) 的 `.skill-slot`（同吃 `skill`）、[`GainNoteView.tsx`](src/play/GainNoteView.tsx) 的 `.reward-card`、[`EquipPanel.tsx`](src/play/EquipPanel.tsx) 的 `.equip-slot`、[`BagPanel.tsx`](src/play/BagPanel.tsx) 的 `.bag-cell`。
+- 落点四处：[`SkillBar.tsx`](src/play/SkillBar.tsx) 与 [`BattleDialog.tsx`](src/play/BattleDialog.tsx) 的 `.skill-slot`（共用 `skill`）、[`GainNoteView.tsx`](src/play/GainNoteView.tsx) 的 `.reward-card`、[`EquipPanel.tsx`](src/play/EquipPanel.tsx) 的 `.equip-slot`、[`BagPanel.tsx`](src/play/BagPanel.tsx) 的 `.bag-cell`。
 - **背包格的交叠已定**（原先留待 V1.1 的唯一原因）：与 `item.background` 取「**道具衬底优先、格位底纹兜底**」，调用点写 `cell ?? bagSlot`，hook 不判别，两节不抢落点。
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **52 个文件 / 608 项**全绿（新增 [`src/play/__tests__/slotSkin.test.tsx`](src/play/__tests__/slotSkin.test.tsx) 12 项 ＋ `window.test.ts` 补 4 项）。设计侧同步 [`docs/design/skin/03-window.md`](docs/design/skin/03-window.md) §4.3 / §八；任务侧 [`task/04-skin.md`](task/04-skin.md) 拆出已勾选的「固定族格子」条，剩余「条 / 提示条 / 分隔线」等 V1.1 九宫格。
 
@@ -211,7 +217,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 
 **2026-09-30 · D3 第五屏（容器衬底 `window.surfaces` 接入）**
 - 取图：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `surfaceOf(win, kind)`——`dialog` / `drawer` / `popover` 各查自己的键，**不跨键借用**；`textureRef()` 归一三写法（衬底不需要 `rotate` / `flip`）。
-- 落图：[`src/ui/Texture.tsx`](src/ui/Texture.tsx) 新增 `surfaceStyle(ref, assets)`——与三层渲染器**同吃「取图结果 → 可用地址」**，差别只在落法：**铺满容器整个背景**（`background-size: 100% 100%`）。尺寸交给 CSS（§二：随视口族「尺寸由窗口决定」，量不出「多大一个盒」，故只取 `src`）；**不写 `background-color`**——底纹可以带透明，纸面底色留给 CSS。接线走 [`src/ui/useSurfaceStyle.ts`](src/ui/useSurfaceStyle.ts)：未启用皮肤 / 未配该键 / 包里缺这张图一律 `undefined`，调用方**不传 `style`**。
+- 落图：[`src/ui/Texture.tsx`](src/ui/Texture.tsx) 新增 `surfaceStyle(ref, assets)`——与三层渲染器**共用「取图结果 → 可用地址」**，差别只在落法：**铺满容器整个背景**（`background-size: 100% 100%`）。尺寸交给 CSS（§二：随视口族「尺寸由窗口决定」，量不出「多大一个盒」，故只取 `src`）；**不写 `background-color`**——底纹可以带透明，纸面底色留给 CSS。接线走 [`src/ui/useSurfaceStyle.ts`](src/ui/useSurfaceStyle.ts)：未启用皮肤 / 未配该键 / 包里缺这张图一律 `undefined`，调用方**不传 `style`**。
 - 三个落点：`.modal`（战斗 / 对话 / 遭遇 / 菜单 / 结算 / 更新记录）、抽屉里四张 `.panel`（状态 / 背包 / 装备 / 骰流水）、[`src/ui/Popover.tsx`](src/ui/Popover.tsx) 的 `.popover`；**按组件给、不按类名给**（`.panel` 是通用类名，出身卡网格等各有自己的节）；**构建页 `.modal` 与 `LoadScreen` 的 `.load-cover` 不接**（后者封面归 `startup.bg`）。
 - 未接：按钮四态（`KW-6`）与随内容族 / 单向族（提示条 / 条 / 分隔线）**必须九宫格**（硬拉伸违反 `KW-3`）、固定族格子与 `item.background` 抢同一落点，一并留到 **V1.1 / `item` 批**；`KW-1` / `KW-5` 的清单提示也要等校验层（`SkinIssueCode` 现只有 `KP-*`）。
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **40 个文件 / 453 项**全绿（本轮新增 2 个用例文件 / 11 项）。设计侧同步 [`docs/design/skin/03-window.md`](docs/design/skin/03-window.md) §八（新增「实现落点」）；任务侧 [`task/04-skin.md`](task/04-skin.md) 的 `window` 条拆出「容器衬底」并勾选。

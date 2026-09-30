@@ -1,8 +1,8 @@
 /**
  * 创意模式顶栏（`skin/09-creative.md` §2.1 / §2.5）。
  *
- * 只放**对整份皮肤生效**的入口：改名 · 载入靶子 · 生成骨架 · 导入 · 导出 `.pp` / `.pgame` · 回构建页。
- * 槽位级的操作一律在左栏与右栏，不往顶栏堆。
+ * 只放**对整份皮肤生效**的入口：改名 · 选一份游戏包 · 生成清单 · 导入 · 导出 `.pp` / `.pgame` · 回构建页。
+ * 图片位置级的操作一律置于左栏与右栏，不放入顶栏。
  */
 
 import { useRef, useState } from 'react'
@@ -65,13 +65,13 @@ export default function CreativeTopBar() {
     if (!dir) return
     const { result, bytes } = readSkinDirectory(dir.files, dir.name)
     if (!result.skin) {
-      note(`打开目录失败：${result.issues.map((i) => `${i.code} ${i.detail}`).join('；') || '读不出皮肤'}`)
+      note(`打开文件夹失败：${result.issues.map((i) => `${i.code} ${i.detail}`).join('；') || '读不出皮肤'}`)
       return
     }
     mergeSkin(result.skin)
     for (const issue of result.issues) note(`${issue.code} ${issue.detail}`)
     const entry = await createSkinLibrary().add(result.skin, bytes)
-    note(`已从目录「${dir.name}」并入工程并入库：${entry.name || entry.source}（未自动启用）`)
+    note(`已导入文件夹「${dir.name}」：${entry.name || entry.source}（没有自动启用，需要的话去构建页开）`)
   }
 
   const exportPP = async () => {
@@ -79,16 +79,16 @@ export default function CreativeTopBar() {
     const preview = await renderPreviewPng(state.manifest, state.assets)
     const result = packSkin({ manifest: state.manifest, assets: state.assets, preview })
     downloadBlob(`${stemOf(state.manifest.name ?? '')}.pp`, result.bytes)
-    const notes = [`已导出 .pp：${result.written.length} 份素材`]
-    if (result.missing.length > 0) notes.push(`引用了但缺失 ${result.missing.length} 条：${result.missing.slice(0, 5).join('、')}`)
-    if (result.unused.length > 0) notes.push(`未引用的素材 ${result.unused.length} 条，未打进包`)
+    const notes = [`已导出皮肤包：里面装了 ${result.written.length} 张图`]
+    if (result.missing.length > 0) notes.push(`皮肤里点名要用、但没找到的图有 ${result.missing.length} 张：${result.missing.slice(0, 5).join('、')}`)
+    if (result.unused.length > 0) notes.push(`有 ${result.unused.length} 张图没被任何位置用到，没有打进包`)
     for (const text of notes) note(text)
   }
 
   const exportPGame = async () => {
     const state = useCreativeStore.getState()
     if (state.targetPmod === '') {
-      note('导出 .pgame 需要先载入靶子 `.pmod`（它就是包里的那一份）')
+      note('要导出完整游戏包，得先选一份游戏包（.pmod）—— 成品里要带着它')
       return
     }
     const preview = await renderPreviewPng(state.manifest, state.assets)
@@ -100,7 +100,7 @@ export default function CreativeTopBar() {
       pmod: state.targetPmod,
     })
     downloadBlob(`${stemOf(state.manifest.name ?? '')}.pgame`, result.bytes)
-    note(`已导出 .pgame：内含 .pmod 与 ${result.written.length} 份素材`)
+    note(`已导出完整游戏包：里面带着游戏数据和 ${result.written.length} 张图`)
   }
 
   return (
@@ -111,29 +111,33 @@ export default function CreativeTopBar() {
         value={manifest.name ?? ''}
         onChange={(e) => setMeta({ name: e.target.value })}
         placeholder="皮肤名称"
-        title="皮肤名（写进 manifest 的 name）"
+        title="皮肤名称：会写进皮肤文件，导出后显示的就是这个名字"
       />
 
-      <button className="btn small grow" onClick={pickTarget} title="载入一份 .pmod 当靶子：它决定有哪些槽位值得填">
-        <Target size={14} /> 靶子
+      <button
+        className="btn small grow"
+        onClick={pickTarget}
+        title="选一份现成的游戏包（.pmod）：它用到哪些道具、哪些路面，你的皮肤就要准备哪些图"
+      >
+        <Target size={14} /> 选一份游戏包
       </button>
       <button
         className="btn small grow"
         onClick={buildSkeleton}
-        title={target ? '按靶子的启用组件与道路姿态生成待填骨架' : '没有靶子时生成空白骨架'}
+        title={target ? '按这份游戏包用到的道具和路面朝向，列出你要准备的图' : '还没选游戏包时，只列出固定不变的那几张图'}
       >
-        <Hammer size={14} /> 骨架
+        <Hammer size={14} /> 列出要准备的图
       </button>
-      <button className="btn small grow" onClick={importSkin} title="导入 .pp 并逐节点合并（同名以导入者为准）">
+      <button className="btn small grow" onClick={importSkin} title="导入一份皮肤包（.pp）并合并进来：同一个位置两边都有图时，以你导入的为准">
         <FolderUp size={14} /> 导入
       </button>
-      <button className="btn small grow primary" onClick={() => void exportPP()} title="导出 .pp（manifest.json ＋ 被引用素材 ＋ preview.png）">
+      <button className="btn small grow primary" onClick={() => void exportPP()} title="导出皮肤包（.pp）：里面是你的皮肤文件、用到的图、和一张预览图">
         <Download size={14} /> 导出 .pp
       </button>
       <button
         className="btn small grow"
         onClick={() => void exportPGame()}
-        title={target === undefined ? '先载入靶子 .pmod' : `导出 .pgame（含 ${targetSource}）`}
+        title={target === undefined ? '先选一份游戏包（.pmod）' : `导出完整游戏包（.pgame）：带着 ${targetSource} 一起`}
       >
         <Package size={14} /> .pgame
       </button>
@@ -158,7 +162,7 @@ export default function CreativeTopBar() {
               setMenuOpen(false)
             }}
           >
-            <FilePlus2 size={13} /> 从空白骨架重来
+            <FilePlus2 size={13} /> 清空，全部重来
           </button>
           <button
             className="btn small"
@@ -166,9 +170,24 @@ export default function CreativeTopBar() {
               void openDirectory()
               setMenuOpen(false)
             }}
-            title="打开本地目录：与「导入 .pp」同一条合并路径"
+            title="从本地文件夹挑图导入：和「导入皮肤包」走同一条合并流程"
           >
             <FolderOpen size={13} /> 打开本地目录
+          </button>
+          <button
+            className="btn small"
+            onClick={() => {
+              const loaded = useCreativeStore.getState().loadTargetFromProject()
+              if (!loaded) {
+                useCreativeStore
+                  .getState()
+                  .note('构建页当前工程还是空的：先在构建页放置内容，或直接选一份游戏包')
+              }
+              setMenuOpen(false)
+            }}
+            title="把构建页当前工程导出成 .pmod 当靶子（`skin/09-creative.md` §五 待确认 1）"
+          >
+            <Target size={13} /> 用当前构建工程当靶子
           </button>
           <button
             className="btn small"
@@ -178,7 +197,7 @@ export default function CreativeTopBar() {
             }}
             disabled={target === undefined}
           >
-            <FileImage size={13} /> 卸下靶子
+            <FileImage size={13} /> 移除游戏包
           </button>
           <button
             className="btn small"
@@ -199,7 +218,7 @@ export default function CreativeTopBar() {
             <Play size={13} /> 前往游玩页
           </button>
           <div className="faint" style={{ fontSize: 11.5, padding: '2px 4px' }}>
-            当前槽位清单 {slots.length} 条
+            现在一共 {slots.length} 个图片位置
           </div>
         </Popover>
       )}

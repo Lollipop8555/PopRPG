@@ -52,7 +52,7 @@
 
 ## 🛠 AI 实现守则（开工前必读）
 
-任何**实现**任务开工前，额外先读 [`design/00c-guidelines.md`](design/00c-guidelines.md)：必读顺序、禁止事项（不许堆大文件 / 不许跳过操作模式 / 不许擅自改决策 / 不许引后端或额外绘图库）、代码组织约定、验收原子化、视觉贯穿。这是防止做出"一坨"的直接约束。
+任何**实现**任务开工前，额外先读 [`design/00c-guidelines.md`](design/00c-guidelines.md)：必读顺序、禁止事项（不许把大量代码集中在单个文件 / 不许跳过操作模式 / 不许擅自改决策 / 不许引后端或额外绘图库）、代码组织约定、验收原子化、视觉贯穿。这是防止代码堆砌失控的直接约束。
 
 ## 模块映射（文件 → 覆盖原章节）
 
@@ -124,9 +124,14 @@
 
 ## 进度同步
 
+**2026-09-30 · D4 靶子来源补齐 ＋ 创意模式文案回到设计名词（铁律零复查）**
+- **靶子来源补齐**：§五·待确认 1 原先只落地「在 Creative 内临时选择一份 `.pmod`」；现进 Creative 且本工程没存过靶子时，用 `loadTargetFromProject()` 把**构建页当前工程**导出成 `.pmod` 当靶子（工程里没启用组件、地图上也没铺任何件时不接管），顶栏更多菜单另有「用当前构建工程当靶子」可随时改回；**Creative 自己存下的靶子优先**。§五·待确认 1 两侧均已落地，原文已标注。
+- **文案回到设计名词**：左栏暂存区与按钮改用 §2.2 原文「**未绑定素材 / 绑定到选中位置**」，徽章与中栏三类名统一为 §2.4 原文「**已命中 / 走通用 / 程序绘制 / 可留空**」；右栏类型名去掉术语堆叠与冗余修饰；全量复查并清除 `颗` / `面骰` / `认领` / `放好` / `回捞` / `顶替` / `顺手` / `跟着变` 等口语（含注释）。
+- 设计侧同步：[`design/skin/09-creative.md`](design/skin/09-creative.md) §五·待确认 1（标注落地）与 §六（改写 ＋ 新增「靶子来源」一行）；任务侧同步 [`TASK.md`](../TASK.md) 与 [`task/04-skin.md`](../task/04-skin.md)。验证：`npx tsc --noEmit` 无错，`npx vitest run` **55 个文件 / 669 项**全绿，真浏览器实测自动取靶子生效且无 console 报错。
+
 **2026-09-30 · D4 Creative 模式接线（第三个顶层模式可用，[`design/skin/09-creative.md`](design/skin/09-creative.md) 状态改「已落地」）**
 - **从「未实现」到「可用」**：模块代码（`src/creative/*` 11 个文件 ＋ `src/store/creative.ts`）此前已写好但**无装配、无路由**；本次接上——[`src/app/router.ts`](../src/app/router.ts) 扩为 `Route = 'play' | 'build' | 'creative'`（`#/creative`），[`src/app/App.tsx`](../src/app/App.tsx) 三支渲染，入口挂[构建页顶栏](../src/build/TopBar.tsx)菜单。
-- **页面**：[`src/creative/CreativeApp.tsx`](../src/creative/CreativeApp.tsx) 依 §2.1 出三栏（顶栏 / 左栏槽位 / 中栏「预览 · 命中检查 · 道路矩阵」三页 / 右栏检视器 ＋ 底部提示条），窄屏抽屉；编辑器自身只用程序绘制样式与 lucide 图标（`S-18`）。
+- **页面**：[`src/creative/CreativeApp.tsx`](../src/creative/CreativeApp.tsx) 依 §2.1 出三栏（顶栏 / 左栏槽位 / 中栏「预览 · 还缺哪些图 · 路面填图板」三页 / 右栏检视器 ＋ 底部提示条），窄屏抽屉；编辑器自身只用程序绘制样式与 lucide 图标（`S-18`）。
 - **预览＝真渲染、非示意**：[`src/creative/CreativePreview.tsx`](../src/creative/CreativePreview.tsx) 把靶子 `.pmod` 起一局后，把本工程 manifest 与素材源**作为入参覆盖**顶进 [`src/play/MapView.tsx`](../src/play/MapView.tsx)（**不写全局皮肤**，游玩页 / 构建页一格不改）；`MapView` 新增三个**可选**入参 `manifest` / `assets` / `onlyAssets`，并把 `onStep` 改为可省（省掉即**只读预览**）。「只看素材」＝脱掉程序绘制兜底，画面剩下的就是这份皮肤**真正提供了什么**。
 - **打开本地目录**（D4「`.pp` 或本地目录」的另一半）：`pickDirectory()` ＋ [`package.ts`](../src/creative/package.ts) `readSkinDirectory()`（剥公共顶层目录后走同一条 `readSkinEntries()`）；**导入即入皮肤库**（裁决 15）落到代码，导出产物不自动入库。
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **54 个文件 / 658 项**全绿；`npm run build` 通过；真浏览器实测三路由可渲染且无 console 报错。
@@ -159,7 +164,7 @@
 **2026-09-30 · D3 第十二屏：固定族格子 `window.slots` 接入（[`design/skin/03-window.md`](design/skin/03-window.md) §4.3 / §八）**
 - **D3「`window` 其余」的第一项落地**：四个**固定族格子**键——技能格 / 奖励卡 / 背包格 / 部位标签——接入 `window.slots`。固定族尺寸写死（§二：技能格 54 / 奖励卡 92 / 部位标签 44），故 V1 走**整图等比拉伸**，不需要九宫格，这一项因此能在 V2.1 内完成。
 - **与容器 / 按钮同一条取图链**：[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `SLOT_KINDS` / `slotOf(win, kind)`（四键**不跨键借用**）→ [`src/ui/useSlotStyle.ts`](../src/ui/useSlotStyle.ts) 的 `useSlotStyle(kind)` 复用 `surfaceStyle()`。V1.1 接九宫格时**容器 / 按钮 / 格子一处改完**（`surfaceStyle()` 内部换 `border-image`），三侧调用方一行不动。
-- **四个落点**：[`SkillBar.tsx`](../src/play/SkillBar.tsx) 与 [`BattleDialog.tsx`](../src/play/BattleDialog.tsx) 的 `.skill-slot`（**两处同吃 `skill`**，不是两套素材）、[`GainNoteView.tsx`](../src/play/GainNoteView.tsx) 的 `.reward-card`、[`EquipPanel.tsx`](../src/play/EquipPanel.tsx) 的 `.equip-slot`、[`BagPanel.tsx`](../src/play/BagPanel.tsx) 的背包格与穿戴格 `.bag-cell`。未配该键 / 包里缺图 / 未启用皮肤一律不传 `style`，CSS 纸面照旧。
+- **四个落点**：[`SkillBar.tsx`](../src/play/SkillBar.tsx) 与 [`BattleDialog.tsx`](../src/play/BattleDialog.tsx) 的 `.skill-slot`（**两处共用 `skill`**，不是两套素材）、[`GainNoteView.tsx`](../src/play/GainNoteView.tsx) 的 `.reward-card`、[`EquipPanel.tsx`](../src/play/EquipPanel.tsx) 的 `.equip-slot`、[`BagPanel.tsx`](../src/play/BagPanel.tsx) 的背包格与穿戴格 `.bag-cell`。未配该键 / 包里缺图 / 未启用皮肤一律不传 `style`，CSS 纸面照旧。
 - **背包格的交叠已定**（原文留待 V1.1 的唯一原因）：`.bag-cell` 同时是道具衬底位（[`06-item-building.md`](design/skin/06-item-building.md) §3.2），取「**道具衬底优先、格位底纹兜底**」——调用点写 `cell ?? bagSlot`（`cell` 为 `undefined` 即道具没配 `background`），**hook 本身仍是纯读取、不判别**，两节因此不会抢同一个落点、同一格上只出现一层。
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **52 个文件 / 608 项**全绿（新增 1 个用例文件 / 16 项：[`src/play/__tests__/slotSkin.test.tsx`](../src/play/__tests__/slotSkin.test.tsx) 12 项落点（含背包格两半的优先级）、[`src/engine/skin/__tests__/window.test.ts`](../src/engine/skin/__tests__/window.test.ts) 补 4 项取值，且旧的「整节没接管 → 一个行内样式都不传」不变量未回归）。任务侧 [`task/04-skin.md`](../task/04-skin.md) 拆出已勾选的「固定族格子」条。
 
@@ -190,7 +195,7 @@
 - **四态只读 `normal`**（§4.1，`KW-6`）：`hover` / `active` / `disabled` 仍由 CSS 表现——`:disabled { opacity }` 与 `:active { transform }` 照旧生效，`:hover` 变的只是素材**之下**的底色（素材不透明时看不出变化，属 V1 既定取舍）；**禁用按钮照样拿 `normal` 那张图**。
 - **落点**：各屏按钮按角色接键——战斗 / 对话 / 遭遇 / 结算的确定键走 `primary`、取消 / 次项走 `plain`、`不防御`走 `danger`（自杀语义）；地图顶栏菜单入口走 `icon`、抽屉项走 `plain`、标题栏关闭走 `close`；小尺寸加点 / 次级按钮走 `small`；封面「开始冒险」`primary` / 「构建世界」`plain` / 「其他开始方式」`ghost`；首页「出发」`primary` / 「换一局」`plain`。**构建页 `.btn` 不接**（含 [`src/ui/RowMenu.tsx`](../src/ui/RowMenu.tsx)，只被组件库用）。
 - **未接**：`hover` / `active` / `disabled` 三态（与九宫格**同批** → V1.1，两者落法都在 `surfaceStyle()` 内部、分两批要改两遍同一个函数；**已由 D3 第十四屏收口**）、固定族格子（技能格 / 奖励卡 / 部位标签）、提示条 / 条 / 分隔线（**必须九宫格**，`KW-3`）；`KW-1` / `KW-5` / `KW-6` / `KW-7` 的清单提示等校验层（`SkinIssueCode` 现只有 `KP-*`）。
-- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **47 个文件 / 544 项**全绿（本轮新增 1 个用例文件 / 16 项：[`src/play/__tests__/windowButtons.test.tsx`](../src/play/__tests__/windowButtons.test.tsx) 11 项**专盯落图**——攻击 / 防御同吃 `primary` 而不防御走 `danger`、缺键不借图、掷骰 `primary` 与菜单 `icon` 各取各的、抽屉 `plain` 与关闭 `close`、面板 `small` / `close`、封面三键、首页两键、未配 / 缺图一颗都不传 `style`、禁用仍拿 `normal`、七键互不借用；[`src/engine/skin/__tests__/window.test.ts`](../src/engine/skin/__tests__/window.test.ts) 补 5 项纯函数用例——字符串＝只写 `normal`、四态缺 `normal` 取不到、七键不借用、`window` 节缺位不抛、`BUTTON_KINDS` 定序）。里程碑状态：[`task/04-skin.md`](../task/04-skin.md) 的 `window` 条拆出「按钮 `normal` 态」并勾选；设计侧 [`design/skin/03-window.md`](design/skin/03-window.md) §八 补「按钮」实现落点、§4.1 排期行定稿为 **D3 第九屏接入 `normal`**、其余三态与九宫格**同批**（V1.1）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **47 个文件 / 544 项**全绿（本轮新增 1 个用例文件 / 16 项：[`src/play/__tests__/windowButtons.test.tsx`](../src/play/__tests__/windowButtons.test.tsx) 11 项**专盯落图**——攻击 / 防御共用 `primary` 而不防御走 `danger`、缺键不借图、掷骰 `primary` 与菜单 `icon` 各取各的、抽屉 `plain` 与关闭 `close`、面板 `small` / `close`、封面三键、首页两键、未配 / 缺图一颗都不传 `style`、禁用仍拿 `normal`、七键互不借用；[`src/engine/skin/__tests__/window.test.ts`](../src/engine/skin/__tests__/window.test.ts) 补 5 项纯函数用例——字符串＝只写 `normal`、四态缺 `normal` 取不到、七键不借用、`window` 节缺位不抛、`BUTTON_KINDS` 定序）。里程碑状态：[`task/04-skin.md`](../task/04-skin.md) 的 `window` 条拆出「按钮 `normal` 态」并勾选；设计侧 [`design/skin/03-window.md`](design/skin/03-window.md) §八 补「按钮」实现落点、§4.1 排期行定稿为 **D3 第九屏接入 `normal`**、其余三态与九宫格**同批**（V1.1）。
 
 **2026-09-30 · D3 第八屏：欢迎页 `startup` ＋ 游戏首页 `lobby` 接入（[`design/skin/08-pages.md`](design/skin/08-pages.md) §2.1 / §2.2 / §七）**
 - **两屏全落**：整屏背景（`fit` 三档）＋ 欢迎页三件图形（标题字形 / 主视觉 / 装饰骰子）＋ 世界简介面板底 ＋ 出身卡（含选中态）。
@@ -217,7 +222,7 @@
 - **取图**：[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `markOf(misc, kind)`（`start` / `end` / `footprint` 各查自己的键、**不跨键借用**）、`dieBodyOf(misc)`（本体**一张通吃 46 / 38 / 34 三档**、不分尺寸档）、`dieFaceOf(misc, pips)`（`1`–`6` → 点阵 `d1`–`d6`；**其余点数一律 `numeric`**——`2D6` 的合计值与流程里的异常值都走这条）。缺位一律 `undefined`：包里只有 `d1` / `d6` 时 `d2` 取不到，**那一面自己回退程序点阵、不倒借别的面**。
 - **三种落法各归其位**：**标记**走 SVG 层（`textureProps` ＋ `SvgTexture`），盒＝**整格**、与道路同一约定（[`design/skin/01-road.md`](design/skin/01-road.md) §3.1）——素材按 `cellSize × cellSize` 正方形交付、图形自己居中留白，原先程序绘制旗 / 叉占格 86%、脚印占格 60%，**素材接管后内缩比例由素材自己定**；**骰子本体**走 **CSS 背景**、`surfaceStyle(…, 'contain')`（等比缩放进 `.die` 盒、**绝不拉伸**，§三「不拉伸」；描边与圆角照旧归 CSS，同 §五「素材只提供纸面底纹」的规矩）；**骰面**走**行内层**（`InlineTexture` ＋ 新增 `.die-face` 的 `100% × 100%`，尺寸随本体、交给 CSS）。
 - **镜像 / 旋转复用由包里显式声明**（§三 的 `d2` / `d3` 镜像、`d6` 旋转）：写对象式如 `"d6": { "img": "d6.png", "rotate": 90 }`，运行期经 `textureRef()` 归一后照此落图——**默认不启用镜像**（[`design/skin.md`](design/skin.md) §3.2）。
-- **落点**：起点 / 终点 / 脚印在 [`src/play/MapView.tsx`](../src/play/MapView.tsx)（**脚印只在 `road` 缺图时**顶替 `<Footprint>`；该格有道路图就轮不到它）；**五处 `.die` 盒**同吃本体一张（HUD 46 / 对战 38 掷骰中 ＋ 30 定格 / 对话 34 / 流水 34，`🎲` 兜底时**也铺**——本体属于那个空骰盒，不属于某一次点数）；骰面由 [`src/play/DiceLog.tsx`](../src/play/DiceLog.tsx) 的 `DieFace` 一处收口（四个调用处共用）。接线 [`src/ui/useDieSkin.ts`](../src/ui/useDieSkin.ts)；标记三键在 `MapView` 就地接线。**缺图一律回退程序图形**（旗 / 藏宝图 X / 脚印 / 点阵 / 数字文本）；**贴图不套手绘滤镜**（§六）。
+- **落点**：起点 / 终点 / 脚印在 [`src/play/MapView.tsx`](../src/play/MapView.tsx)（**脚印只在 `road` 缺图时**顶替 `<Footprint>`；该格有道路图就轮不到它）；**五处 `.die` 盒**共用本体一张（HUD 46 / 对战 38 掷骰中 ＋ 30 定格 / 对话 34 / 流水 34，`🎲` 兜底时**也铺**——本体属于那个空骰盒，不属于某一次点数）；骰面由 [`src/play/DiceLog.tsx`](../src/play/DiceLog.tsx) 的 `DieFace` 一处收口（四个调用处共用）。接线 [`src/ui/useDieSkin.ts`](../src/ui/useDieSkin.ts)；标记三键在 `MapView` 就地接线。**缺图一律回退程序图形**（旗 / 藏宝图 X / 脚印 / 点阵 / 数字文本）；**贴图不套手绘滤镜**（§六）。
 - **构建页不接**：`src/build/Canvas.tsx` 的起终点与脚印照旧程序绘制（与构建页画布 `background`、构建页 `.modal` 同一处理）。
 - **未接**：`node.building` **随格数拉伸、必须九宫格**（`KM-1`，V1 无 `slice` → **V1.1**）；**图标**（lucide 与内容 emoji 要一个按名索引的入口组件，兜底字形 `🙂` `✦` `❔` `🎲` `🔒` 按 §四**永远不可覆盖**）；**引导线**属**平铺**（`tile` → **V2.2**）；`die.rolling`（**待确认 2** 未裁决，暂用 `🎲`）；`KM-1`–`KM-3` 等校验层（`SkinIssueCode` 现只有 `KP-*`）。
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **42 个文件 / 471 项**全绿（新增 2 个用例文件 / 18 项：`engine/skin/__tests__/misc.test.ts`、`play/__tests__/miscSkin.test.tsx`）。里程碑状态：V2.1 行与 [`task/04-skin.md`](../task/04-skin.md) 的 `misc` 条拆分并勾选；§九 待确认 1（起终点是否接受素材覆盖）由实现定下——**接受、缺图照旧画程序图形**。
@@ -225,7 +230,7 @@
 **2026-09-30 · D3 第五屏：容器衬底 `window.surfaces` 接入（[`design/skin/03-window.md`](design/skin/03-window.md) §二 / §四 / §八）**
 - **先落「随视口族」那一族**：对话框 / 抽屉 / 气泡（§二「尺寸由窗口决定」）已接 `window.surfaces`；其余三族（随内容 / 单向 / 固定）要么必须九宫格、要么会与 `item.background` 抢同一个落点，见文末。
 - **取图**：[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `surfaceOf(win, kind)`——`dialog` / `drawer` / `popover` 各查自己的键、**不跨键借用**（对话框没配就用不回抽屉的图）；`textureRef()` 归一三写法（衬底不需要 `rotate` / `flip`）。
-- **落图**：`drawTexture` 家族多一种落法——[`src/ui/Texture.tsx`](../src/ui/Texture.tsx) 的 `surfaceStyle(ref, assets)`：与三层渲染器**同吃「取图结果 → 可用地址」**，但**不摆坐标、不量盒**，而是**铺满容器的整个背景**（`background-size: 100% 100%`）。尺寸交给 CSS（随视口族量不出「多大一个盒」，故这里只取 `src`）；**不写 `background-color`**——底纹可以带透明，纸面底色得留给容器的 CSS，衔接处才不露白；圆角 / 描边 / 阴影仍归容器自己的 CSS（§五「素材只提供纸面底纹」）。接线 [`src/ui/useSurfaceStyle.ts`](../src/ui/useSurfaceStyle.ts)：未启用皮肤 / 未配该键 / 包里缺这张图一律 `undefined`，调用方**不传 `style`**（§一：皮肤是可选叠加层）。
+- **落图**：`drawTexture` 家族多一种落法——[`src/ui/Texture.tsx`](../src/ui/Texture.tsx) 的 `surfaceStyle(ref, assets)`：与三层渲染器**共用「取图结果 → 可用地址」**，但**不摆坐标、不量盒**，而是**铺满容器的整个背景**（`background-size: 100% 100%`）。尺寸交给 CSS（随视口族量不出「多大一个盒」，故这里只取 `src`）；**不写 `background-color`**——底纹可以带透明，纸面底色得留给容器的 CSS，衔接处才不露白；圆角 / 描边 / 阴影仍归容器自己的 CSS（§五「素材只提供纸面底纹」）。接线 [`src/ui/useSurfaceStyle.ts`](../src/ui/useSurfaceStyle.ts)：未启用皮肤 / 未配该键 / 包里缺这张图一律 `undefined`，调用方**不传 `style`**（§一：皮肤是可选叠加层）。
 - **三个落点**：`.modal`（战斗 / 对话 / 遭遇 / 菜单 / 结算 / 更新记录）、抽屉里四张 `.panel`（状态 / 背包 / 装备 / 骰流水）、[`src/ui/Popover.tsx`](../src/ui/Popover.tsx) 的 `.popover`。**按组件给、不按类名给**——`.panel` 是通用类名，出身卡网格等各有自己的节，故不做全局选择器。**构建页 `.modal` 不接**（与构建页画布一致）；`LoadScreen` 的「页面卡片」`.load-cover` 是整屏容器、本来没有卡片外观，该屏封面归 `startup.bg`（[`design/skin/08-pages.md`](design/skin/08-pages.md)）。
 - **未接**：按钮四态（`KW-6`，**已由 D3 第十四屏收口**）、随内容族（提示条）与单向族（条 / 分隔线）**必须九宫格**（硬拉伸违反 `KW-3`）、固定族格子与 `item.background` 抢同一类元素——一并留到 **V1.1 / `item` 批**；`KW-1` / `KW-5` 的清单提示也要等校验层（`SkinIssueCode` 现只有 `KP-*`）。
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **40 个文件 / 453 项**全绿（新增 2 个用例文件 / 11 项：`engine/skin/__tests__/window.test.ts`、`play/__tests__/windowSurfaces.test.tsx`）。里程碑状态：V2.1 行与 [`task/04-skin.md`](../task/04-skin.md) 的 `window` 条拆出「容器衬底」并勾选；其余各屏待做。
@@ -256,7 +261,7 @@
 **2026-09-30 · D3 第三屏：棋子形象 `role` 接入（[`design/skin/02-role.md`](design/skin/02-role.md) §十一）**
 - 取图：`roleSprite(role, kind, id)`（[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts)）按 §三 四组各查各表、**不跨组借用**（职业 / 怪物 / NPC 缺位即回退该组自己的 `icon` emoji）；`spriteRef()` 承担三写法归一，两者都只出形状、不碰 IO。
 - 地图棋子：[`src/play/MapView.tsx`](../src/play/MapView.tsx) 的 `role.player` 按**整格大小 ＋ 锚点格中心**出图（`x/y = 格 × CELL`、`w/h = CELL`，四周留白由素材自画）→ SVG 层 `SvgTexture`；**取不到图才回到方框 ＋ 职业 `icon` emoji**。绿色定位环是「你在这儿」的标记、与棋子形象无关，故照旧画。
-- 三处文字落点（外加底栏共四处）新增**行内层**：[`src/ui/Texture.tsx`](../src/ui/Texture.tsx) 的 `InlineTexture`（跟文字同排，尺寸由所在处 CSS 的 `1em` 决定）＋ [`src/ui/RoleGlyph.tsx`](../src/ui/RoleGlyph.tsx)，接在出身卡职业图标与状态面板标题、底栏（`role.classes.<职业 id>`）、对战弹层标题（`role.monsters.<怪物 id>`）、对话弹层标题（`role.npcs.<NPC id>`）；非正方形素材按 `object-fit: contain` 等比内缩（`KR-1` 只提示、不改行为）。渲染层由**两层**变**三层**，同吃一份 `TextureProps`（[`design/skin.md`](design/skin.md) §四 已改）。
+- 三处文字落点（外加底栏共四处）新增**行内层**：[`src/ui/Texture.tsx`](../src/ui/Texture.tsx) 的 `InlineTexture`（跟文字同排，尺寸由所在处 CSS 的 `1em` 决定）＋ [`src/ui/RoleGlyph.tsx`](../src/ui/RoleGlyph.tsx)，接在出身卡职业图标与状态面板标题、底栏（`role.classes.<职业 id>`）、对战弹层标题（`role.monsters.<怪物 id>`）、对话弹层标题（`role.npcs.<NPC id>`）；非正方形素材按 `object-fit: contain` 等比内缩（`KR-1` 只提示、不改行为）。渲染层由**两层**变**三层**，共用一份 `TextureProps`（[`design/skin.md`](design/skin.md) §四 已改）。
 - **`player` 与 `classes` 是两条独立的链**：地图棋子只认 `player`，不借 `classes.<职业>` 的图（§三 回退表的字面执行）；要做「按职业出棋子」需先改规范（§十 待确认 2）。
 - 未落地：立绘（§四，含 §4.1 四落点、`W` 比例缩放与 25% 宽度上限）与受击表现（§4.4 的 `hurt` 与形变），排在 D3 后续批次。
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **35 个文件 / 406 项**全绿（新增 8 项）。
@@ -360,6 +365,6 @@
 
 **2026-09-26 · 文档防烂加固**
 - 视觉风格从末尾 §10 **前置**为 `design/00b-style.md`（全局基调，开工 UI 前必读）。
-- 新增 `design/00c-guidelines.md`（AI 实现守则）：必读顺序 / 禁止事项（不许堆大文件、不许跳过操作模式、不许擅自改决策、不许引后端或额外绘图库）/ 代码组织约定（store 分层、引擎UI分离、组件拆分粒度、每里程碑 build 通过）/ 验收原子化 / 视觉贯穿。
+- 新增 `design/00c-guidelines.md`（AI 实现守则）：必读顺序 / 禁止事项（不许把大量代码集中在单个文件、不许跳过操作模式、不许擅自改决策、不许引后端或额外绘图库）/ 代码组织约定（store 分层、引擎UI分离、组件拆分粒度、每里程碑 build 通过）/ 验收原子化 / 视觉贯穿。
 - 根索引两条铁律 + 全局基调块 + 实现守则块已接入；模块映射表与章节映射同步更新。
 - 背景：一次按文档的实现产出混乱代码（已删除），复盘认定文档缺失"实现守则/代码组织红线"是主要可改进点，故补此模块从源头约束。
