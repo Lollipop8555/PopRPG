@@ -3,7 +3,7 @@
 > **上层索引**：[`../skin.md`](../skin.md)　**包结构**：[`00-package.md`](00-package.md)　**窗体**：[`03-window.md`](03-window.md)
 > **设计依据**：2026-09-29 裁决 5（pp 需覆盖首页与角色选择页，允许不设置、走降级）＋ 裁决 20（原 `pages` 拆为 `startup` / `lobby`；首页封面图归皮肤侧）＋ 裁决 24（出身卡内的**职业立绘**由 [`02-role.md`](02-role.md) `role.portraits` 接管，本节不设字段）
 > **现状**：`startup` → `src/play/LoadScreen.tsx:71-151`（封面式主页 B0）；`lobby` → `src/play/StartScreen.tsx:44-129`
-> **状态**：新增（含 1 处待确认）
+> **状态**：已实现——两屏全部落地（整屏背景 `fit` 三档 ＋ 欢迎页三件图形 ＋ 世界简介面板底 ＋ 出身卡含选中态）
 
 ## 一、范围
 
@@ -92,3 +92,15 @@
 ## 六、待确认
 
 1. **是否需要覆盖「加载中」过程屏**：现开局是同步构造场景，无独立加载屏（加载条见 [`03-window.md`](03-window.md)）；若将来引入异步加载，需要新增 `loading` 键（与 `startup` / `lobby` 同级）。
+
+## 七、实现落点（2026-09-30）
+
+> 两屏**全部落地**：整屏背景（`fit` 三档）＋ 欢迎页三件图形 ＋ 世界简介面板底 ＋ 出身卡（含选中态）。
+
+- **取图** [`src/engine/skin/lookup.ts`](../../../src/engine/skin/lookup.ts)：`pageFitOf(bg)`——`cover` / `contain` / `tile`，**非法值与缺省一律回退 `cover`**（`KPG-1` 只提示、不改行为）；`pageBgOf(page)`——欢迎页与首页**各查自己那一节的 `bg`、互不借用**（§2.3 逐节点降级）；`startupArtOf(startup, art)`——`title` / `cover` / `dice` 三键一个入口，未配该键即 `undefined`；`lobbyCardPaint(lobby, selected)`——返回 `{ img, stroke }`，`selected.img` 缺位**沿用卡底**、`stroke` 只在选中态给，`card` 整节没配即 `undefined`。
+- **整屏背景的落法**：[`src/ui/Texture.tsx`](../../../src/ui/Texture.tsx) 新增 `pageBgStyle(ref, assets, fit)`，三档各是一种铺法——`cover` → `background-size: cover`、`contain` → `contain`、`tile` → `background-size: auto` ＋ `background-repeat: repeat`，一律居中。与衬底同一条底线：**只写 image 与铺法、不动 `background-color`**（`contain` 留出的两侧边由主题底色兜着，`S-26`）；未启用皮肤 / 没配该键 / 包里缺这张图，一律返回 `undefined` ⇒ 调用方**不传 `style`**、纸面底纹照旧。
+- **欢迎页** [`src/play/LoadScreen.tsx`](../../../src/play/LoadScreen.tsx)：`bg` 落在**整屏容器** `.play-shell.no-topbar`（不是内层的 `.load-cover`——那层带着页面留白、铺不满屏）。`title` 走**行内层** `InlineTexture`（盒取 `CSS_SIZED_BOX`；尺寸交给新增的 `.cover-title .cover-title-art`——**高 `0.86em`、宽由素材宽高比推出、绝不拉伸**），**文案不变、落在 `alt="PopRPG"` 上**（`S-14`）。`cover` 用 `SvgTexture` **整块替换洞穴手绘**，复用现成的 `<svg class="cover-cave" viewBox="0 0 120 92">` 当盒（V1 拉伸进盒，`S-1`），出了图就一条 `path` 都不留。`dice` 只给**骰子本体**（`surfaceStyle(…, 'contain')`——与 `misc.dice.body` 同一档落法：等比进盒、绝不拉伸），**骰面复用 `misc.dice`**：装饰骰子直接渲染现成的 `DieFace`（`useDieFace()`），本节**不另设骰面字段**（`KPG-4`）。三颗装饰骰子各成一个 `CoverDie` 小组件（hook 不能写在条件 / 循环里），**没配骰面时仍是程序绘制的数字面**——`.die` 的缺省观感不因皮肤改变。
+- **游戏首页** [`src/play/StartScreen.tsx`](../../../src/play/StartScreen.tsx)：`bg` 落在 `.play-shell.start-screen`；`panel` 落 `.panel.scroll`（V1 拉伸，`S-1`）；`card` 落每一张 `.class-card`——`img` 用 `surfaceStyle()` 铺满整卡（V1 拉伸，`KPG-2`），`stroke` **只写在选中那一张**（未选中**不碰** `border-color`、交还给 CSS——与衬底三元组的「描边缺省不绘制」不同，这里是整张卡）。两态各算一次（`useLobbyCardStyle(false | true)`：卡片在 `map` 里、hook 不能写在回调内）再按 `selectedId` 取。
+- **接线** [`src/ui/usePageSkin.ts`](../../../src/ui/usePageSkin.ts)：`useStartupBgStyle()` / `useLobbyBgStyle()` / `useLobbyPanelStyle()` / `useLobbyCardStyle(selected)` / `useStartupArt(art, box)` / `useStartupDiceBody()`——只做「取图 → 落图」一次接线，两屏共用一份 store 状态。
+- **未接**：封面标语 / 副标题 / 版本号 / 警告条的文字与字体（§2.1 末条、`S-15`）、卡片内的职业图标与立绘（归 [`02-role.md`](02-role.md)）、按钮与徽章（归 [`03-window.md`](03-window.md)）；`card` / `panel` / `dice` 的 `slice` 九宫格随 `S-1`（V1 一律拉伸 → V1.1）。
+- **验收**：`npx tsc --noEmit` 无错；`npx vitest run` **46 个文件 / 528 项**全绿（本轮新增 2 个用例文件 / 24 项：[`engine/skin/__tests__/page.test.ts`](../../../src/engine/skin/__tests__/page.test.ts) 10 项——`fit` 非法值回退、两屏互不借用、`selected.img` 缺位沿用卡底；[`play/__tests__/pageSkin.test.tsx`](../../../src/play/__tests__/pageSkin.test.tsx) 14 项——**落图**：`fit` 三档、标题换字形与 `alt`、主视觉替掉 `path`、装饰骰子本体与复用骰面、卡片两态，以及「没配 / 缺图 ⇒ 一个 `style` 都不传」）。

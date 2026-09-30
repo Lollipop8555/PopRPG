@@ -17,6 +17,26 @@ import { navigate } from '../app/router'
 import { APP_VERSION, changelog } from '../lib/version'
 import Overlay from '../ui/Overlay'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { useStartupArt, useStartupBgStyle, useStartupDiceBody } from '../ui/usePageSkin'
+import { useDieFace } from '../ui/useDieSkin'
+import { CSS_SIZED_BOX, InlineTexture, SvgTexture } from '../ui/Texture'
+
+/** 洞穴手绘 SVG 的坐标盒（`viewBox`）：主视觉素材也按这个盒落位（`08-pages.md` §2.1） */
+const CAVE_BOX = { x: 0, y: 0, w: 120, h: 92 }
+
+/**
+ * 主视觉上的装饰骰子（`.die.cover-die`）：本体归 `startup.dice`、骰面复用 `misc.dice`（`KPG-4`）。
+ * 两件都没配就照旧画程序数字面——缺省观感不因皮肤改变。
+ */
+function CoverDie({ pips, className }: { pips: number; className: string }) {
+  const body = useStartupDiceBody()
+  const face = useDieFace(pips)
+  return (
+    <span className={`die cover-die ${className}`} style={body}>
+      {face ? <InlineTexture {...face} /> : pips}
+    </span>
+  )
+}
 
 export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario) => void }) {
   const [warnings, setWarnings] = useState<string[]>([])
@@ -25,6 +45,10 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
   const startSaved = usePlayStore((s) => s.setSession)
   // 更新记录弹窗也是对话框（`skin/03-window.md` §四）：封面本身归 `startup.bg`（`08-pages.md`）
   const surface = useSurfaceStyle('dialog')
+  // 封面三件：整屏背景 / 标题字形 / 主视觉（`skin/08-pages.md` §2.1）
+  const bg = useStartupBgStyle()
+  const titleArt = useStartupArt('title', CSS_SIZED_BOX)
+  const coverArt = useStartupArt('cover', CAVE_BOX)
 
   const fromBuild = () => {
     const library = useLibraryStore.getState()
@@ -72,34 +96,44 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
   }
 
   return (
-    <div className="play-shell no-topbar">
+    <div className="play-shell no-topbar" style={bg}>
       <div className="load-cover">
         <div className="cover-tag">掷骰 · 探窟 · 求生</div>
-        <h1 className="cover-title">PopRPG</h1>
+        {/* 标题图形只换字形、不改文案：文案落在 `alt` 上（`S-14`） */}
+        <h1 className="cover-title">
+          {titleArt ? <InlineTexture {...titleArt} className="cover-title-art" alt="PopRPG" /> : 'PopRPG'}
+        </h1>
         <p className="cover-sub">翻开地穴的每一格，怪潮、宝箱与陷阱都在等你；命运由骰子点数决定。</p>
 
         <div className="cover-hero">
+          {/* 主视觉：配了素材就整块替换洞穴手绘（V1 拉伸进同一个 `viewBox`，`S-1`） */}
           <svg className="cover-cave" viewBox="0 0 120 92" fill="none" aria-hidden="true">
-            <path
-              d="M10 90 L10 44 Q10 8 60 8 Q110 8 110 44 L110 90"
-              stroke="var(--line)"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M23 90 L23 47 Q23 22 60 22 Q97 22 97 47 L97 90 Z"
-              fill="rgba(60,48,34,0.13)"
-              stroke="var(--line-soft)"
-              strokeWidth="1.6"
-            />
-            <line x1="30" y1="90" x2="90" y2="90" stroke="var(--line)" strokeWidth="1.8" strokeLinecap="round" />
-            <line x1="38" y1="81" x2="82" y2="81" stroke="var(--line-soft)" strokeWidth="1.3" strokeLinecap="round" />
-            <line x1="46" y1="72" x2="74" y2="72" stroke="var(--line-soft)" strokeWidth="1.3" strokeLinecap="round" />
+            {coverArt ? (
+              <SvgTexture {...coverArt} />
+            ) : (
+              <>
+                <path
+                  d="M10 90 L10 44 Q10 8 60 8 Q110 8 110 44 L110 90"
+                  stroke="var(--line)"
+                  strokeWidth="2.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M23 90 L23 47 Q23 22 60 22 Q97 22 97 47 L97 90 Z"
+                  fill="rgba(60,48,34,0.13)"
+                  stroke="var(--line-soft)"
+                  strokeWidth="1.6"
+                />
+                <line x1="30" y1="90" x2="90" y2="90" stroke="var(--line)" strokeWidth="1.8" strokeLinecap="round" />
+                <line x1="38" y1="81" x2="82" y2="81" stroke="var(--line-soft)" strokeWidth="1.3" strokeLinecap="round" />
+                <line x1="46" y1="72" x2="74" y2="72" stroke="var(--line-soft)" strokeWidth="1.3" strokeLinecap="round" />
+              </>
+            )}
           </svg>
-          <span className="die cover-die d1">3</span>
-          <span className="die cover-die d2">6</span>
-          <span className="die cover-die d3">5</span>
+          <CoverDie pips={3} className="d1" />
+          <CoverDie pips={6} className="d2" />
+          <CoverDie pips={5} className="d3" />
         </div>
 
         <div className="cover-actions">

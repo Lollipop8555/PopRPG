@@ -28,7 +28,7 @@
 |---|---|---|---|
 | **V1** | Phase 0 基座 / Phase A BUILD / Phase B PLAY | **已冻结口径**：七大类 · 13 项配置 · `encounter` 五选一 | **已完成**（A 首轮 ＋ B 全部 58 项勾选；全量 197 项单测绿） |
 | **V2.0** | **新增 NPC 与对话**（第 8 类组件 ＋ **进入建筑后的 NPC 触发节点**） | **追加设定 / 结构改造**（不属于 V1 的阶段性设计） | **已完成**（编辑器侧 E0–E3 ＋ 运行时 E4 ＋ 19 项原子验收；E5 皮肤落点并入 **V2.1**） |
-| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条（棋子形象 / 立绘四落点 / 受击表现）＋ `window` 容器衬底（对话框 / 抽屉 / 气泡）＋ `misc` 地图标记与骰子 ＋ `item` / `building`（道具格子与图标 ＋ 建筑地图节点 / 名称字体字色）**已收口**，余下各屏待做） |
+| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条（棋子形象 / 立绘四落点 / 受击表现）＋ `window` 容器衬底（对话框 / 抽屉 / 气泡）＋ `misc` 地图标记与骰子 ＋ `item` / `building`（道具格子与图标 ＋ 建筑地图节点 / 名称字体字色）＋ `startup` / `lobby`（欢迎页封面三件 ＋ 首页背景与出身卡）**已收口**，余下各屏待做） |
 | **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 九宫格切片消费 / 皮肤校验 / 音频播放 | 叠加层 | V2.1 之后 |
 
 > **V1 口径冻结、不改写**：`task/00-foundation.md` / `task/01-build.md` 里的「七大类 / 13 项 / 五选一」是 **V1 史实**；
@@ -65,7 +65,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 | [task/01-build.md](task/01-build.md) | Phase A BUILD（构建页） | 信息架构/数据模型/布局/图层/组件库/模式/画布/属性编辑/引擎纯函数/校验/预设/导入导出 | **已完成首轮实现**（build + 78 项单测全绿） |
 | [task/02-play.md](task/02-play.md) | Phase B PLAY（游玩页） | 框架加载/开局/移动回合/战斗UI/骰子公示/技能交互/状态/遭遇/商店/装备背包/存档 | **已完成**（B0–B10 与 B 验收 1–14 全部勾选） |
 | [task/03-polish.md](task/03-polish.md) | Phase C 收尾 | 视觉打磨 / GitHub Pages 部署 | 部分已完成 |
-| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地；D3 进行中：运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条 ＋ `window` 容器衬底 ＋ `misc` 地图标记与骰子 ＋ `item` / `building` 已接；**优先级 ②**；端到端依赖 B） |
+| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地；D3 进行中：运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条 ＋ `window` 容器衬底 ＋ `misc` 地图标记与骰子 ＋ `item` / `building` ＋ `startup` / `lobby` 已接；**优先级 ②**；端到端依赖 B） |
 | [task/05-npc.md](task/05-npc.md) | **V2.0** 新增 NPC 与对话（跨 A / B） | NPC 数据模型与对话树（**全树同一个结构**；给道具 `give`；本层掷骰 `dice` / 各项 `hit`）/ 组件库与组件页 / **NPC 模组面板（思维导图，命中覆盖检查）** / 建筑实例页与校验 / 运行时抽取与弹层（掷定锁死 / **重入三选项 ＋ 三标记** / `give` 一次性交付）/ 皮肤侧接口约定 | **已完成**（E0–E3 编辑器侧 ＋ E4 运行时 ＋ 19 项原子验收；E5 皮肤侧接口约定并入 [task/04-skin.md](task/04-skin.md)） |
 
 ---
@@ -130,6 +130,15 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 ---
 
 ## 进度同步
+
+**2026-09-30 · D3 第八屏（欢迎页 `startup` ＋ 游戏首页 `lobby` 接入）**
+- 取图：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `pageFitOf(bg)`（`cover` / `contain` / `tile`，**非法值与缺省一律回退 `cover`**——`KPG-1` 只提示、不改行为）、`pageBgOf(page)`（**两屏各查自己那一节的 `bg`、互不借用**，§2.3 逐节点降级）、`startupArtOf(startup, art)`（`title` / `cover` / `dice` 三键一个入口）、`lobbyCardPaint(lobby, selected)`（`CardPaint = { img, stroke }`：`selected.img` 缺位**沿用卡底**、`stroke` 只在选中态给；`card` 整节没配即 `undefined`）。
+- 整屏背景的落法：[`src/ui/Texture.tsx`](src/ui/Texture.tsx) 新增 `pageBgStyle(ref, assets, fit)`——`cover` / `contain` → `background-size` 同名值 ＋ `no-repeat`，`tile` → `auto` ＋ `repeat`，一律居中；**只写 image 与铺法、不动 `background-color`**（`contain` 留出的两侧边由主题底色兜着，取舍 `S-26`），未启用皮肤 / 没配该键 / 包里缺这张图都返回 `undefined` ⇒ 调用方**不传 `style`**、纸面底纹照旧。
+- 欢迎页 [`src/play/LoadScreen.tsx`](src/play/LoadScreen.tsx)：`bg` 落**整屏容器** `.play-shell.no-topbar`（不是带页面留白的内层 `.load-cover`）；`title` 走**行内层** `InlineTexture`（盒 `CSS_SIZED_BOX`，尺寸交给新增的 `.cover-title .cover-title-art`——**高 `0.86em`、宽由素材宽高比推出、绝不拉伸**），**文案不变、落在 `alt`**（`S-14`）；`cover` 用 `SvgTexture` **整块替换洞穴手绘**（复用现成 `<svg class="cover-cave" viewBox="0 0 120 92">` 当盒，出了图一条 `path` 都不留）；`dice` 只给**骰子本体**（`surfaceStyle(…, 'contain')`，与 `misc.dice.body` 同一档落法）＋ **骰面复用 `misc.dice`**（直接渲染现成的 `DieFace`，本节**不另设骰面字段**，`KPG-4`）；三颗装饰骰子各成一个 `CoverDie` 小组件（hook 不能写在条件 / 循环里），**没配骰面时仍是程序绘制的数字面**——缺省观感不因皮肤改变。
+- 游戏首页 [`src/play/StartScreen.tsx`](src/play/StartScreen.tsx)：`bg` 落 `.play-shell.start-screen`；`panel` 落 `.panel.scroll`（V1 拉伸，`S-1`）；`card` 落每张 `.class-card`——`img` 用 `surfaceStyle()` 铺满整卡，`stroke` **只写在选中那一张**（未选中**不碰** `border-color`、交还 CSS——与衬底三元组的「描边缺省不绘制」不同，这里是整张卡）；两态各算一次（`useLobbyCardStyle(false | true)`）再按 `selectedId` 取。
+- 接线：[`src/ui/usePageSkin.ts`](src/ui/usePageSkin.ts)（`useStartupBgStyle` / `useLobbyBgStyle` / `useLobbyPanelStyle` / `useLobbyCardStyle` / `useStartupArt` / `useStartupDiceBody`）——只做「取图 → 落图」一次接线，两屏共用。
+- 未接：封面标语 / 副标题 / 版本号 / 警告条的文字与字体（`S-15`）、卡片内的职业图标与立绘（归 [`docs/design/skin/02-role.md`](docs/design/skin/02-role.md)）、按钮与徽章（归 [`docs/design/skin/03-window.md`](docs/design/skin/03-window.md)）、`card` / `panel` / `dice` 的 `slice` 九宫格（`S-1` → V1.1）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **46 个文件 / 528 项**全绿（本轮新增 2 个用例文件 / 24 项：`engine/skin/__tests__/page.test.ts` 10 项 ＋ `play/__tests__/pageSkin.test.tsx` 14 项，后者专盯**落图**：`fit` 三档、标题换字形与 `alt`、主视觉替掉 `path`、装饰骰子本体与复用骰面、卡片两态，以及「没配 / 缺图 ⇒ 一个 `style` 都不传」）。设计侧同步 [`docs/design/skin/08-pages.md`](docs/design/skin/08-pages.md) §七（新增「实现落点」）与状态行；任务侧 [`task/04-skin.md`](task/04-skin.md) 的 `startup` / `lobby` 条勾选、`window` 两条补注。
 
 **2026-09-30 · D3 第七屏（道具 `item` ＋ 建筑 `building` 接入）**
 - 取图：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `itemSkinOf()` / `buildingSkinOf()`（键一律组件 `id`、**不跨键借用**）、`groundPaint(field, fallback?)`（衬底三元组；字符串写法＝只写 `fill`；**三项全空即整节未接管**——判的是**原字段**，兜底色救不回来）、`buildingImgOf(building, misc, id)`（`building[<id>].img ?? misc.nodes.building`，**全篇唯一跨节回退**；节点查不到组件时不拿空串撞键）。

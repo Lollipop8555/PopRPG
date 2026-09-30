@@ -798,6 +798,14 @@
   color: var(--ink-soft);
 }
 
+/* 标题素材替掉字形时的那一行：高度跟标题行高、宽度由素材宽高比推出（`KPG-3` 建议 ~6:1），
+   绝不拉伸、不设方框——比 `.inline-texture` 的 `1em` 方框更贴标题区（`skin/08-pages.md` §2.1） */
+.cover-title .cover-title-art {
+  width: auto;
+  height: 0.86em;
+  vertical-align: 0;
+}
+
 .cover-hero {
   position: relative;
   width: 100%;

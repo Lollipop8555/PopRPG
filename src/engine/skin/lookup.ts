@@ -14,22 +14,28 @@
  * - 骰子：本体与骰面各一张；骰面 1–6 取点阵 `d1`–`d6`、其余点数取数字面 `numeric`。
  * - 道具 / 建筑：键一律为**组件 `id`**，不跨键借用；建筑贴图 `building.img` 缺位才回退
  *   `misc.nodes.building`（`06-item-building.md` §2.3，全篇唯一的一处跨节回退）。
+ * - 欢迎页 / 游戏首页：两屏各查自己的 `bg`，**不互相借用**；出身卡 `selected.img` 缺位沿用卡底。
  */
 
 import type {
   SkinBuilding,
   SkinBuildingSkin,
+  SkinColor,
   SkinDieFace,
+  SkinFit,
   SkinGround,
   SkinGroundField,
+  SkinImage,
   SkinItem,
   SkinItemSkin,
+  SkinLobby,
   SkinMisc,
   SkinPath,
   SkinPortrait,
   SkinPortraitObject,
   SkinRole,
   SkinSprite,
+  SkinStartup,
   SkinTexture,
   SkinWindow,
 } from '../../types'
@@ -163,4 +169,53 @@ export function buildingImgOf(
   id: string | undefined,
 ): SkinTexture | undefined {
   return (id === undefined ? undefined : building?.[id]?.img) ?? misc?.nodes?.building
+}
+
+// ── 欢迎页与游戏首页 `startup` / `lobby`（`skin/08-pages.md`）─────────────
+
+/**
+ * 封面类背景的填充方式（`08-pages.md` §2.1）：`cover` / `contain` / `tile`，**缺省 `cover`**。
+ * 手改过的包外 JSON 可能给别的词或 `undefined`，一律按 `cover` 处理（`KPG-1` 只提示、不改行为）。
+ */
+export function pageFitOf(bg: SkinImage | undefined): SkinFit {
+  const fit = bg?.fit
+  return fit === 'contain' || fit === 'tile' ? fit : 'cover'
+}
+
+/**
+ * 取整屏背景（`08-pages.md` §2.1 / §2.2）：欢迎页与游戏首页**各查自己的 `bg`、互不借用**——
+ * 只配了 `startup.bg` 时首页仍是纸面底纹（§2.3 逐节点降级）。
+ */
+export function pageBgOf(page: SkinStartup | SkinLobby | undefined): SkinImage | undefined {
+  return page?.bg
+}
+
+/** 欢迎页的三件图形（§2.1）：标题字形 / 主视觉 / 主视觉上的装饰骰子 */
+export type StartupArt = 'title' | 'cover' | 'dice'
+
+/** 取欢迎页图形；未配该键即 `undefined`，该处照旧程序绘制 */
+export function startupArtOf(startup: SkinStartup | undefined, art: StartupArt): SkinImage | undefined {
+  return startup?.[art]
+}
+
+/**
+ * 出身卡底的取图结果（§2.2 `card` ／ `card.selected`）。
+ *
+ * 卡底本身是**素材对象**（`img` 必填），`selected.img` 才是可缺的那个：缺位时**沿用卡底**
+ * （同一张底、只换描边）。`stroke` 未给即**不碰**描边——与衬底三元组的「描边缺省不绘制」
+ * 不同，这里是整张卡，未给就该由 `.class-card` / `.class-card.selected` 的 CSS 说了算。
+ */
+export interface CardPaint {
+  /** 卡底：选中态没另给图时就是 `card.img` */
+  img: SkinPath
+  /** 选中态描边；只有选中那一态才可能有 */
+  stroke?: SkinColor
+}
+
+/** 取出身卡底：`card` 整节没配即 `undefined`，卡片照旧手绘 */
+export function lobbyCardPaint(lobby: SkinLobby | undefined, selected: boolean): CardPaint | undefined {
+  const card = lobby?.card
+  if (card === undefined) return undefined
+  const sel = selected ? card.selected : undefined
+  return { img: sel?.img ?? card.img, stroke: sel?.stroke }
 }

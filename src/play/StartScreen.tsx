@@ -16,6 +16,7 @@ import { portraitOf, roleSprite } from '../engine/skin'
 import { useSkinStore } from '../store/skin'
 import { RoleGlyph } from '../ui/RoleGlyph'
 import { Portrait, portraitTile } from '../ui/Portrait'
+import { useLobbyBgStyle, useLobbyCardStyle, useLobbyPanelStyle } from '../ui/usePageSkin'
 
 export default function StartScreen({
   scenario,
@@ -40,6 +41,12 @@ export default function StartScreen({
   const role = useSkinStore((s) => s.skin?.manifest.role)
   // 职业立绘（§4.1 落点 5）：`classes.<职业 id>` → 回退 `player`；两者都取不到才是 `undefined`（⇒ 回 emoji）
   const classPortrait = (id: string) => portraitTile(portraitOf(role, 'class', id), assets)
+  // 首页三处素材（`skin/08-pages.md` §2.2）：整屏背景 / 世界简介面板底 / 出身卡底（含选中态描边）
+  const bg = useLobbyBgStyle()
+  const panel = useLobbyPanelStyle()
+  // 卡片两态各算一次：`selected.img` 缺位时沿用卡底、只换描边（§2.2 `card.selected`）
+  const cardStyle = useLobbyCardStyle(false)
+  const selectedCardStyle = useLobbyCardStyle(true)
 
   // 玩家自己掷骰决定出身（带一个短暂的摇骰过程）
   const roll = () => {
@@ -51,7 +58,7 @@ export default function StartScreen({
   }
 
   return (
-    <div className="play-shell start-screen">
+    <div className="play-shell start-screen" style={bg}>
       <div className="panel topbar">
         <span className="title hand">{scenario.name}</span>
         <button className="btn" onClick={onCancel}>
@@ -60,7 +67,7 @@ export default function StartScreen({
       </div>
 
       <div className="play-body" style={{ gridTemplateColumns: 'minmax(0,1fr)' }}>
-        <div className="panel scroll">
+        <div className="panel scroll" style={panel}>
           <div className="panel-head">
             <span>这一局的世界</span>
           </div>
@@ -98,6 +105,7 @@ export default function StartScreen({
                 type="button"
                 className={`class-card${selectedId === cls.id ? ' selected' : ''}`}
                 onClick={() => setSelectedId(cls.id)}
+                style={selectedId === cls.id ? selectedCardStyle : cardStyle}
               >
                 <div className="class-card-head">
                   {/* 职业立绘放大替代 `.class-icon`（缺图回退 `portraits.player`，再缺才回 emoji）；居中（§4.1 落点 5） */}

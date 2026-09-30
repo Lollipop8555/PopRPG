@@ -13,6 +13,7 @@
 
 import type { CSSProperties } from 'react'
 import type { GroundPaint } from '../engine/skin'
+import type { SkinFit } from '../types'
 import {
   effectiveMode,
   placeTexture,
@@ -133,6 +134,31 @@ export function groundStyle(
     style.backgroundPosition = 'center'
   }
   return style
+}
+
+/**
+ * **整屏封面背景**（`skin/08-pages.md` §2.1 / §2.2）：`startup.bg` / `lobby.bg` 铺满所在那一屏。
+ *
+ * 与衬底同一条底线：**只写 image 与铺法、不动 `background-color`**——`contain` 留出的边由主题底色
+ * 兜着（§2.1 `fit` 列），返回 `undefined`（未配该键 / 包里缺这张图）即调用方不传 `style`。
+ *
+ * `fit` 三档各是一种铺法：`cover`（缺省，裁切铺满）/ `contain`（整张可见）/ `tile`（原尺寸平铺）。
+ */
+export function pageBgStyle(
+  ref: TextureRef | undefined,
+  assets: SkinAssets,
+  fit: SkinFit = 'cover',
+): CSSProperties | undefined {
+  if (ref === undefined) return undefined
+  const src = assets.urlOf(ref.src)
+  if (src === undefined) return undefined
+
+  return {
+    backgroundImage: `url("${src}")`,
+    backgroundSize: fit === 'tile' ? 'auto' : fit,
+    backgroundRepeat: fit === 'tile' ? 'repeat' : 'no-repeat',
+    backgroundPosition: 'center',
+  }
 }
 
 /** 千分位取整：贴图坐标不必带浮点尾巴，免得每次渲染都换属性值 */
