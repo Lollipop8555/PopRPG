@@ -28,7 +28,7 @@
 |---|---|---|---|
 | **V1** | Phase 0 基座 / Phase A BUILD / Phase B PLAY | **已冻结口径**：七大类 · 13 项配置 · `encounter` 五选一 | **已完成**（A 首轮 ＋ B 全部 58 项勾选；全量 197 项单测绿） |
 | **V2.0** | **新增 NPC 与对话**（第 8 类组件 ＋ **进入建筑后的 NPC 触发节点**） | **追加设定 / 结构改造**（不属于 V1 的阶段性设计） | **已完成**（编辑器侧 E0–E3 ＋ 运行时 E4 ＋ 19 项原子验收；E5 皮肤落点并入 **V2.1**） |
-| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条（棋子形象 / 立绘四落点 / 受击表现）＋ `window` 容器衬底（对话框 / 抽屉 / 气泡）＋ `misc` 地图标记与骰子 ＋ `item` / `building`（道具格子与图标 ＋ 建筑地图节点 / 名称字体字色）＋ `startup` / `lobby`（欢迎页封面三件 ＋ 首页背景与出身卡）**已收口**，余下各屏待做） |
+| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条（棋子形象 / 立绘四落点 / 受击表现）＋ `window` 容器衬底（对话框 / 抽屉 / 气泡）＋ `misc` 地图标记与骰子 ＋ `item` / `building`（道具格子与图标 ＋ 建筑地图节点 / 名称字体字色）＋ `startup` / `lobby`（欢迎页封面三件 ＋ 首页背景与出身卡）＋ `window` 按钮 `normal` 态**已收口**，余下各屏待做） |
 | **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 九宫格切片消费 / 皮肤校验 / 音频播放 | 叠加层 | V2.1 之后 |
 
 > **V1 口径冻结、不改写**：`task/00-foundation.md` / `task/01-build.md` 里的「七大类 / 13 项 / 五选一」是 **V1 史实**；
@@ -65,7 +65,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 | [task/01-build.md](task/01-build.md) | Phase A BUILD（构建页） | 信息架构/数据模型/布局/图层/组件库/模式/画布/属性编辑/引擎纯函数/校验/预设/导入导出 | **已完成首轮实现**（build + 78 项单测全绿） |
 | [task/02-play.md](task/02-play.md) | Phase B PLAY（游玩页） | 框架加载/开局/移动回合/战斗UI/骰子公示/技能交互/状态/遭遇/商店/装备背包/存档 | **已完成**（B0–B10 与 B 验收 1–14 全部勾选） |
 | [task/03-polish.md](task/03-polish.md) | Phase C 收尾 | 视觉打磨 / GitHub Pages 部署 | 部分已完成 |
-| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地；D3 进行中：运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条 ＋ `window` 容器衬底 ＋ `misc` 地图标记与骰子 ＋ `item` / `building` ＋ `startup` / `lobby` 已接；**优先级 ②**；端到端依赖 B） |
+| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地；D3 进行中：运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条 ＋ `window` 容器衬底 ＋ `misc` 地图标记与骰子 ＋ `item` / `building` ＋ `startup` / `lobby` ＋ `window` 按钮 `normal` 态 已接；**优先级 ②**；端到端依赖 B） |
 | [task/05-npc.md](task/05-npc.md) | **V2.0** 新增 NPC 与对话（跨 A / B） | NPC 数据模型与对话树（**全树同一个结构**；给道具 `give`；本层掷骰 `dice` / 各项 `hit`）/ 组件库与组件页 / **NPC 模组面板（思维导图，命中覆盖检查）** / 建筑实例页与校验 / 运行时抽取与弹层（掷定锁死 / **重入三选项 ＋ 三标记** / `give` 一次性交付）/ 皮肤侧接口约定 | **已完成**（E0–E3 编辑器侧 ＋ E4 运行时 ＋ 19 项原子验收；E5 皮肤侧接口约定并入 [task/04-skin.md](task/04-skin.md)） |
 
 ---
@@ -130,6 +130,13 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 ---
 
 ## 进度同步
+
+**2026-09-30 · D3 第九屏（按钮 `normal` 态接入）**
+- 取图：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `ButtonKind` / `BUTTON_KINDS` 与 `buttonOf(win, kind)`——七个键（`plain` / `primary` / `danger` / `ghost` / `small` / `icon` / `close`）**按元素角色给、不按类名给**、**不跨键借用**；四态对象**只取 `normal`**，**缺 `normal` 即整颗按钮算没配**（只写 `hover` 不会凭空多出底图），字符串写法等价于只写 `normal`。
+- 落图与接线：**复用容器那份** [`src/ui/Texture.tsx`](src/ui/Texture.tsx) 的 `surfaceStyle()`——按钮属「随内容族」（盒随文字量变，V1 与容器同档走整体拉伸，圆角 / 描边仍归 `.btn` 的 CSS）；接线 [`src/ui/useButtonStyle.ts`](src/ui/useButtonStyle.ts)（`buttonOf()` → `textureRef()` → `surfaceStyle()`，与容器衬底**同一条取图链**、只多一步「从四态里挑 `normal`」）。未启用皮肤 / 没配该键 / 包里缺这张图一律 `undefined` ⇒ 调用方**不传 `style`**、纸面照旧。**V1.1 接九宫格时容器与按钮一处改完**（`surfaceStyle()` 内部换 `border-image`），两侧调用方一行不动。
+- 落点：各屏按钮按角色接键——战斗 / 对话 / 遭遇 / 结算确定键 `primary`、取消 / 次项 `plain`、`不防御` `danger`；地图顶栏菜单入口 `icon`、抽屉项 `plain`、标题栏关闭 `close`；小尺寸次级按钮 `small`；封面「开始冒险」`primary` / 「构建世界」`plain` / 「其他开始方式」`ghost`；首页「出发」`primary` / 「换一局」`plain`。**构建页 `.btn` 不接**。
+- 未接：按钮 `hover` / `active` / `disabled` 三态（`KW-6`，与九宫格**同批** → V1.1，落法同在 `surfaceStyle()` 内部）、固定族格子、提示条 / 条 / 分隔线（**必须九宫格** `KW-3`）；`KW-1` / `KW-5` / `KW-6` / `KW-7` 清单提示等校验层（`SkinIssueCode` 现只有 `KP-*`）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **47 个文件 / 544 项**全绿（本轮新增 1 个用例文件 / 16 项：[`src/play/__tests__/windowButtons.test.tsx`](src/play/__tests__/windowButtons.test.tsx) 11 项专盯落图 ＋ [`src/engine/skin/__tests__/window.test.ts`](src/engine/skin/__tests__/window.test.ts) 补 5 项纯函数用例）。设计侧同步 [`docs/design/skin/03-window.md`](docs/design/skin/03-window.md) §八（补「按钮」实现落点）、§4.1（排期行定稿）；任务侧 [`task/04-skin.md`](task/04-skin.md) 的 `window` 条拆出「按钮 `normal` 态」并勾选。
 
 **2026-09-30 · D3 第八屏（欢迎页 `startup` ＋ 游戏首页 `lobby` 接入）**
 - 取图：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `pageFitOf(bg)`（`cover` / `contain` / `tile`，**非法值与缺省一律回退 `cover`**——`KPG-1` 只提示、不改行为）、`pageBgOf(page)`（**两屏各查自己那一节的 `bg`、互不借用**，§2.3 逐节点降级）、`startupArtOf(startup, art)`（`title` / `cover` / `dice` 三键一个入口）、`lobbyCardPaint(lobby, selected)`（`CardPaint = { img, stroke }`：`selected.img` 缺位**沿用卡底**、`stroke` 只在选中态给；`card` 整节没配即 `undefined`）。

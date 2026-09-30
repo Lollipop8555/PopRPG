@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { StepForward } from 'lucide-react'
 import type { Session } from '../types/session'
 import { useDieBodyStyle } from '../ui/useDieSkin'
+import { useButtonStyle } from '../ui/useButtonStyle'
 import { DieFace } from './DiceLog'
 
 export default function DiceHud({
@@ -24,6 +25,8 @@ export default function DiceHud({
   const [spinPips, setSpinPips] = useState<number | null>(null)
   // 骰子本体（`skin/04-misc.md` §三）：三档尺寸共用一张，底下这盒就是最大那一档
   const dieBody = useDieBodyStyle()
+  // 掷骰按钮（`skin/03-window.md` §四）：HUD 上的主行动走 `primary`
+  const primaryBtn = useButtonStyle('primary')
 
   // 旋转期间点数快速滚动，营造「正在掷」的手感
   useEffect(() => {
@@ -64,7 +67,12 @@ export default function DiceHud({
               : '步数已用尽'}
         </div>
       </div>
-      <button className="btn primary" disabled={!canRoll || spinning} onClick={onRoll} style={{ whiteSpace: 'nowrap' }}>
+      <button
+        className="btn primary"
+        disabled={!canRoll || spinning}
+        onClick={onRoll}
+        style={{ whiteSpace: 'nowrap', ...primaryBtn }}
+      >
         <StepForward size={13} />{' '}
         {session.awaitingEncounter ? '掷骰' : session.stepsLeft > 0 ? '下一回合' : '投掷前进'}
       </button>

@@ -10,6 +10,7 @@ import type { ItemDef } from '../types'
 import type { Session } from '../types/session'
 import { bagCapacityText, itemDef } from './inventory'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { useButtonStyle } from '../ui/useButtonStyle'
 import { ItemGlyph } from '../ui/ItemGlyph'
 import { groundStyle } from '../ui/Texture'
 import { groundPaint, itemSkinOf } from '../engine/skin'
@@ -36,6 +37,9 @@ export default function BagPanel({
   // 道具皮肤（`skin/06-item-building.md` §3.2）：键是组件 `id`，图标与衬底都按格子逐个查
   const itemSkins = useSkinStore((s) => s.skin?.manifest.item)
   const assets = useSkinStore((s) => s.assets)
+  // 按钮（`skin/03-window.md` §四）：格子里的行内动作走 `small`，标题栏的关闭走 `close`
+  const smallBtn = useButtonStyle('small')
+  const closeBtn = useButtonStyle('close')
 
   return (
     <div className="panel" style={surface}>
@@ -44,7 +48,12 @@ export default function BagPanel({
         <span className="row" style={{ gap: 6, alignItems: 'center' }}>
           <span className="badge">{bagCapacityText(session)}</span>
           {onClose && (
-            <button className="btn small" title="关闭" onClick={onClose} style={{ padding: '0 6px' }}>
+            <button
+              className="btn small"
+              title="关闭"
+              onClick={onClose}
+              style={{ padding: '0 6px', ...closeBtn }}
+            >
               <X size={14} />
             </button>
           )}
@@ -73,6 +82,7 @@ export default function BagPanel({
               <span className="bag-name">{item.name}</span>
               <button
                 className="btn small bag-act"
+                style={smallBtn}
                 onClick={() => (consumable ? onUse(entry.id) : onEquip(entry.id))}
                 title={consumable ? '使用' : '装备'}
               >
@@ -103,7 +113,7 @@ export default function BagPanel({
                 >
                   <ItemGlyph skin={skin} assets={assets} icon={item.icon} className="bag-ico" />
                   <span className="bag-name">{item.name}</span>
-                  <button className="btn small bag-act" onClick={() => onUnequip(item.id)}>
+                  <button className="btn small bag-act" style={smallBtn} onClick={() => onUnequip(item.id)}>
                     卸下
                   </button>
                 </div>

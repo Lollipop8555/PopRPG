@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import type { Session } from '../types/session'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { useButtonStyle } from '../ui/useButtonStyle'
 import { useDieBodyStyle, useDieFace } from '../ui/useDieSkin'
 import { InlineTexture } from '../ui/Texture'
 
@@ -67,6 +68,8 @@ export default function DiceLog({ session, onClose }: { session: Session; onClos
   const surface = useSurfaceStyle('drawer')
   // 骰子本体（`skin/04-misc.md` §三）：铺进 `.die` 盒，三档尺寸共用一张
   const dieBody = useDieBodyStyle()
+  // 标题栏的关闭按钮（`skin/03-window.md` §四）：只有图形、无文字的按钮走 `close`
+  const closeBtn = useButtonStyle('close')
 
   const replay = () => {
     if (lastRoll) setDie({ pips: lastRoll.pips, key: Date.now() })
@@ -96,7 +99,12 @@ export default function DiceLog({ session, onClose }: { session: Session; onClos
             )}
           </span>
           {onClose && (
-            <button className="btn small" title="关闭" onClick={onClose} style={{ padding: '0 6px' }}>
+            <button
+              className="btn small"
+              title="关闭"
+              onClick={onClose}
+              style={{ padding: '0 6px', ...closeBtn }}
+            >
               <X size={14} />
             </button>
           )}

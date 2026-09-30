@@ -12,6 +12,7 @@ import type { ItemDef, StatKey } from '../types'
 import type { Session } from '../types/session'
 import { itemDef } from './inventory'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { useButtonStyle } from '../ui/useButtonStyle'
 import { ItemGlyph } from '../ui/ItemGlyph'
 import { itemSkinOf } from '../engine/skin'
 import { useSkinStore } from '../store/skin'
@@ -45,6 +46,9 @@ export default function EquipPanel({
   // 道具皮肤（`skin/06-item-building.md` §3.2）：穿戴行与更换气泡里的道具图标同吃 `item.icon`
   const itemSkins = useSkinStore((s) => s.skin?.manifest.item)
   const assets = useSkinStore((s) => s.assets)
+  // 按钮（`skin/03-window.md` §四）：部位行的「更换 / 装备」走 `small`，标题栏的关闭走 `close`
+  const smallBtn = useButtonStyle('small')
+  const closeBtn = useButtonStyle('close')
 
   // 背包里、能穿进该部位、且还没穿的装备
   const candidatesFor = (slot: (typeof EQUIP_SLOTS)[number]): ItemDef[] =>
@@ -61,7 +65,12 @@ export default function EquipPanel({
         <span className="row" style={{ gap: 6, alignItems: 'center' }}>
           <span className="badge">{equipped.length} 件穿戴中</span>
           {onClose && (
-            <button className="btn small" title="关闭" onClick={onClose} style={{ padding: '0 6px' }}>
+            <button
+              className="btn small"
+              title="关闭"
+              onClick={onClose}
+              style={{ padding: '0 6px', ...closeBtn }}
+            >
               <X size={14} />
             </button>
           )}
@@ -102,6 +111,7 @@ export default function EquipPanel({
               {onEquip && (
                 <button
                   className="btn small equip-change"
+                  style={smallBtn}
                   onClick={(e) => setOpen({ slot, anchor: e.currentTarget })}
                 >
                   {items.length ? '更换' : '装备'}

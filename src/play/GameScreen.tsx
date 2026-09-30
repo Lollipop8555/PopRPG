@@ -27,6 +27,7 @@ import HeroNotice from './HeroNotice'
 import Overlay from '../ui/Overlay'
 import { useSkinStore } from '../store/skin'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { useButtonStyle } from '../ui/useButtonStyle'
 import { portraitOf, roleSprite } from '../engine/skin'
 import { RoleGlyph } from '../ui/RoleGlyph'
 import { Portrait, portraitHurtTile, portraitTile } from '../ui/Portrait'
@@ -71,6 +72,12 @@ export default function GameScreen({ session }: { session: Session }) {
   const role = useSkinStore((s) => s.skin?.manifest.role)
   // 对话框纸面底纹（`skin/03-window.md` §四）：菜单弹层与结算弹层都在这一屏，两处共用一份
   const dialogSurface = useSurfaceStyle('dialog')
+  // 按钮（§四）：菜单入口只有图形、走 `icon`；菜单里的抽屉项与结算弹层的中性项走 `plain`；
+  // 菜单的关闭走 `close`，结算的「重新开始」是本屏主行动、走 `primary`
+  const iconBtn = useButtonStyle('icon')
+  const closeBtn = useButtonStyle('close')
+  const plainBtn = useButtonStyle('plain')
+  const primaryBtn = useButtonStyle('primary')
   // 主角立绘：落点 1（底栏）。取不到即整块不渲染、hud-face 原样留着（§4.3）
   const heroOf = portraitOf(role, 'player')
   const hudPortrait = portraitTile(heroOf, assets)
@@ -228,7 +235,7 @@ export default function GameScreen({ session }: { session: Session }) {
 
             {/* 底栏最右：菜单入口（点击弹出独立对话框） */}
             <div className="hud-menu">
-              <button className="btn small" title="菜单" onClick={() => setMenuOpen(true)}>
+              <button className="btn small" style={iconBtn} title="菜单" onClick={() => setMenuOpen(true)}>
                 <Menu size={18} />
               </button>
             </div>
@@ -251,27 +258,27 @@ export default function GameScreen({ session }: { session: Session }) {
           <div className="modal sheet" style={dialogSurface}>
             <div className="panel-head" style={{ justifyContent: 'space-between' }}>
               <span className="hand">菜单</span>
-              <button className="btn small" onClick={() => setMenuOpen(false)}>
+              <button className="btn small" style={closeBtn} onClick={() => setMenuOpen(false)}>
                 关闭
               </button>
             </div>
             <div className="sheet-actions">
-              <button className="btn" onClick={() => { setDrawer('status'); setMenuOpen(false) }}>
+              <button className="btn" style={plainBtn} onClick={() => { setDrawer('status'); setMenuOpen(false) }}>
                 状态
               </button>
-              <button className="btn" onClick={() => { setDrawer('bag'); setMenuOpen(false) }}>
+              <button className="btn" style={plainBtn} onClick={() => { setDrawer('bag'); setMenuOpen(false) }}>
                 背包
               </button>
-              <button className="btn" onClick={() => { setDrawer('log'); setMenuOpen(false) }}>
+              <button className="btn" style={plainBtn} onClick={() => { setDrawer('log'); setMenuOpen(false) }}>
                 流水
               </button>
-              <button className="btn" onClick={() => { setDrawer('equip'); setMenuOpen(false) }}>
+              <button className="btn" style={plainBtn} onClick={() => { setDrawer('equip'); setMenuOpen(false) }}>
                 装备
               </button>
-              <button className="btn" onClick={() => { downloadSave(session); setMenuOpen(false) }}>
+              <button className="btn" style={plainBtn} onClick={() => { downloadSave(session); setMenuOpen(false) }}>
                 存档
               </button>
-              <button className="btn" onClick={() => play.quit()}>
+              <button className="btn" style={plainBtn} onClick={() => play.quit()}>
                 退出
               </button>
             </div>
@@ -293,14 +300,15 @@ export default function GameScreen({ session }: { session: Session }) {
             <div className="row">
               <button
                 className="btn primary"
+                style={primaryBtn}
                 onClick={() => play.startWith(session.scenario, session.player.cls?.id ?? '')}
               >
                 重新开始（同一场景）
               </button>
-              <button className="btn" onClick={() => navigate('build')}>
+              <button className="btn" style={plainBtn} onClick={() => navigate('build')}>
                 去构建页改一改
               </button>
-              <button className="btn" onClick={() => play.quit()}>
+              <button className="btn" style={plainBtn} onClick={() => play.quit()}>
                 回到入口
               </button>
             </div>

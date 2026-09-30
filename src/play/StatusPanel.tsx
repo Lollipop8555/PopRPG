@@ -15,6 +15,7 @@ import { RoleGlyph } from '../ui/RoleGlyph'
 import { Portrait, portraitHurtTile, portraitTile } from '../ui/Portrait'
 import { useHitPulse } from '../ui/useHitPulse'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { useButtonStyle } from '../ui/useButtonStyle'
 
 export default function StatusPanel({
   session,
@@ -33,6 +34,9 @@ export default function StatusPanel({
   const role = useSkinStore((s) => s.skin?.manifest.role)
   // 抽屉纸面底纹（`skin/03-window.md` §四）：三个面板 ＋ 骰日志同吃 `surfaces.drawer`
   const surface = useSurfaceStyle('drawer')
+  // 按钮（§四）：属性行的加点按钮走 `small`，标题栏的关闭走 `close`
+  const smallBtn = useButtonStyle('small')
+  const closeBtn = useButtonStyle('close')
   // 落到面板头的立绘与底栏同源同图（§4.1 落点 4）：取不到即整块不渲染、留 emoji ＋ 名称
   const heroOf = portraitOf(role, 'player')
   const headPortrait = portraitTile(heroOf, assets)
@@ -59,7 +63,12 @@ export default function StatusPanel({
         <span className="row" style={{ gap: 6, alignItems: 'center' }}>
           <span className="badge">第 {session.round} 回合</span>
           {onClose && (
-            <button className="btn small" title="关闭" onClick={onClose} style={{ padding: '0 6px' }}>
+            <button
+              className="btn small"
+              title="关闭"
+              onClick={onClose}
+              style={{ padding: '0 6px', ...closeBtn }}
+            >
               <X size={14} />
             </button>
           )}
@@ -95,6 +104,7 @@ export default function StatusPanel({
             </span>
             <button
               className="btn small"
+              style={smallBtn}
               disabled={free <= 0}
               onClick={() => onAllocate(key)}
             >

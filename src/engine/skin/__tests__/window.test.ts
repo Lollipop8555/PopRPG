@@ -1,13 +1,14 @@
 /**
- * 容器取值（`skin/03-window.md` §四）：`surfaceOf()` 的确定性——三种容器各查自己的键，
- * **不跨键借用**（对话框没配就用不回抽屉的图），整个 `window` 节缺位也不抛。
+ * 容器与按钮取值（`skin/03-window.md` §四）：`surfaceOf()` / `buttonOf()` 的确定性——
+ * 每个键各查自己的键，**不跨键借用**（对话框没配就用不回抽屉的图），整个 `window` 节缺位也不抛。
  */
 
 import { describe, expect, it } from 'vitest'
-import { surfaceOf } from '../lookup'
-import type { SkinWindow } from '../../../types'
+import { BUTTON_KINDS, buttonOf, surfaceOf } from '../lookup'
+import type { SkinButton, SkinWindow } from '../../../types'
 
 const DIALOG = 'art/window/paper.png'
+const PRIMARY = 'art/window/btn-primary.png'
 
 describe('window.surfaces 取值（§四）', () => {
   const win: SkinWindow = {
@@ -29,5 +30,42 @@ describe('window.surfaces 取值（§四）', () => {
   it('整个 window 节缺位（无皮肤 / 老包）即取不到，不抛', () => {
     expect(surfaceOf(undefined, 'dialog')).toBeUndefined()
     expect(surfaceOf({ buttons: {} }, 'dialog')).toBeUndefined()
+  })
+})
+
+describe('window.buttons 取值（§四）', () => {
+  const win: SkinWindow = {
+    buttons: {
+      primary: PRIMARY,
+      danger: 'art/window/btn-danger.png',
+      // 四态对象：`normal` 是唯一必填项，其余三态 V1 不读取
+      small: { normal: 'art/window/btn-small.png', hover: 'art/window/btn-small-hover.png' },
+      // 老包 / 手写配置可能漏掉 `normal`，此时整颗按钮算没配
+      ghost: { hover: 'art/window/btn-ghost-hover.png' } as unknown as SkinButton,
+    },
+  }
+
+  it('字符串写法等于只写 `normal`，四态对象交出的是它的 `normal`', () => {
+    expect(buttonOf(win, 'primary')).toBe(PRIMARY)
+    expect(buttonOf(win, 'small')).toBe('art/window/btn-small.png')
+  })
+
+  it('四态对象缺 `normal` 即取不到：`hover` 不代表这颗按钮有图', () => {
+    expect(buttonOf(win, 'ghost')).toBeUndefined()
+  })
+
+  it('七个键互不借用：配了 `primary` 不等于配了 `plain` / `close`', () => {
+    expect(buttonOf(win, 'plain')).toBeUndefined()
+    expect(buttonOf(win, 'close')).toBeUndefined()
+    expect(buttonOf(win, 'icon')).toBeUndefined()
+  })
+
+  it('整个 window 节缺位、或该键没配，都取不到且不抛', () => {
+    expect(buttonOf(undefined, 'primary')).toBeUndefined()
+    expect(buttonOf({ surfaces: {} }, 'primary')).toBeUndefined()
+  })
+
+  it('键集合是固定的七个（清单与遍历用），键名不随实现漂移', () => {
+    expect([...BUTTON_KINDS]).toEqual(['plain', 'primary', 'danger', 'ghost', 'small', 'icon', 'close'])
   })
 })

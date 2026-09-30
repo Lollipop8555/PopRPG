@@ -10,6 +10,7 @@ import type { Session } from '../types/session'
 import Overlay from '../ui/Overlay'
 import GainNoteView from './GainNoteView'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { useButtonStyle } from '../ui/useButtonStyle'
 
 export default function EncounterView({
   session,
@@ -22,6 +23,9 @@ export default function EncounterView({
 }) {
   // 对话框纸面底纹（`skin/03-window.md` §四）：要在提前返回之前取，hook 不能落在条件之后
   const surface = useSurfaceStyle('dialog')
+  // 按钮（`skin/03-window.md` §四）：标题栏的确认走 `primary`，货架行的「买下」走 `small`
+  const primaryBtn = useButtonStyle('primary')
+  const smallBtn = useButtonStyle('small')
   const encounter = session.encounter
   if (!encounter) return null
 
@@ -37,7 +41,7 @@ export default function EncounterView({
           <span className="hand" style={{ fontSize: 16 }}>
             {encounter.title}
           </span>
-          <button className="btn primary encounter-confirm" onClick={onClose}>
+          <button className="btn primary encounter-confirm" style={primaryBtn} onClick={onClose}>
             确认
           </button>
         </div>
@@ -74,7 +78,7 @@ export default function EncounterView({
                   <span style={{ fontSize: 12.5 }}>
                     {nameOf(good.id)} —— {good.price} 枚{nameOf(good.currency)}
                   </span>
-                  <button className="btn small" onClick={() => onBuy(index)}>
+                  <button className="btn small" style={smallBtn} onClick={() => onBuy(index)}>
                     买下
                   </button>
                 </div>

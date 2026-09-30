@@ -15,6 +15,7 @@ import { usePlayStore } from '../store/play'
 import { useSkinStore } from '../store/skin'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useDieBodyStyle } from '../ui/useDieSkin'
+import { useButtonStyle } from '../ui/useButtonStyle'
 import { portraitOf, roleSprite } from '../engine/skin'
 import Overlay from '../ui/Overlay'
 import { RoleGlyph } from '../ui/RoleGlyph'
@@ -71,6 +72,10 @@ export default function BattleDialog({ session }: { session: Session }) {
   const surface = useSurfaceStyle('dialog')
   // 骰子本体（`skin/04-misc.md` §三）：战中那两枚（定格 30 / 掷骰中 38）同吃一张
   const dieBody = useDieBodyStyle()
+  // 按钮（`skin/03-window.md` §四）：操作区的主行动（攻击 / 防御 / 继续交锋）走 `primary`，
+  // 「不防御」是这一场里的危险动作，走 `danger`
+  const primaryBtn = useButtonStyle('primary')
+  const dangerBtn = useButtonStyle('danger')
 
   const monster = session.monster
   if (!monster) return null
@@ -258,6 +263,7 @@ export default function BattleDialog({ session }: { session: Session }) {
               </div>
               <button
                 className="btn primary"
+                style={primaryBtn}
                 disabled={!selected}
                 onClick={() => selected && play.requestRoll({ kind: 'attack', skillId: selected })}
               >
@@ -271,12 +277,14 @@ export default function BattleDialog({ session }: { session: Session }) {
               </div>
               <button
                 className="btn primary"
+                style={primaryBtn}
                 onClick={() => play.requestRoll({ kind: 'defend', willDefend: true })}
               >
                 防御（掷防骰）
               </button>
               <button
                 className="btn danger"
+                style={dangerBtn}
                 onClick={() => play.requestRoll({ kind: 'defend', willDefend: false })}
               >
                 不防御
@@ -285,7 +293,7 @@ export default function BattleDialog({ session }: { session: Session }) {
  ) : (
             <>
               <div className="faint">本回合交锋已结束</div>
-              <button className="btn primary" onClick={() => play.nextRound()}>
+              <button className="btn primary" style={primaryBtn} onClick={() => play.nextRound()}>
                 下一回合（继续交锋）
               </button>
             </>

@@ -124,6 +124,15 @@
 
 ## 进度同步
 
+**2026-09-30 · D3 第九屏：按钮 `normal` 态接入（[`design/skin/03-window.md`](design/skin/03-window.md) §四 / §四.1 / §八）**
+- **承接容器衬底那一批**：`window` 的「随视口族」（容器）已落，本批落 §四 的**七个按钮键**——`plain` / `primary` / `danger` / `ghost` / `small` / `icon` / `close`，**按元素角色给、不按类名给**；按钮属「随内容族」（盒随文字量变，§二），V1 与容器同档走**整体拉伸**。
+- **取图**：[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `ButtonKind` 与 `BUTTON_KINDS`（七键的定序清单，清单 / 遍历用）、`buttonOf(win, kind)`——**七键各查自己的键、不跨键借用**；四态对象**只取 `normal`**，**缺 `normal` 即整颗按钮算没配**（老包 / 手写配置不会因为只写了 `hover` 就凭空多出一张底图），字符串写法等价于只写 `normal`。
+- **落图与接线**：容器那份**原样复用**——[`src/ui/useButtonStyle.ts`](../src/ui/useButtonStyle.ts) 的 `useButtonStyle(kind)` 走同一条「`buttonOf()` → `textureRef()` → `surfaceStyle()`」。与容器的差别**只有一处**：容器取 `surfaces.<键>` 的值，按钮多一步「从四态里挑 `normal`」；故 **V1.1 接九宫格时容器与按钮一处改完**（`surfaceStyle()` 内部换 `border-image`），两侧调用方一行都不动。**未启用皮肤 / 没配该键 / 包里缺这张图一律 `undefined`** ⇒ 调用方**不传 `style`**、CSS 纸面照旧。
+- **四态只读 `normal`**（§4.1，`KW-6`）：`hover` / `active` / `disabled` 仍由 CSS 表现——`:disabled { opacity }` 与 `:active { transform }` 照旧生效，`:hover` 变的只是素材**之下**的底色（素材不透明时看不出变化，属 V1 既定取舍）；**禁用按钮照样拿 `normal` 那张图**。
+- **落点**：各屏按钮按角色接键——战斗 / 对话 / 遭遇 / 结算的确定键走 `primary`、取消 / 次项走 `plain`、`不防御`走 `danger`（自杀语义）；地图顶栏菜单入口走 `icon`、抽屉项走 `plain`、标题栏关闭走 `close`；小尺寸加点 / 次级按钮走 `small`；封面「开始冒险」`primary` / 「构建世界」`plain` / 「其他开始方式」`ghost`；首页「出发」`primary` / 「换一局」`plain`。**构建页 `.btn` 不接**（含 [`src/ui/RowMenu.tsx`](../src/ui/RowMenu.tsx)，只被组件库用）。
+- **未接**：`hover` / `active` / `disabled` 三态（与九宫格**同批** → V1.1，两者落法都在 `surfaceStyle()` 内部、分两批要改两遍同一个函数）、固定族格子（技能格 / 奖励卡 / 部位标签）、提示条 / 条 / 分隔线（**必须九宫格**，`KW-3`）；`KW-1` / `KW-5` / `KW-6` / `KW-7` 的清单提示等校验层（`SkinIssueCode` 现只有 `KP-*`）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **47 个文件 / 544 项**全绿（本轮新增 1 个用例文件 / 16 项：[`src/play/__tests__/windowButtons.test.tsx`](../src/play/__tests__/windowButtons.test.tsx) 11 项**专盯落图**——攻击 / 防御同吃 `primary` 而不防御走 `danger`、缺键不借图、掷骰 `primary` 与菜单 `icon` 各取各的、抽屉 `plain` 与关闭 `close`、面板 `small` / `close`、封面三键、首页两键、未配 / 缺图一颗都不传 `style`、禁用仍拿 `normal`、七键互不借用；[`src/engine/skin/__tests__/window.test.ts`](../src/engine/skin/__tests__/window.test.ts) 补 5 项纯函数用例——字符串＝只写 `normal`、四态缺 `normal` 取不到、七键不借用、`window` 节缺位不抛、`BUTTON_KINDS` 定序）。里程碑状态：[`task/04-skin.md`](../task/04-skin.md) 的 `window` 条拆出「按钮 `normal` 态」并勾选；设计侧 [`design/skin/03-window.md`](design/skin/03-window.md) §八 补「按钮」实现落点、§4.1 排期行定稿为 **D3 第九屏接入 `normal`**、其余三态与九宫格**同批**（V1.1）。
+
 **2026-09-30 · D3 第八屏：欢迎页 `startup` ＋ 游戏首页 `lobby` 接入（[`design/skin/08-pages.md`](design/skin/08-pages.md) §2.1 / §2.2 / §七）**
 - **两屏全落**：整屏背景（`fit` 三档）＋ 欢迎页三件图形（标题字形 / 主视觉 / 装饰骰子）＋ 世界简介面板底 ＋ 出身卡（含选中态）。
 - **取图**：[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `pageFitOf(bg)`——`cover` / `contain` / `tile`，**非法值与缺省一律回退 `cover`**（`KPG-1` 只提示、不改行为）；`pageBgOf(page)`——**两屏各查自己那一节的 `bg`、互不借用**（§2.3 逐节点降级）；`startupArtOf(startup, art)`——`title` / `cover` / `dice` 三键一个入口，未配该键即 `undefined`；`lobbyCardPaint(lobby, selected)`——`CardPaint = { img, stroke }`，`selected.img` 缺位**沿用卡底**、`stroke` 只在选中态给，`card` 整节没配即 `undefined`。

@@ -53,7 +53,9 @@
       "active":   "skin/window/btn_primary_active.png",
       "disabled": "skin/window/btn_primary_disabled.png"
     },
+    "plain":   "skin/window/btn_plain.png",
     "danger":  "skin/window/btn_danger.png",
+    "ghost":   "skin/window/btn_ghost.png",
     "small":   "skin/window/btn_small.png",
     "icon":    "skin/window/btn_icon.png",
     "close":   "skin/window/btn_close.png"
@@ -74,6 +76,20 @@
 ```
 
 按钮可写四态对象（上例 `primary`）或单张字符串（上例 `danger`，等价于只写 `normal`）。
+
+**键按元素角色定，不按 CSS 类名定**（同一个 `.btn small` 可以是 `small` / `icon` / `close`，看它在界面里干的是什么）：
+
+| 键 | 元素角色 | 游玩态的落点 |
+|---|---|---|
+| `plain` | `.btn` 本身：中性按钮 | 菜单的抽屉项与存档 / 退出、取消、对话次项 |
+| `primary` | 本屏主行动 | 开始冒险、出发、掷骰、攻击 / 防御、确认 |
+| `danger` | 危险动作 | 交锋里的「不防御」 |
+| `ghost` | 低强调按钮（虚线边） | 封面的「其他开始方式」折叠入口 |
+| `small` | 行内小动作 | 买下、使用 / 装备 / 卸下、更换、加点 |
+| `icon` | 只有图形、无文字的按钮 | 地图顶栏的菜单入口 |
+| `close` | 关闭 | 各处标题栏的关闭 |
+
+键名允许自定义：引擎只读上表七个键，其余键配了也静默搁置（与其余各节一致，不报错也不回退到别的键）。
 
 ### 4.1 按钮四态（结构定稿，实现顺序可后置）
 
@@ -128,11 +144,14 @@ V1 不解析九宫格，因此：
 3. 按钮四态素材的**接入排期**：是否与九宫格（V1.1）同批实现？（结构已定稿，见 §四.1）
 
 > **已裁决（13）**：按钮 `hover` / `active` / `disabled` 三态**结构现在就定稿**（§四.1：字段名 ＋ 缺省回退链），**实现顺序可后置**。
+>
+> **排期已定**（D3 第九屏）：`normal` 态已接入（§八「按钮」）；其余三态与九宫格**同批**（V1.1）——两者的落法都落在 `surfaceStyle()` 内部，分两批做要改两遍同一个函数。
 
 ## 八、实现落点（2026-09-30）
 
-> **本批只落「容器衬底」**：三种**随视口族**容器（§二）——对话框 / 抽屉 / 气泡——已接入 `window.surfaces`。
-> 按钮四态（§4.1）与其余三族（格子 / 条 / 提示条 / 分隔线）**尚未接入**，原因见文末「未接部分」。
+> **本批落「容器衬底 ＋ 按钮 `normal` 态」**：三种**随视口族**容器（§二）——对话框 / 抽屉 / 气泡——已接入 `window.surfaces`；
+> 七个按钮键（§四）已接入 `window.buttons` 的 `normal` 态。
+> 四态里的其余三态（§4.1）与其余三族（格子 / 条 / 提示条 / 分隔线）**尚未接入**，原因见文末「未接部分」。
 
 ### 取图与落图
 
@@ -153,9 +172,33 @@ V1 不解析九宫格，因此：
 - **构建页不接**：`src/build/*` 的 `.modal`（校验清单 / NPC 方案 / 规则页弹层）不铺游玩态底纹，与「构建页画布未接」（[`05-canvas.md`](05-canvas.md) §八）保持一致。
 - **加载屏的「页面卡片」不铺纸面底纹**：`LoadScreen` 的 `.load-cover` 是整屏容器、本来就没有卡片外观，该屏封面归 `startup.bg`（[`08-pages.md`](08-pages.md)）。
 
+### 按钮（§四）
+
+- **取图**：[`src/engine/skin/lookup.ts`](../../../src/engine/skin/lookup.ts) 的 `buttonOf(win, kind)`——七个键（`BUTTON_KINDS`）各查自己的键，**不跨键借用**；四态对象**只取 `normal`**，缺 `normal` 即整颗按钮算没配（老包 / 手写配置不会因为只有 `hover` 就凭空多出一张底图）。
+- **落图与接线**：容器那份**原样复用**——[`src/ui/useButtonStyle.ts`](../../../src/ui/useButtonStyle.ts) 的 `useButtonStyle(kind)` 走同一条「`buttonOf()` → `textureRef()` → `surfaceStyle()`」。按钮是**随内容族**（盒随文字量变，§二），V1 与容器同档：**整体拉伸铺满**，圆角与描边仍归 `.btn` 的 CSS（§五「素材只提供纸面底纹」）。
+- **与容器的差别只有一处**：容器取 `surfaces.<键>` 的值，按钮多一步「从四态里挑 `normal`」。因此 V1.1 接九宫格时**容器与按钮一处改完**（`surfaceStyle()` 内部换 `border-image`），两侧调用方一行都不动。
+- **四态只读 `normal`**（§4.1，`KW-6`）：`hover` / `active` / `disabled` 仍由 CSS 表现——`:disabled { opacity }` 与 `:active { transform }` 照旧生效，`:hover` 变的只是素材**之下**的底色（素材不透明时看不出变化，属 V1 的既定取舍）。
+
+| 文件 | 接入的键 | 元素 |
+|---|---|---|
+| [`LoadScreen.tsx`](../../../src/play/LoadScreen.tsx) | `primary` / `plain` / `ghost` / `small` / `close` | 开始冒险、构建世界、「其他开始方式」（选中与未选中共用 `plain`）、导出 / 导入组件库、更新记录关闭 |
+| [`StartScreen.tsx`](../../../src/play/StartScreen.tsx) | `plain` / `primary` | 换一局、掷骰决定出身、出发 |
+| [`GameScreen.tsx`](../../../src/play/GameScreen.tsx) | `icon` / `close` / `plain` / `primary` | 菜单入口、菜单纸张的关闭、六个抽屉项、结算弹层的三项 |
+| [`DiceHud.tsx`](../../../src/play/DiceHud.tsx) | `primary` | 掷骰 |
+| [`BattleDialog.tsx`](../../../src/play/BattleDialog.tsx) | `primary` / `danger` | 攻击 / 防御 / 下一回合、不防御 |
+| [`TalkDialog.tsx`](../../../src/play/TalkDialog.tsx) | `primary` / `plain` | 继续对话 / 继续、重新对话 / 路过、台下的选项 |
+| [`EncounterView.tsx`](../../../src/play/EncounterView.tsx) | `primary` / `small` | 标题栏确认、货架行的「买下」 |
+| [`BagPanel.tsx`](../../../src/play/BagPanel.tsx) | `small` / `close` | 使用 / 装备 / 卸下、标题栏关闭 |
+| [`EquipPanel.tsx`](../../../src/play/EquipPanel.tsx) | `small` / `close` | 更换 / 装备、标题栏关闭 |
+| [`StatusPanel.tsx`](../../../src/play/StatusPanel.tsx) | `small` / `close` | 属性行的加点、标题栏关闭 |
+| [`DiceLog.tsx`](../../../src/play/DiceLog.tsx) | `close` | 骰流水标题栏关闭 |
+
+- **构建页不接**：`src/build/*` 的 `.btn` 不铺游玩态按钮素材（含 [`ui/RowMenu.tsx`](../../../src/ui/RowMenu.tsx)，它只被组件库用），与「构建页画布未接」（[`05-canvas.md`](05-canvas.md) §八）保持一致。
+- **封面的版本号入口不接**：`.cover-version` 是纯文字入口、没有纸面，七个键里没有它对应的角色（要单独控制得先定新键，见 §四「键名允许自定义」）。
+
 ### 未接部分
 
-- **按钮四态**（§4.1）：`window.buttons` 结构已定稿，本批不接——除 `normal` 外三态仍由 CSS 表现（`KW-6`）。
+- **按钮四态**（§4.1）：`normal` 已接入（上一节）；`hover` / `active` / `disabled` 仍由 CSS 表现（`KW-6`），与九宫格同批（V1.1）。
 - **随内容族与单向族**（§二：提示条 / 条 / 分隔线）**必须九宫格 / 单轴九宫格**，V1 硬拉伸会违反「随内容族禁止拉伸」（`KW-3`），故整批留到 V1.1：提示条与分隔线继续由 CSS 绘制。
 - **固定族格子**（技能格 / 奖励卡 / 部位标签）：尺寸固定、可整图等比拉伸，留到 **`item` / `building` 批**一并接——它们与 `item.background` 会落在同一类元素上，避免两节抢同一个落点。
 - **校验项**：`KW-1`（随视口族无 `slice`，V1 会整体拉伸）与 `KW-5`（路径不存在）的清单提示**尚未落进校验层**（`SkinIssueCode` 目前只有 `KP-*`），等汇总批（D6）统一接。

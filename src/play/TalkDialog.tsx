@@ -33,6 +33,7 @@ import { roleSprite } from '../engine/skin'
 import { useSkinStore } from '../store/skin'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useDieBodyStyle } from '../ui/useDieSkin'
+import { useButtonStyle } from '../ui/useButtonStyle'
 import { DieFace } from './DiceLog'
 import Overlay from '../ui/Overlay'
 import { RoleGlyph } from '../ui/RoleGlyph'
@@ -84,6 +85,9 @@ export default function TalkDialog({
   const surface = useSurfaceStyle('dialog')
   // 骰子本体（`skin/04-misc.md` §三）：对话里那枚骰子与底栏那枚同吃一张
   const dieBody = useDieBodyStyle()
+  // 按钮（`skin/03-window.md` §四）：带方向的主项（继续对话 / 继续）走 `primary`，其余走 `plain`
+  const primaryBtn = useButtonStyle('primary')
+  const plainBtn = useButtonStyle('plain')
 
   const view = talkView(session)
   if (!view) return null
@@ -112,16 +116,16 @@ export default function TalkDialog({
             </span>
           </div>
           <div className="row" style={{ gap: 6, marginTop: 4 }}>
-            <button className="btn primary talk-choice" onClick={() => onMenu('continue')}>
+            <button className="btn primary talk-choice" style={primaryBtn} onClick={() => onMenu('continue')}>
               继续对话
             </button>
             {canRestart && (
-              <button className="btn talk-choice" onClick={() => onMenu('restart')}>
+              <button className="btn talk-choice" style={plainBtn} onClick={() => onMenu('restart')}>
                 重新对话
               </button>
             )}
             {canPass && (
-              <button className="btn talk-choice" onClick={() => onMenu('pass')}>
+              <button className="btn talk-choice" style={plainBtn} onClick={() => onMenu('pass')}>
                 路过
               </button>
             )}
@@ -156,7 +160,7 @@ export default function TalkDialog({
 
         {talk.stage === 'line' && (
           <div className="row" style={{ marginTop: 6, justifyContent: 'flex-end' }}>
-            <button className="btn primary talk-choice" onClick={onNext}>
+            <button className="btn primary talk-choice" style={primaryBtn} onClick={onNext}>
               继续
             </button>
           </div>
@@ -208,7 +212,7 @@ export default function TalkDialog({
         {talk.stage === 'choose' && !talk.replay && !needsRoll && (
           <div className="talk-options">
             {options.map((o) => (
-              <button key={o.index} className="btn talk-option" onClick={() => onChoose(o.index)}>
+              <button key={o.index} className="btn talk-option" style={plainBtn} onClick={() => onChoose(o.index)}>
                 {o.label}
               </button>
             ))}

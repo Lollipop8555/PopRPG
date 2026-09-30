@@ -10,6 +10,7 @@
  * - 立绘：职业缺位**先回退 `role.portraits.player`**；怪物与 NPC 缺位即不渲染，**不跨条借用**。
  * - 衬底：字符串写法等价于只写 `fill`；`stroke` 独立设置，未给即不绘制描边。
  * - 容器：对话框 / 抽屉 / 气泡三种容器各查 `window.surfaces` 一个键，**互不借用**。
+ * - 按钮：七个键各查 `window.buttons` 自己的键，**互不借用**；V1 只取 `normal` 态。
  * - 地图标记：起点 / 终点 / 脚印三键各查 `misc.marks` 自己的键，**互不借用**（缺了照旧画程序图形）。
  * - 骰子：本体与骰面各一张；骰面 1–6 取点阵 `d1`–`d6`、其余点数取数字面 `numeric`。
  * - 道具 / 建筑：键一律为**组件 `id`**，不跨键借用；建筑贴图 `building.img` 缺位才回退
@@ -96,6 +97,36 @@ export type SurfaceKind = 'dialog' | 'drawer' | 'popover'
 /** 取容器底纹；`window.surfaces` 未配该键即 `undefined` */
 export function surfaceOf(win: SkinWindow | undefined, kind: SurfaceKind): SkinTexture | undefined {
   return win?.surfaces?.[kind]
+}
+
+/**
+ * **按钮键**（`skin/03-window.md` §四）：键按**元素角色**判定，不按 CSS 类名判定——
+ * `plain` 是 `.btn` 本身（中性按钮），`primary` / `danger` / `ghost` / `small` 是它的四个修饰类，
+ * `icon`（只有图形、无文字的按钮）与 `close`（关闭）由调用点在落点处显式指定。
+ * 键集合允许自定义；配了无人读取的键即静默搁置，与其余各节一致。
+ */
+export type ButtonKind = 'plain' | 'primary' | 'danger' | 'ghost' | 'small' | 'icon' | 'close'
+
+/** 按钮键的固定顺序（清单展示与遍历用） */
+export const BUTTON_KINDS: readonly ButtonKind[] = [
+  'plain',
+  'primary',
+  'danger',
+  'ghost',
+  'small',
+  'icon',
+  'close',
+]
+
+/**
+ * 取按钮素材的 **`normal` 态**（`skin/03-window.md` §四）：`normal` 是四态对象里的唯一必填项，
+ * 字符串写法等价于只写 `normal`；四态对象缺 `normal` 即 `undefined`（整颗按钮走 CSS）。
+ * 其余三态（`hover` / `active` / `disabled`）V1 不读取，仍由 CSS 表现（`KW-6`）。
+ */
+export function buttonOf(win: SkinWindow | undefined, kind: ButtonKind): SkinTexture | undefined {
+  const button = win?.buttons?.[kind]
+  if (button === undefined) return undefined
+  return typeof button === 'string' || 'img' in button ? button : button.normal
 }
 
 /**

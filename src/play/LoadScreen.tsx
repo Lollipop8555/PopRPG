@@ -17,6 +17,7 @@ import { navigate } from '../app/router'
 import { APP_VERSION, changelog } from '../lib/version'
 import Overlay from '../ui/Overlay'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { useButtonStyle } from '../ui/useButtonStyle'
 import { useStartupArt, useStartupBgStyle, useStartupDiceBody } from '../ui/usePageSkin'
 import { useDieFace } from '../ui/useDieSkin'
 import { CSS_SIZED_BOX, InlineTexture, SvgTexture } from '../ui/Texture'
@@ -45,6 +46,12 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
   const startSaved = usePlayStore((s) => s.setSession)
   // 更新记录弹窗也是对话框（`skin/03-window.md` §四）：封面本身归 `startup.bg`（`08-pages.md`）
   const surface = useSurfaceStyle('dialog')
+  // 按钮按元素角色各取一键（§四）：封面不另立按钮字段，直接复用 `window.buttons`（`08-pages.md` §一）
+  const startBtn = useButtonStyle('primary')
+  const plainBtn = useButtonStyle('plain')
+  const ghostBtn = useButtonStyle('ghost')
+  const smallBtn = useButtonStyle('small')
+  const closeBtn = useButtonStyle('close')
   // 封面三件：整屏背景 / 标题字形 / 主视觉（`skin/08-pages.md` §2.1）
   const bg = useStartupBgStyle()
   const titleArt = useStartupArt('title', CSS_SIZED_BOX)
@@ -137,34 +144,34 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
         </div>
 
         <div className="cover-actions">
-          <button className="btn primary cover-start" onClick={fromBuild}>
+          <button className="btn primary cover-start" style={startBtn} onClick={fromBuild}>
             <Sword size={22} /> 开始冒险
           </button>
-          <button className="btn cover-build" onClick={() => navigate('build')}>
+          <button className="btn cover-build" style={plainBtn} onClick={() => navigate('build')}>
             <Hammer size={16} /> 构建世界
           </button>
         </div>
 
         <div className="cover-more">
-          <button className="btn ghost" onClick={() => setMoreOpen((o) => !o)}>
+          <button className="btn ghost" style={ghostBtn} onClick={() => setMoreOpen((o) => !o)}>
             {moreOpen ? '收起其他开始方式' : '其他开始方式'}
           </button>
           {moreOpen && (
             <>
               <div className="cover-more-body">
-                <button className="btn" onClick={fromFile}>
+                <button className="btn" style={plainBtn} onClick={fromFile}>
                   <FileDown size={14} /> 选一份 .pmod
                 </button>
-                <button className="btn" onClick={fromSave}>
+                <button className="btn" style={plainBtn} onClick={fromSave}>
                   <FileUp size={14} /> 载入 .psave 存档
                 </button>
               </div>
               <div className="sketch-line" style={{ width: 220, margin: '2px 0' }} />
               <div className="cover-more-body">
-                <button className="btn small" onClick={exportLibrary}>
+                <button className="btn small" style={smallBtn} onClick={exportLibrary}>
                   <LibraryBig size={13} /> 导出组件库
                 </button>
-                <button className="btn small" onClick={importLibrary}>
+                <button className="btn small" style={smallBtn} onClick={importLibrary}>
                   <FileDown size={13} /> 导入组件库
                 </button>
               </div>
@@ -194,7 +201,7 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
               <span className="hand" style={{ fontSize: 16 }}>
                 更新记录
               </span>
-              <button className="btn small" onClick={() => setVersionOpen(false)}>
+              <button className="btn small" style={closeBtn} onClick={() => setVersionOpen(false)}>
                 关闭
               </button>
             </div>

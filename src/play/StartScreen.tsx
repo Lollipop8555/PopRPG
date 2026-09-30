@@ -17,6 +17,7 @@ import { useSkinStore } from '../store/skin'
 import { RoleGlyph } from '../ui/RoleGlyph'
 import { Portrait, portraitTile } from '../ui/Portrait'
 import { useLobbyBgStyle, useLobbyCardStyle, useLobbyPanelStyle } from '../ui/usePageSkin'
+import { useButtonStyle } from '../ui/useButtonStyle'
 
 export default function StartScreen({
   scenario,
@@ -47,6 +48,9 @@ export default function StartScreen({
   // 卡片两态各算一次：`selected.img` 缺位时沿用卡底、只换描边（§2.2 `card.selected`）
   const cardStyle = useLobbyCardStyle(false)
   const selectedCardStyle = useLobbyCardStyle(true)
+  // 按钮（`skin/03-window.md` §四）：该屏不另立按钮字段，直接复用 `window.buttons`（`08-pages.md` §一）
+  const plainBtn = useButtonStyle('plain')
+  const primaryBtn = useButtonStyle('primary')
 
   // 玩家自己掷骰决定出身（带一个短暂的摇骰过程）
   const roll = () => {
@@ -61,7 +65,7 @@ export default function StartScreen({
     <div className="play-shell start-screen" style={bg}>
       <div className="panel topbar">
         <span className="title hand">{scenario.name}</span>
-        <button className="btn" onClick={onCancel}>
+        <button className="btn" style={plainBtn} onClick={onCancel}>
           换一局
         </button>
       </div>
@@ -140,11 +144,16 @@ export default function StartScreen({
 
           <div className="start-actions">
             {list.length > 1 && (
-              <button className="btn" onClick={roll} disabled={rolling}>
+              <button className="btn" style={plainBtn} onClick={roll} disabled={rolling}>
                 {rolling ? '🎲 掷骰中…' : '🎲 掷骰决定出身'}
               </button>
             )}
-            <button className="btn primary" disabled={!selected} onClick={() => selected && onStart(selected.id)}>
+            <button
+              className="btn primary"
+              style={primaryBtn}
+              disabled={!selected}
+              onClick={() => selected && onStart(selected.id)}
+            >
               出发
             </button>
           </div>
