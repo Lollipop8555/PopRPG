@@ -154,7 +154,8 @@ describe('落点 2：常驻 HUD 与菜单（§四）', () => {
     fireEvent.click(container.querySelector('button[title="菜单"]')!)
 
     const items = [...document.querySelectorAll('.sheet-actions .btn')]
-    expect(items.length).toBe(6)
+    // 四个抽屉 / 存档 / 退出 ＋ 定位线开关（开关也是中性项，走 `plain`）
+    expect(items.length).toBe(7)
     for (const item of items) expect(bgOf(item)).toContain(`blob:${PLAIN}`)
     expect(bgOf(byText('关闭'))).toContain(`blob:${CLOSE}`)
     expect(bgOf(items[0])).not.toContain(CLOSE)

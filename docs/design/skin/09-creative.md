@@ -2,7 +2,7 @@
 
 > **上层索引**：[`../skin.md`](../skin.md)　**包结构**：[`00-package.md`](00-package.md)
 > **设计依据**：2026-09-29 裁决 9 / 10（build 模式可加载 pp 预览地图；新增 Creative 模式用于构建 pp）＋ 裁决 21（内置**九宫格切分工具**；字体**不做**额外处理）
-> **状态**：新增（含 1 处待确认）
+> **状态**：**已落地**（截至 2026-09-30，含 1 处待确认）——第三个顶层模式已接入（`src/app/router.ts` 三支 `#/` / `#/build` / `#/creative`），实现落点见 §六。
 
 ## 一、定位
 
@@ -35,19 +35,25 @@ Creative 模式是**第三个顶层模式**，与既有两模式并列：
 - 绑定即写回 manifest 的对应字段，不复制文件内容（导出时按推荐约定写入 `resource/<节>/` 子目录，manifest 中记**相对包根**的完整路径——素材位置以描述文件为准，目录名不构成约束，裁决 19 / 22）。
 - 绑定后立即在同一屏内显示**预览缩略图**与「原始尺寸 / 目标尺寸 / 是否成整倍数」。
 
-### 2.3 九宫格切分工具（裁决 21）
+### 2.3 九宫格 / `.9.png` 切片设置面板（裁决 21 / 28）
 
-针对 `.9.png` 的「黑边浏览器读不到」问题，Creative 提供**切分工具**：
+**这一栏面向所有「需要拉伸」的素材**（窗体 / 面板 / 按钮 / 建筑 / 色块……，[`../skin.md`](../skin.md) §二 裁决 28）：**任何**已绑定的槽位都带一条「九宫格」属性栏，**不限 `.9.png` 命名**——`.9.png` 只是命名预留；**运行期只认 manifest 里的 `slice`**，`.9.png` 的黑边浏览器读不到。
 
 | 步骤 | 行为 |
 |---|---|
 | 导入 | 取一张整图（`.9.png` 或普通图），显示原始像素尺寸 |
 | 定线 | 拖出**四根参考线**（上 / 右 / 下 / 左），实时预览九宫格分区与四角、四边、中心各自的范围 |
-| 写入 | 一键把 `slice: [上, 右, 下, 左]` 写回该素材所在的 manifest 字段 |
+| 数值 | 四个数值输入框（px，非负整数）与四根参考线**双向联动**：拖线改数、改数动线 |
+| 黑边识别 | 读入 `.9.png` 时若检测到 Android 约定的 1px 黑边标记，**自动把参考线摆到黑边位置**作初值；**黑边只读不写**（不生成、不导出，取舍 `S-16`） |
+| 中心填充 | `fill` 开关 ＝ 切片末是否带 `fill`（中心区是否用图填充），与 DOM 层写法一致（[`../skin.md`](../skin.md) §3.3） |
+| 写入 | 一键把 `slice: [上, 右, 下, 左]`（含 `fill`）写回该素材所在的 manifest 字段 |
 | 导出切片 | 可选：把九张切片另存为独立素材写进包内（便于人工核对或交给外部工具继续处理） |
 
-- **不改变 V1 的渲染规则**：V1 仍按普通拉伸绘制（取舍 `S-1`）；本工具产出的是**参数与可选切片**，供 V1.1 的 `nine` 策略消费。
-- 工具只做「按参考线切分」，不做抠图、改色、重绘（取舍 `S-16`）。
+- **实时预览**：面板内自带一个可拖动改变尺寸的预览框（另给宽 / 高滑杆），边拖边看拉伸结果，并标出「四角 / 四边 / 中心」各自被拉伸的区域。
+- **即时校验**：`上 ＋ 下 ≥ 图高`、或 `左 ＋ 右 ≥ 图宽` 时中间区为负——当场标红，并把该槽位计入配置清单（与 build 一致：提示但不阻断导出）。
+- **不做逐轴「拉伸 / 平铺」开关**：面板只设 `slice` ＋ `fill`。平铺是**独立策略**、不进九宫格面板（`tile` 的唯一候选是定位线，[`../skin.md`](../skin.md) §3.4 裁决 29）。
+- **不改渲染规则**：本面板只产出**参数与可选切片**。DOM 层（面板 / 弹窗 / 按钮 / 格子 / 条 / 提示条 / 分隔线）已按 `border-image` 九宫格绘制（D3 第十三屏）；**SVG 层**（道路 / 地图 / 画布 / 棋子）仍走 `preserveAspectRatio`，要走九宫格得另起切块拼装，**尚未落地**（[`../skin.md`](../skin.md) §3.3）。
+- 面板只做「按参考线切分」，不做抠图、改色、重绘（取舍 `S-16`）。
 
 ### 2.4 命中检查（本模式的核心价值）
 
@@ -87,3 +93,24 @@ Creative 模式是**第三个顶层模式**，与既有两模式并列：
 ## 五、待确认
 
 1. **`.pgame` 导出时 `.pmod` 的来源**：取当前 build 工程、还是允许在 Creative 内临时选择一份 `.pmod` 文件？当前按「取当前工程，且允许临时选择」撰写。
+
+## 六、实现落点
+
+当前按「在 Creative 内临时选择一份 `.pmod`」落地（§五·待确认 1 的宽松侧）。
+
+| 关注点 | 文件 | 要点 |
+|---|---|---|
+| 路由（第三支） | [`../../../src/app/router.ts`](../../../src/app/router.ts) | `Route = 'play' \| 'build' \| 'creative'`，`#/creative`；入口在构建页顶栏菜单（`三个顶层模式` 互相可达） |
+| 页面外壳 | [`../../../src/creative/CreativeApp.tsx`](../../../src/creative/CreativeApp.tsx) | §2.1 三栏：顶栏 / 左栏槽位 / 中栏（预览 · 命中检查 · 道路矩阵三页）/ 右栏检视器 ＋ 底部提示条；窄屏走 `.drawer-toggle` 抽屉 |
+| 工程状态 | [`../../../src/store/creative.ts`](../../../src/store/creative.ts) | `persist`（`localStorage` 键 `poprpg_creative`，只存描述与素材清单）＋ 素材字节走 IndexedDB（与皮肤库同一套 `BlobStore`）；`hydrate()` 刷新后回捞字节并按存下的 `.pmod` 文本重建靶子 |
+| 靶子与骨架 | [`../../../src/creative/target.ts`](../../../src/creative/target.ts) | `readPmodTarget()` 读出该局启用组件与全部道路 flag；`skeletonManifest()` / `blankManifest()` 出骨架与空白 |
+| 槽位与绑定 | [`../../../src/creative/slots.ts`](../../../src/creative/slots.ts) | `enumerateSlots()` / `matchSlot()`（`<元素>_<变体>.<ext>` 建议名，先精确后宽松）/ `writeSlot()` / `clearSlot()` |
+| 九宫格切分（裁决 21） | [`../../../src/creative/nine.ts`](../../../src/creative/nine.ts) ＋ `NineSlicePanel.tsx` | 四根参考线可拖可填数、实时预览、写回 `slice`、可另存九张切片；**不改 V1 的拉伸渲染** |
+| 命中检查 | [`../../../src/creative/hits.ts`](../../../src/creative/hits.ts) ＋ `HitCheckPanel.tsx` / `RoadMatrixPanel.tsx` | 已命中 / 走通用 / 程序绘制三类；道路 `16 × 16` flag 矩阵 ＋「按 flag / 按姿态」两视图（§2.5 的两种视图在此） |
+| 打包与预览图 | [`../../../src/creative/package.ts`](../../../src/creative/package.ts) / `preview.ts` | `packSkin()` / `packPGame()` / `readSkinPackage()` 统一走 `fflate`；`renderPreviewPng()` 出 `preview.png` |
+| 预览（§2.5） | [`../../../src/creative/CreativePreview.tsx`](../../../src/creative/CreativePreview.tsx) | 靶子 `.pmod` → `startSession()` → **复用游玩页 `MapView`**，把本工程 manifest 与素材源作**覆盖入参**顶进去（不写全局皮肤，故不影响游玩页）；「只看素材」由 `MapView` 的 `onlyAssets` 脱掉程序绘制兜底 |
+| 导入即入库（裁决 15） | [`../../../src/creative/CreativeTopBar.tsx`](../../../src/creative/CreativeTopBar.tsx) | `readSkinPackage()` → `mergeSkin()`（逐节点合并、同名以导入者为准）→ `createSkinLibrary().add()`（包体原封入库、**不自动启用**）；**导出产物不自动入库** |
+| 编辑器自身 UI 不接管素材（`S-18`） | 各 `src/creative/*.tsx` | 只用程序绘制的基础样式与 lucide 图标，素材只出现在预览与槽位缩略图 |
+| 不做其它图片编辑（`S-16` / `S-27`） | — | 除九宫格切分外不内置裁剪 / 抠图 / 改色 / `.9.png`；包内字体原样打包、不子集化 |
+
+**已知边界**：`window` §四.2 信息图标组合、`misc` 其余项（`node.building` 九宫格 / 引导线 `tile` / `dice.rolling`）与 D6 校验清单接入（`KP-*` 进 `build/Checklist.tsx`）**尚未落地**，不在本次范围内。

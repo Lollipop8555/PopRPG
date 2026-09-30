@@ -43,7 +43,7 @@
 ## D2 贴图渲染器
 
 - [x] `drawTexture(target, src, box, opts)` 单一抽象；`opts = { mode: 'stretch' | 'nine' | 'tile', slice?, rotate?, flip? }`（[`skin.md`](../docs/design/skin.md) §四）——**落点**：`src/ui/Texture.tsx` 的 `textureProps(ref, assets, box, extra)` 为唯一入口（取图 → 落位 → 换地址，画不出来返回 `undefined`）；`target` 在 React 里体现为**选用哪个渲染器**，不做运行期分支
-- [x] V1 只实现 `stretch`（`<image preserveAspectRatio="none">`）；`nine` / `tile` 仅预留参数位，V1 不解析九宫格（取舍 `S-1`；**切分工具**在 D4，但 V1 渲染不变，裁决 21）——**落点**：`src/engine/skin/texture.ts` 的 `effectiveMode()`（`nine` 要「策略 ＋ 切片」齐备才成立、否则回落 `stretch`；`tile` 独立成立）。**DOM 层的 `nine` 已提前落地**（D3 第十三屏）：新增 `surfaceMode(ref)`（素材带 `slice` → `nine`）＋ `src/ui/Texture.tsx` 的 `nineStyle()` 出 `border-image`，容器 / 按钮 / 格子 / 条 / 提示条 / 分隔线六处一次升级、调用方一行不动（[`skin/03-window.md`](../docs/design/skin/03-window.md) §八「九宫格」）；`tile` 仍待裁决（§七.2）；**SVG 层（地图 / 画布 / 棋子）本批不动**
+- [x] V1 只实现 `stretch`（`<image preserveAspectRatio="none">`）；`nine` / `tile` 仅预留参数位，V1 不解析九宫格（取舍 `S-1`；**切分工具**在 D4，但 V1 渲染不变，裁决 21）——**落点**：`src/engine/skin/texture.ts` 的 `effectiveMode()`（`nine` 要「策略 ＋ 切片」齐备才成立、否则回落 `stretch`；`tile` 独立成立）。**DOM 层的 `nine` 已提前落地**（D3 第十三屏）：新增 `surfaceMode(ref)`（素材带 `slice` → `nine`）＋ `src/ui/Texture.tsx` 的 `nineStyle()` 出 `border-image`，容器 / 按钮 / 格子 / 条 / 提示条 / 分隔线六处一次升级、调用方一行不动（[`skin/03-window.md`](../docs/design/skin/03-window.md) §八「九宫格」）；`tile` **已裁决不进本节**（裁决 29：分隔线走单轴九宫格，唯一候选＝定位线，见 `misc` 条）；**SVG 层（地图 / 画布 / 棋子）本批不动**
 - [x] 渲染器为**纯函数 + 单一入口**：业务代码内**禁止**判断素材类型（不写 `if (is9Patch)`）——**落点**：几何与取图归纯函数 `src/engine/skin/texture.ts`（三写法归一 `spriteRef` / 单张 `textureRef`、绕心旋转镜像 `placeTexture`、角度归一），地址归 `src/io/skin-assets.ts`（按需建、`release()` 一次撤，裁决 15）；业务侧只拿 `TextureProps`
 - [x] DOM 层（面板 / 弹窗）与 SVG 层共用同一调用接口（两侧实现可不同）——**落点**：同一份 `TextureProps` 两个实现——`SvgTexture`（`<image>`，绕盒心 `transform`）与 `DomTexture`（`<img>` 绝对定位，`rotate` / `scaleX(-1)` ＋ `transform-origin: center`，要求父元素 `position: relative`）
 - [x] 位图素材**不套手绘滤镜**（`S-6`）；纸纹与手绘分隔线仍由 CSS 承担，素材接管时不得双层叠加（[`skin.md`](../docs/design/skin.md) §3.4）——**落点**：素材节点一律不写 `filter`（手绘滤镜只由程序绘制的图形显式加 `url(#poprpg-sketch)`），并统一 `pointerEvents: none`（素材不参与点击命中）
@@ -63,7 +63,7 @@
 - [ ] `window` §四.2 **信息图标组合**（裁决 12）：`background` 衬底在下 ＋ `icon` 居中在上；名称与说明文字走**窗体自身**字体字色，**不读** `building.font` / `fontColor`
 - [x] `misc` **地图标记 ＋ 骰子**：起点 / 终点 / 脚印与骰子本体 / 骰面（[`skin/04-misc.md`](../docs/design/skin/04-misc.md) §二、§三、§十）——**落点**：取图 `markOf(misc, kind)`（`start` / `end` / `footprint` 三键**不跨键借用**）、`dieBodyOf()`（一张通吃 46 / 38 / 34 三档）、`dieFaceOf(misc, pips)`（`1`–`6` → 点阵，**其余点数一律 `numeric`**）；**标记**走 SVG 层、盒＝**整格**（与道路同一约定，图形自己居中留白；原程序绘制旗 / 叉占格 86%、脚印 60%），落点 `src/play/MapView.tsx`（**脚印只在 `road` 缺图时**顶替 `<Footprint>`）；**骰子本体**走 CSS 背景 `surfaceStyle(…, 'contain')`（等比进 `.die` 盒、绝**不拉伸**），五处 `.die` 盒同吃一张（HUD 46 / 对战 38 掷骰中 ＋ 30 定格 / 对话 34 / 流水 34）；**骰面**走行内层 `InlineTexture` ＋ `.die-face`（尺寸随本体），四个调用处共用 `src/play/DiceLog.tsx` 的 `DieFace`；**缺图一律回退程序图形**（旗 / X / 脚印 / 点阵 / 数字文本），贴图不套手绘滤镜；§三 的镜像 / 旋转复用由包里对象式显式声明、**默认不启用镜像**；**构建页 `src/build/Canvas.tsx` 不接**
 - [x] `misc` **图标（按名索引）**（[`skin/04-misc.md`](../docs/design/skin/04-misc.md) §四、§十）：`misc.icons.<lucide 图标名>`——**落点**：取图 `iconOf(misc, name)`（`src/engine/skin/lookup.ts`，清单 `ICON_NAMES` 九个名字；**不跨名借用**，清单外名字静默搁置）、落图走**行内层** `InlineTexture`（与内容 emoji 同一档：**不套手绘滤镜、不加衬底**；素材占 lucide 那档 `size × size` 的盒 → **换与不换都不动布局**）、入口组件 `src/ui/GameIcon.tsx`（`name` / `icon` / `size`，未配 / 缺图 / 未启用皮肤一律原样回退那个 lucide 元件）、接线 `src/ui/useIconSkin.ts`（`iconOf()` → `textureRef()` → `textureProps()`）；**落点八个文件、九个名字**（加载屏 `Sword` / `Hammer` / `FileDown` / `FileUp` / `LibraryBig`、顶栏 `Menu` / `Flag`、骰子 `StepForward`、四面板关闭 `X`）；**内容 emoji**（职业 / 道具 / 怪物 / 技能）不归这里、走 `role` / `item` 各节；**兜底字形** `🙂` `✦` `❔` `🎲` `🔒` **永远不可覆盖**；**构建页不接**
-- [ ] `misc` 其余：**建筑节点 `node.building`**（随格数拉伸、**必须九宫格** `KM-1`，V1 无 `slice` → **V1.1**；**已被用作 `building.img` 缺位的回退通用件**、按**普通拉伸**顶替，见 `item` / `building` 条）/ **引导线**（属**平铺** `tile`，V1 无该策略 → **V2.2**）/ 骰子动画态 `die.rolling`（**待确认 2** 未裁决，暂用 `🎲`）；`KM-1`–`KM-3` 的清单提示等校验层（`SkinIssueCode` 现只有 `KP-*`）
+- [ ] `misc` 其余：**建筑节点 `node.building`**（随格数拉伸、**必须九宫格** `KM-1`，V1 无 `slice` → **V1.1**；**已被用作 `building.img` 缺位的回退通用件**、按**普通拉伸**顶替，见 `item` / `building` 条）/ **引导线**（＝**定位线**，属**平铺** `tile`，V1 无该策略 → **V2.2**；**当前位置线是程序绘制的虚线，游玩菜单已给出开 / 关**——`MapView` 的 `guides`，裁决 27）/ 骰子动画态 `die.rolling`（**待确认 2** 未裁决，暂用 `🎲`）；`KM-1`–`KM-3` 的清单提示等校验层（`SkinIssueCode` 现只有 `KP-*`）
 - [x] `background`（画布）：**下标一一对应、每张地图只渲染一层** / 越界降级为最后一层 / 图点与格 `[0,0]` 中心对齐 / 跟随 `cellSize` 缩放 / 图外填充色取**采用层**的值 / 无可用层即默认配置（裁决 17，修订 23；[`skin/05-canvas.md`](../docs/design/skin/05-canvas.md)）——**落点**：取层与落位归纯函数 `src/engine/skin/canvas.ts`（`backgroundUsable()` 判掉 `KB-1`、`backgroundOf()` 吃 `available` 判掉 `KB-2` 并向前回退、`backgroundPlacement()` 出倍率与左上角落点）；渲染在 `src/play/MapView.tsx`（底纹色取采用层 → `translate/scale` 的 `<g>` 里一张背景图 → 参照线 / 道路）；图**按素材自身像素**出图（取图盒 `w/h: 'auto'`，SVG 层不写 `width`/`height`），故无需解码量尺寸。**构建页画布（`src/build/Canvas.tsx`）本轮未接**，仍画纸面底纹
 - [x] `item` / `building` **（`item` 全落；`building` 落地图节点）**：**取图** `itemSkinOf()` / `buildingSkinOf()`（键一律组件 `id`、**不跨键借用**）、`groundPaint(field, fallback?)`（字符串＝只写 `fill`；**三项全空即整节未接管**、判的是原字段）、`buildingImgOf(building, misc, id)`（`building[<id>].img ?? misc.nodes.building` 全篇唯一跨节回退，节点查不到组件时不拿空串撞键）；**衬底落法** `Texture.tsx` 的 `groundStyle()`——`img` → 背景图（`100% 100%`）、`fill` → 背景色、`stroke` → `border-color`，**未给 `stroke` 写 `transparent` 只为不改盒尺寸**，整节未接管即不传 `style`；**道具**走 `ui/ItemGlyph.tsx`（行内层 `InlineTexture`／缺图原样输出 `icon` 字形），落点 `play/BagPanel.tsx` 的背包格 ＋ 穿戴格（`.bag-cell` 衬底，`fill` 兜底＝组件 `color` → `fallbackColor(id)`）与 `play/EquipPanel.tsx` 的穿戴行 ＋ **更换气泡候选**，**`bag-name` 字体字色不接**（归窗体）；**建筑**在 `play/MapView.tsx` 的 `NodeShape`——`img` 可用即 `<g rotate(-0.6°)> ＋ SvgTexture` **整图替换 `rect`**（`+3 / −6` 保留 3px 内缩，`S-9`）且**不再画图标字形**，未出图时 `background` 接管 `rect`（`fill` α0.42、**`stroke` 缺省即 `transparent` ＋ `stroke-width: 0`**，裁决 18），两件都缺即程序绘制照旧；名称 `fontColor` 与 `font`（`ui/skinFont.ts` 的 `usePackFont()`：包内文件注入 `@font-face`、族名取文件名去扩展名，**内置字体名原样交给 CSS、缺文件回退内置字体** `KIB-4`；字号固定 11px，`S-10`）。**未接**：物品／建筑**信息视图**与**组件库**（等 `03-window.md` §四.2 与构建页排期）、`KIB-*` 校验层（`SkinIssueCode` 现只有 `KP-*`）、`misc.nodes.building` 的**九宫格**（`KM-1` → V1.1）。**背包格上 `item.background` 与 `window.slots.bag` 的关系已定**（道具衬底优先、格位底纹兜底，见上面的 `window` 固定族格子条 / [`skin/03-window.md`](../docs/design/skin/03-window.md) §4.3）
 - [x] `startup` / `lobby`：APP 欢迎页与游戏首页／选角页面，**首页封面图归皮肤侧**（`bg`，`.pmod` 不设字段）；字体与字色**不由**这两节接管（裁决 20；[`skin/08-pages.md`](../docs/design/skin/08-pages.md)）——**落点**：取图 `pageFitOf()`（`cover` / `contain` / `tile`，**非法值与缺省一律回退 `cover`**，`KPG-1`）、`pageBgOf()`（两屏**各查自己那一节的 `bg`、互不借用**）、`startupArtOf(startup, art)`（`title` / `cover` / `dice` 三键一个入口）、`lobbyCardPaint(lobby, selected)`（`selected.img` 缺位**沿用卡底**、`stroke` 只在选中态给）；**整屏背景**落法 `Texture.tsx` 的 `pageBgStyle(ref, assets, fit)`——`cover` / `contain` → `background-size` 同名值 ＋ `no-repeat`，`tile` → `auto` ＋ `repeat`，一律居中，**只写 image 与铺法、不动 `background-color`**（`contain` 留的边由主题底色兜着，`S-26`）；**欢迎页** `play/LoadScreen.tsx`——整屏背景落 `.play-shell.no-topbar`（不是带留白的内层 `.load-cover`）、`title` 走**行内层** `InlineTexture`（盒 `CSS_SIZED_BOX`，尺寸交给新增的 `.cover-title .cover-title-art`：高 `0.86em`、宽由素材宽高比推出、绝不拉伸；**文案不变、落在 `alt`**，`S-14`）、`cover` 用 `SvgTexture` 整块替换洞穴手绘（复用现成 `<svg class="cover-cave" viewBox="0 0 120 92">` 当盒）、`dice` 只给**本体**（`surfaceStyle(…, 'contain')`，与 `misc.dice.body` 同档）＋ **骰面复用 `misc.dice`**（直接渲染 `DieFace`，本节**不另设骰面字段**，`KPG-4`；没配骰面仍是程序数字面，缺省观感不变）；**游戏首页** `play/StartScreen.tsx`——`bg` 落 `.play-shell.start-screen`、`panel` 落 `.panel.scroll`（V1 拉伸）、`card` 落每张 `.class-card`（`img` 铺满整卡、`stroke` **只写选中那一张**、未选中**不碰** `border-color` 交还 CSS）；接线 `ui/usePageSkin.ts`（`useStartupBgStyle` / `useLobbyBgStyle` / `useLobbyPanelStyle` / `useLobbyCardStyle` / `useStartupArt` / `useStartupDiceBody`）。**未接**：封面标语 / 副标题 / 版本号 / 警告条的文字字体（`S-15`）、职业图标与立绘（归 `02-role.md`）、按钮与徽章（归 `03-window.md`）；`card` / `panel` 的 `slice` **九宫格已随 D3 第十三屏生效**（都走 `surfaceStyle()`，`panel` 的 `pageSkin` 测试标题已随之改写），`dice` 走 `contain` 铺法、不受切片影响
@@ -71,17 +71,22 @@
 
 ## D4 Creative 模式（第三个顶层模式）
 
-- [ ] 路由与模式入口：`src/app/router.ts` 现为 `play` / `build` 两支，扩为三支，`Route` 类型同步
-- [ ] 新建：空白骨架；或**从 `.pmod` 生成骨架**（读出该局启用组件与地图用到的全部道路 flag，逐槽位生成空值待填条目）
-- [ ] 打开：`.pp`（zip，`fflate` 解包）或本地目录；导入：与用户皮肤**逐节点**合并（同名以导入者为准）；**导入即入皮肤库，导出产物不自动入库**（裁决 15）
-- [ ] 导出：`.pp`；或 `.pgame`（`pack.json` ＋ 当前 `.pmod` ＋ 当前皮肤打包）——**打包/解包统一走 `fflate`**（裁决 14 / 19）
-- [ ] 素材绑定：拖入图片按 `<元素>_<变体>.<ext>` 自动匹配槽位，未识别者进「未绑定素材」暂存区；绑定即写回 manifest（写**相对包根**路径）、不复制文件内容；同屏显示预览缩略图与尺寸比
-- [ ] **九宫格切分工具（裁决 21）**：导入整图 → 拖四根参考线（上／右／下／左）→ 实时预览九宫格分区 → 写回 `slice` ＋ 可选另存九张切片（[`skin/09-creative.md`](../docs/design/skin/09-creative.md) §2.3）；**不改变 V1 的拉伸渲染**
-- [ ] 命中检查：**已命中 / 走通用 / 程序绘制**三类清单，「程序绘制」列为缺图清单并给出建议文件名；道路另给 `16 × 16` flag 矩阵视图（可直接绑定素材）
-- [ ] 预览：被编辑 `.pp` ＋ 靶子 `.pmod`；「只看素材」开关；道路「按 flag / 按姿态」两种视图
-- [ ] Creative 编辑器自身 UI **不接管素材**（避免自举循环，取舍 `S-18`）
-- [ ] 存储：编辑中的工程与素材 blob 与 build 项目同级存本地，导出时才打包；打开高版本包时保存**不降级**版本号
-- [ ] 除九宫格切分外**不内置其它图片编辑**（裁剪构图 / 抠图 / 改色 / 生成 `.9.png` 黑边，`S-16`）；**字体不做子集化**，原样打包、超大仅提示（裁决 21，`S-27`）
+> **已接**（2026-09-30）：`#/creative` 三支路由 ＋ 页面三栏 ＋ 中栏三页；工程状态、靶子/骨架、槽位与绑定、九宫格切分、命中检查、预览、打包/解包、导入入库全部落地，实现落点见 [`skin/09-creative.md`](../docs/design/skin/09-creative.md) §六。
+> **剩余两处**（**不臆造数据/不越设计**，故留白并记待办）：
+> ① 「目标尺寸 / 是否成整倍数」需要一份**目标尺寸表**（文档只有尺寸行，无机器可读数据）——当前检视器只给缩略图 ＋ **原始尺寸**；
+> ② 九宫格面板的**分区高亮实时预览**与「可拖尺寸的拉伸预览框」未落地（拖线/填数/黑边识别/成对校验/另存九张已在）。
+
+- [x] 路由与模式入口：[`../src/app/router.ts`](../src/app/router.ts) 扩为 `Route = 'play' | 'build' | 'creative'`（`#/creative`），入口挂在构建页顶栏菜单（与游玩页并列），创意页顶栏亦可互达
+- [x] 新建：空白骨架（`blankManifest()`）；或**从 `.pmod` 生成骨架**（[`../src/creative/target.ts`](../src/creative/target.ts) 的 `readPmodTarget()` 读出该局启用组件与地图用到的全部道路 flag，`skeletonManifest()` 逐槽位生成空值待填条目）
+- [x] 打开：`.pp`（zip，`fflate` 解包）＋ **本地目录**（`pickDirectory()` → [`../src/creative/package.ts`](../src/creative/package.ts) `readSkinDirectory()`，剥掉公共顶层目录后走**同一条** `readSkinEntries()`）；导入：与用户皮肤**逐节点**合并（`mergeManifest()`，同名以导入者为准）；**导入即入皮肤库**（`createSkinLibrary().add()`，**不自动启用**），导出产物不自动入库
+- [x] 导出：`.pp`（`packSkin()`）；或 `.pgame`（`packPGame()` —— `pack.json` ＋ 当前 `.pmod` ＋ 当前皮肤）——**打包/解包统一走 `fflate`**（裁决 14 / 19）
+- [x] 素材绑定：拖入图片按 `<元素>_<变体>.<ext>` 建议名自动匹配槽位（先精确后宽松，`matchSlot()`），未识别者进「未绑定素材」暂存区；绑定即写回 manifest（写**相对包根**路径）、不复制文件内容；检视器同屏给缩略图 ＋ **原始尺寸**（目标尺寸/整倍数见上方待办①）
+- [x] **九宫格切分工具（裁决 21）**：[`../src/creative/NineSlicePanel.tsx`](../src/creative/NineSlicePanel.tsx) ＋ [`nine.ts`](../src/creative/nine.ts) —— 导入整图 → 拖四根参考线（上／右／下／左）或直接填数 → 显示**原始像素尺寸**与九格数值、黑边识别、四边成对校验 → 写回 `slice` ＋ 可另存九张切片（分区高亮与可拖预览框见待办②）；**不改变 V1 的拉伸渲染**
+- [x] 命中检查：**已命中 / 走通用 / 程序绘制**三类清单（[`hits.ts`](../src/creative/hits.ts) ＋ `HitCheckPanel.tsx`），「程序绘制」列为缺图清单并给出建议文件名；道路另给 `16 × 16` flag 矩阵视图（[`RoadMatrixPanel.tsx`](../src/creative/RoadMatrixPanel.tsx)，可直接绑定素材）
+- [x] 预览：被编辑工程 ＋ 靶子 `.pmod`（[`CreativePreview.tsx`](../src/creative/CreativePreview.tsx)）：靶子 → `startSession()` → **复用游玩页 `MapView`**（以入参覆盖 manifest/素材，不写全局皮肤）；「只看素材」开关（`MapView` 的 `onlyAssets` 脱掉程序绘制兜底）；道路「按 flag / 按姿态」两种视图在中栏「道路矩阵」页
+- [x] Creative 编辑器自身 UI **不接管素材**（避免自举循环，取舍 `S-18`）——只用程序绘制样式与 lucide 图标，素材只出现在预览与槽位缩略图
+- [x] 存储：[`../src/store/creative.ts`](../src/store/creative.ts) `persist`（`localStorage` 键 `poprpg_creative`，只存描述与素材清单）＋ 素材字节走 IndexedDB（与皮肤库同一套 `BlobStore`），与 build 项目同级；导出时才打包；打开高版本包时 `mergeManifest()` 深合并**保号不降级**
+- [x] 除九宫格切分外**不内置其它图片编辑**（裁剪构图 / 抠图 / 改色 / 生成 `.9.png` 黑边，`S-16`）；**字体不做子集化**，原样打包、超大仅提示（裁决 21，`S-27`）
 
 ## D5 build 模式加载 pp（仅预览）
 
@@ -163,7 +168,7 @@
 
 **2026-09-29 · V2.1 / V2.2 版本线**
 - 本里程碑拆为 **V2.1 ＝ SKIN 基础（D0–D3）** 与 **V2.2 ＝ SKIN 进阶 ＋ 音频（D4–D6）**，**排在 V2.0（新增 NPC）之后**——V1 口径（七大类 / 13 项 / 五选一）不受影响。
-- 「V1.1」字样一律读作 **V2.2**（音频播放 / 贴图 `nine` 策略 / 九宫格切片消费）——**其中 `nine` 的 DOM 层已提前到 V2.1**（D3 第十三屏，见 D2 条目与「九宫格」相关落点），**按钮三态也提前到 V2.1**（D3 第十四屏，原与九宫格同批），`tile` 平铺与 SVG 层切块拼装仍在 V2.2 线上。
+- 「V1.1」字样一律读作 **V2.2**（音频播放 / 贴图 `nine` 策略 / 九宫格切片消费）——**其中 `nine` 的 DOM 层已提前到 V2.1**（D3 第十三屏，见 D2 条目与「九宫格」相关落点），**按钮三态也提前到 V2.1**（D3 第十四屏，原与九宫格同批），`tile` 平铺与 SVG 层切块拼装仍在 V2.2 线上（`tile` 的唯一候选已收敛为**定位线**，裁决 29）。
 
 **2026-09-29 · D0 落地（类型与取图纯函数）**
 - 新增 `src/types/skin.ts`：manifest 顶层 16 键、三写法（`SkinSprite`）、图引用对象（`SkinImage`）、衬底三元组（`SkinGround`）、15 槽位常量 `ROAD_SLOTS`、音频键常量 `BGM_SCENES` / `SFX_EVENTS`、主题 token 白名单 `SKIN_THEME_TOKENS` / `SKIN_LAYOUT_TOKENS`、`.pgame` 容器 `PGamePack` 与约定缺省名；`src/types/index.ts` 已导出。
@@ -222,3 +227,15 @@
 - **接线**：对战 VS 区两侧各管各的（怪物锚 `monster.resources.hp` ＋ `monster.id`）、底栏 / 状态面板 / 地图棋子锚同一个主角 `hp`；棋子形变层**只包形象**，定位环不跟着压扁；形象格的文字落点不做形变。
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **38 个文件 / 437 项**全绿（新增 `hitPulse.test.tsx` 3 项、`portrait.test.tsx` 5 项、`portraitLandings.test.tsx` 4 项、`mapView.test.tsx` 3 项）。
 - 设计侧同步：[`../docs/design/skin/02-role.md`](../docs/design/skin/02-role.md) §十一 新增「受击表现」并撤掉「未落地」、[`../docs/DESIGN.md`](../docs/DESIGN.md) 与 [`../TASK.md`](../TASK.md) 进度同步。
+
+**2026-09-30 · D4 Creative 模式接线（第三个顶层模式从「未实现」到可用）**
+- **路由与入口**：[`../src/app/router.ts`](../src/app/router.ts) 扩为 `Route = 'play' | 'build' | 'creative'`（`#/creative`），[`../src/app/App.tsx`](../src/app/App.tsx) 按三支渲染；入口挂在[构建页顶栏](../src/build/TopBar.tsx)菜单（与「前往游玩页」并列）。此前 `src/creative/*` 与 `src/store/creative.ts` 已写好但**没有任何装配与路由**，本次把它们接上。
+- **页面外壳**：[`../src/creative/CreativeApp.tsx`](../src/creative/CreativeApp.tsx) 按 §2.1 出三栏——顶栏 / 左栏槽位 / 中栏（**预览 · 命中检查 · 道路矩阵**三页）/ 右栏检视器 ＋ 底部提示条；窄屏走 `.drawer-toggle` 抽屉。编辑器自身只用程序绘制样式与 lucide 图标（`S-18`）。
+- **预览复用游玩页渲染**：[`../src/creative/CreativePreview.tsx`](../src/creative/CreativePreview.tsx) 把靶子 `.pmod` 经 `scenarioFromPmod()` → `startSession()` 起一局，再把本工程 manifest 与素材源**作为入参覆盖**顶进 [`../src/play/MapView.tsx`](../src/play/MapView.tsx)——**不写全局皮肤**，故游玩页 / 构建页一格不改。[`MapView`](../src/play/MapView.tsx) 新增三个**可选**入参（`manifest` / `assets` / `onlyAssets`）并把 `onStep` 改为可省（省掉即**只读预览**：不画可达格、不响应点格）；缺省全走原路径，既有渲染与测试不受影响。
+- **「只看素材」**：`onlyAssets` 一并脱掉程序绘制的兜底（纸面底纹 / 圆角矩形 / 脚印 / 旗标 / emoji / 定位环），画面剩下的即**这份皮肤真正提供了什么**。
+- **打开本地目录**（D4「`.pp` 或本地目录」的另一半）：[`../src/io/download.ts`](../src/io/download.ts) 新增 `pickDirectory()`，[`../src/creative/package.ts`](../src/creative/package.ts) 新增 `readSkinDirectory()`——剥掉公共顶层目录后走与 `.pp` **同一条** `readSkinEntries()`，并顺带 `zipEntries()` 出等价字节供入库。
+- **导入即入皮肤库**（裁决 15）落到代码：导入 `.pp` / 打开目录后 `createSkinLibrary().add()`（**不自动启用**）；**导出产物不自动入库**。
+- **素材绑定同屏信息**：检视器补缩略图 ＋ **原始尺寸**（[`../src/creative/CreativeInspector.tsx`](../src/creative/CreativeInspector.tsx) 的 `AssetThumb`，`URL.createObjectURL` 不可用时自动不渲染图片）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **54 个文件 / 658 项**全绿（新增 [`../src/creative/__tests__/creative.test.tsx`](../src/creative/__tests__/creative.test.tsx) 14 项：三支路由、靶子→骨架→绑定→命中→打包、目录装载、页面三栏三页、预览真出 `.mapview`、只看素材）；`npm run build` 通过；真浏览器（Playwright）实测 `#/` / `#/build` / `#/creative` 三路由可渲染且无 console 报错。
+- **两处留白（不臆造数据 / 不越设计）**：① 检视器的「目标尺寸 / 是否成整倍数」需要设计侧一份**目标尺寸表**（文档只有尺寸行，无机器可读数据），当前只给缩略图 ＋ 原始尺寸；② 九宫格面板的**分区高亮实时预览**与「可拖尺寸的拉伸预览框」未落地（拖线 / 填数 / 黑边识别 / 四边成对校验 / 另存九张已在）。两项已记入 D4 顶部待办。
+- 设计侧同步：[`../docs/design/skin/09-creative.md`](../docs/design/skin/09-creative.md) 状态改「**已落地**」并新增 §六 实现落点（含已知边界），[`../docs/DESIGN.md`](../docs/DESIGN.md) 进度同步。

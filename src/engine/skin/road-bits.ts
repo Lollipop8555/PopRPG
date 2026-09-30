@@ -83,7 +83,7 @@ export function roadTileOf(flag: number): RoadTile {
 
   if (n === 0) return { slot: 'isolated', rotate: 0 }
 
-  // n = 1：断头路，基准缺口朝北＝连通南
+  // n = 1：尽端路，基准缺口朝北＝连通南
   if (n === 1) return { slot: 'dead_end', rotate: e[0] ? 180 : e[1] ? 270 : e[2] ? 0 : 90 }
 
   // n = 2：相对为直路（南北为基准），相邻为折路（东北为基准）

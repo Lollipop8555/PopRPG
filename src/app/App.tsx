@@ -1,10 +1,11 @@
 /**
- * 应用根（§7.0）：默认 `#/` 进**游玩**，`#/build` 进**构建** —— 两个路由同一应用。
+ * 应用根（§7.0）：默认 `#/` 进**游玩**，`#/build` 进**构建**，`#/creative` 进**创意模式** —— 同一应用三个路由。
  */
 
 import { useEffect } from 'react'
 import { useRoute } from './router'
 import BuildApp from '../build/BuildApp'
+import CreativeApp from '../creative/CreativeApp'
 import PlayApp from '../play/PlayApp'
 import SketchDefs from '../ui/SketchDefs'
 import { useLibraryStore } from '../store/library'
@@ -27,7 +28,7 @@ export default function App() {
   return (
     <>
       <SketchDefs />
-      {route === 'build' ? <BuildApp /> : <PlayApp />}
+      {route === 'build' ? <BuildApp /> : route === 'creative' ? <CreativeApp /> : <PlayApp />}
     </>
   )
 }

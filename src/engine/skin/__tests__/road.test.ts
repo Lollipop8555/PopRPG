@@ -31,7 +31,7 @@ describe('roadTileOf：槽位与姿态（§三 ＋ §五）', () => {
     expect(slotOf({})).toEqual({ slot: 'isolated', rotate: 0 })
   })
 
-  it('n = 1 断头路基准缺口朝北＝连通南', () => {
+  it('n = 1 尽端路基准缺口朝北＝连通南', () => {
     expect(slotOf({ s: true })).toEqual({ slot: 'dead_end', rotate: 0 })
     expect(slotOf({ w: true })).toEqual({ slot: 'dead_end', rotate: 90 })
     expect(slotOf({ n: true })).toEqual({ slot: 'dead_end', rotate: 180 })

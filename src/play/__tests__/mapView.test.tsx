@@ -283,3 +283,26 @@ describe('棋子的受击形变', () => {
     expect(container.querySelector('.piece-hit')).toBeNull()
   })
 })
+
+describe('定位线（每 10 格）：叠在地图之上的辅助线，贴图本身不含分割线', () => {
+  /** 定位线是唯一带 `3 4` 虚线的一层（主角定位环是 `3 3`） */
+  const guidesOf = (container: HTMLElement) => container.querySelectorAll('line[stroke-dasharray="3 4"]')
+
+  it('默认画出来；`guides={false}` 一条都不画', () => {
+    paint(undefined)
+    // jsdom 的 `clientWidth / clientHeight` 恒为 0，视口会塌成 0×0 —— 一条线也排不出来，这里先给个固定视口
+    const width = vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(800)
+    const height = vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(600)
+
+    const { container, rerender } = draw()
+
+    expect(guidesOf(container).length).toBeGreaterThan(0)
+
+    rerender(<MapView session={session} onStep={() => {}} guides={false} />)
+
+    expect(guidesOf(container).length).toBe(0)
+
+    width.mockRestore()
+    height.mockRestore()
+  })
+})

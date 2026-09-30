@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import type { GameMap, MapNode, SkinBuilding, SkinMisc, SkinRoad } from '../types'
+import type { GameMap, MapNode, SkinBuilding, SkinManifest, SkinMisc, SkinRoad } from '../types'
 import type { Session } from '../types/session'
 import type { SkinAssets } from '../io/skin-assets'
 import { currentMap, neighbors } from './kit'
@@ -40,15 +40,38 @@ function round3(value: number): number {
   return Math.round(value * 1000) / 1000
 }
 
-export default function MapView({ session, onStep }: { session: Session; onStep: (cell: [number, number]) => void }) {
+export default function MapView({
+  session,
+  onStep,
+  guides = true,
+  manifest: manifestOverride,
+  assets: assetsOverride,
+  onlyAssets = false,
+}: {
+  session: Session
+  /** 点格移动；缺省即**只读预览**（不画可达格、不响应点格），供创意模式预览复用同一套渲染 */
+  onStep?: (cell: [number, number]) => void
+  /** 每 10 格的**定位线**：叠在地图之上的辅助线，用于读数定位；贴图本身不含间距与分割线（`skin/04-misc.md` §五） */
+  guides?: boolean
+  /** 皮肤描述覆盖（创意模式预览用；缺省取全局启用的皮肤） */
+  manifest?: SkinManifest
+  /** 素材源覆盖（创意模式预览用；与 `manifest` 一起给） */
+  assets?: SkinAssets
+  /** **只看素材**：脱掉程序绘制的兜底（纸面底纹 / 圆角矩形 / 脚印 / 旗标 / emoji / 定位环），只留贴图 */
+  onlyAssets?: boolean
+}) {
   const map = currentMap(session)
-  // 皮肤：`assets` 永远是可用对象，未启用皮肤时道路那一格自然回退脚印（§四 降级链）
-  const assets = useSkinStore((s) => s.assets)
-  const road = useSkinStore((s) => s.skin?.manifest.road)
-  const background = useSkinStore((s) => s.skin?.manifest.background)
-  const misc = useSkinStore((s) => s.skin?.manifest.misc)
-  const building = useSkinStore((s) => s.skin?.manifest.building)
-  const role = useSkinStore((s) => s.skin?.manifest.role)
+  // 皮肤：`assets` 永远是可用对象，未启用皮肤时道路那一格自然回退脚印（§四 降级链）。
+  // 创意模式预览用「覆盖」这两个入参，故**不碰全局 store**（`skin/09-creative.md` §2.5）
+  const storeAssets = useSkinStore((s) => s.assets)
+  const storeManifest = useSkinStore((s) => s.skin?.manifest)
+  const assets = assetsOverride ?? storeAssets
+  const skin = manifestOverride ?? storeManifest
+  const road = skin?.road
+  const background = skin?.background
+  const misc = skin?.misc
+  const building = skin?.building
+  const role = skin?.role
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [size, setSize] = useState({ w: 800, h: 600 })
   const [cam, setCam] = useState<[number, number] | null>(null)
@@ -121,9 +144,9 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
     window.addEventListener('pointerup', up)
   }
 
-  // 只有「没拖动」时才算点格，避免拖地图误触发移动
+  // 只有「没拖动」时才算点格，避免拖地图误触发移动（只读预览没有 `onStep`，自然不响应）
   const step = (cell: [number, number]) => {
-    if (!movedRef.current) onStep(cell)
+    if (!movedRef.current) onStep?.(cell)
   }
 
   return (
@@ -137,7 +160,9 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
       {/* 装饰层：不接收指针事件 */}
       <g pointerEvents="none">
         {/* ① 填充色：未被背景图覆盖的地方兜底（取**采用层**的 `color`，漏写即全局主题色） */}
-        <rect x={vx} y={vy} width={size.w} height={size.h} fill={bgLayer?.color ?? 'var(--paper-card)'} />
+        {!onlyAssets && (
+          <rect x={vx} y={vy} width={size.w} height={size.h} fill={bgLayer?.color ?? 'var(--paper-card)'} />
+        )}
 
         {/* ② 背景层：每张地图只画**采用的那一层**，图点 (startX,startY) 对齐格 [0,0] 中心 */}
         {bgTile && bgPlace && (
@@ -149,46 +174,51 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
           </g>
         )}
 
-        {/* [0,0] 基准十字 */}
-        <g opacity={0.5}>
-          <line x1={-10} y1={0} x2={10} y2={0} stroke="var(--ink-faint)" strokeWidth={1.2} />
-          <line x1={0} y1={-10} x2={0} y2={10} stroke="var(--ink-faint)" strokeWidth={1.2} />
-          <text x={12} y={-9} fontSize={10} fill="var(--ink-faint)">
-            [0,0]
-          </text>
-        </g>
+        {/* [0,0] 基准十字：与定位线共用同一个开关（`guides`）。
+            `[0,0]` 的**坐标定义不受影响**——它只是格坐标原点的视觉标记，格子与节点的绝对坐标仍以该原点计。 */}
+        {guides && (
+          <g opacity={0.5}>
+            <line x1={-10} y1={0} x2={10} y2={0} stroke="var(--ink-faint)" strokeWidth={1.2} />
+            <line x1={0} y1={-10} x2={0} y2={10} stroke="var(--ink-faint)" strokeWidth={1.2} />
+            <text x={12} y={-9} fontSize={10} fill="var(--ink-faint)">
+              [0,0]
+            </text>
+          </g>
+        )}
 
-        {/* 每 10 格一条细参照线，铺满当前视口 */}
-        <g opacity={0.28}>
-          {range(Math.floor(vx / CELL), Math.ceil((vx + size.w) / CELL) + 1)
-            .filter((x) => x % 10 === 0)
-            .map((x) => (
-              <line
-                key={`vx${x}`}
-                x1={x * CELL}
-                y1={vy}
-                x2={x * CELL}
-                y2={vy + size.h}
-                stroke="var(--ink-faint)"
-                strokeWidth={1}
-                strokeDasharray="3 4"
-              />
-            ))}
-          {range(Math.floor(vy / CELL), Math.ceil((vy + size.h) / CELL) + 1)
-            .filter((y) => y % 10 === 0)
-            .map((y) => (
-              <line
-                key={`hy${y}`}
-                x1={vx}
-                y1={y * CELL}
-                x2={vx + size.w}
-                y2={y * CELL}
-                stroke="var(--ink-faint)"
-                strokeWidth={1}
-                strokeDasharray="3 4"
-              />
-            ))}
-        </g>
+        {/* 每 10 格一条细参照线，铺满当前视口；开关在游玩菜单里（`guides`） */}
+        {guides && (
+          <g opacity={0.28}>
+            {range(Math.floor(vx / CELL), Math.ceil((vx + size.w) / CELL) + 1)
+              .filter((x) => x % 10 === 0)
+              .map((x) => (
+                <line
+                  key={`vx${x}`}
+                  x1={x * CELL}
+                  y1={vy}
+                  x2={x * CELL}
+                  y2={vy + size.h}
+                  stroke="var(--ink-faint)"
+                  strokeWidth={1}
+                  strokeDasharray="3 4"
+                />
+              ))}
+            {range(Math.floor(vy / CELL), Math.ceil((vy + size.h) / CELL) + 1)
+              .filter((y) => y % 10 === 0)
+              .map((y) => (
+                <line
+                  key={`hy${y}`}
+                  x1={vx}
+                  y1={y * CELL}
+                  x2={vx + size.w}
+                  y2={y * CELL}
+                  stroke="var(--ink-faint)"
+                  strokeWidth={1}
+                  strokeDasharray="3 4"
+                />
+              ))}
+          </g>
+        )}
 
         {map.nodes.map((node) => (
           <NodeShape
@@ -200,26 +230,29 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
             misc={misc}
             building={building}
             assets={assets}
+            onlyAssets={onlyAssets}
           />
         ))}
 
-        {/* 主角：绿色虚线环只是「你在这儿」的定位标记，与棋子形象无关，故一直画 */}
+        {/* 主角：绿色虚线环只是「你在这儿」的定位标记，与棋子形象无关，故一直画（只看素材时收起） */}
         <g data-role-pawn>
-          <circle
-            cx={session.pos[0] * CELL + CELL / 2}
-            cy={session.pos[1] * CELL + CELL / 2}
-            r={CELL / 2 - 5}
-            fill="none"
-            stroke="var(--green)"
-            strokeWidth={2}
-            strokeDasharray="3 3"
-            opacity={0.7}
-          />
+          {!onlyAssets && (
+            <circle
+              cx={session.pos[0] * CELL + CELL / 2}
+              cy={session.pos[1] * CELL + CELL / 2}
+              r={CELL / 2 - 5}
+              fill="none"
+              stroke="var(--green)"
+              strokeWidth={2}
+              strokeDasharray="3 3"
+              opacity={0.7}
+            />
+          )}
           {/* 受击形变只包**形象**这一层（§4.4，基准是格中心）；定位环不跟着压扁 */}
           <g className={pawnHit ? 'piece-hit' : undefined}>
             {pawn ? (
               <SvgTexture {...pawn} />
-            ) : (
+            ) : onlyAssets ? null : (
               <>
                 <rect
                   x={session.pos[0] * CELL + 7}
@@ -241,8 +274,8 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
         </g>
       </g>
 
-      {/* 最上层：主角四邻格，接收点击 */}
-      {neighbors(session.pos).map(([x, y]) => {
+      {/* 最上层：主角四邻格，接收点击（只读预览不画可达格） */}
+      {(onStep ? neighbors(session.pos) : []).map(([x, y]) => {
         const ok = canStep(session, [x, y])
         return (
           <rect
@@ -273,6 +306,7 @@ function NodeShape({
   misc,
   building,
   assets,
+  onlyAssets,
 }: {
   node: MapNode
   session: Session
@@ -281,6 +315,8 @@ function NodeShape({
   misc?: SkinMisc
   building?: SkinBuilding
   assets: SkinAssets
+  /** 只看素材：贴图缺位即留空，不画程序图形 */
+  onlyAssets: boolean
 }) {
   const w = Math.max(1, node.w ?? 1) * CELL
   const h = Math.max(1, node.h ?? 1) * CELL
@@ -356,7 +392,7 @@ function NodeShape({
         <g transform={tilt}>
           <SvgTexture {...nodeImg} />
         </g>
-      ) : (
+      ) : onlyAssets ? null : (
         <rect
           x={x + 3}
           y={y + 3}
@@ -375,21 +411,23 @@ function NodeShape({
         ) : footprint ? (
           <SvgTexture {...footprint} />
         ) : (
-          <Footprint cx={x + w / 2} cy={y + h / 2} size={Math.min(w, h) * 0.6} color={nodeColor} />
+          onlyAssets ? null : <Footprint cx={x + w / 2} cy={y + h / 2} size={Math.min(w, h) * 0.6} color={nodeColor} />
         ))}
       {isMarker ? (
         mark ? (
           <SvgTexture {...mark} />
         ) : (
-          <MapMarker kind={node.type as 'start' | 'end'} x={x + (w - markSize) / 2} y={y + (h - markSize) / 2} size={markSize} />
+          onlyAssets ? null : (
+            <MapMarker kind={node.type as 'start' | 'end'} x={x + (w - markSize) / 2} y={y + (h - markSize) / 2} size={markSize} />
+          )
         )
       ) : // 建筑出了贴图就不再画图标字形：地图上这个位置整块由 `img` 取代（`06-item-building.md` §一 `icon` 落点）
-      isRoad || nodeImg ? null : (
+      isRoad || nodeImg || onlyAssets ? null : (
         <text x={x + w / 2} y={y + h / 2 + 7} fontSize={Math.min(22, CELL * 0.46)} textAnchor="middle">
           {def?.icon ?? '·'}
         </text>
       )}
-      {isBuilding && (
+      {isBuilding && !onlyAssets && (
         // 地图名称（§3.1）：字号固定 11px，只有字色与字体交给素材
         <text
           x={x + w / 2}

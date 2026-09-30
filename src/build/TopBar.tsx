@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState } from 'react'
-import { ClipboardList, Download, MessageSquareText, MoreHorizontal, Redo2, SlidersHorizontal, Undo2, Upload } from 'lucide-react'
+import { ClipboardList, Download, MessageSquareText, MoreHorizontal, Palette, Redo2, SlidersHorizontal, Undo2, Upload } from 'lucide-react'
 import { useProjectStore } from '../store/project'
 import { useHistoryStore } from '../store/history'
 import { redo, undo } from '../store/commit'
@@ -91,6 +91,16 @@ export default function TopBar() {
             }}
           >
             新建空白场景
+          </button>
+          <button
+            className="btn small"
+            onClick={() => {
+              navigate('creative')
+              setMenuOpen(false)
+            }}
+            title="创意模式：拿一份 .pmod 当靶子，交付一份皮肤"
+          >
+            <Palette size={13} /> 前往创意模式
           </button>
           <button
             className="btn small"

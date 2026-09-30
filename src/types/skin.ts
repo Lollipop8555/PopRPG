@@ -262,7 +262,10 @@ export interface SkinMisc {
   }
   /** lucide 图标按名替换 */
   icons?: Record<string, SkinTexture>
-  /** 每 10 格的坐标参照线（平铺策略，素材须四边可拼接） */
+  /**
+   * 每 10 格的坐标参照线＝**定位线**：叠在地图之上的辅助层，只作读数定位用
+   * （贴图本身不含间距与分割线）；游玩菜单可开 / 关，平铺策略，素材须四边可拼接。见 `skin/04-misc.md` §五
+   */
   guides?: {
     grid?: SkinTexture
   }

@@ -43,6 +43,8 @@ export default function GameScreen({ session }: { session: Session }) {
   const [selected, setSelected] = useState<string | undefined>(session.player.skills[0]?.id)
   const [drawer, setDrawer] = useState<Drawer>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  // 地图「定位线」开关（`skin/04-misc.md` §五）：每 10 格一条细线，叠在地图之上，只作读数定位用
+  const [guides, setGuides] = useState(true)
 
   // 技能栏被环境改动过（学了新招 / 被 forget 夺走）时，选中项跟着修正
   useEffect(() => {
@@ -103,6 +105,7 @@ export default function GameScreen({ session }: { session: Session }) {
         <div className="play-stage panel">
           <MapView
             session={session}
+            guides={guides}
             onStep={(cell) => {
               if (!pending && !session.awaitingEncounter) play.step(cell)
             }}
@@ -278,6 +281,14 @@ export default function GameScreen({ session }: { session: Session }) {
               </button>
               <button className="btn" style={plainBtn} onClick={() => { downloadSave(session); setMenuOpen(false) }}>
                 存档
+              </button>
+              <button
+                className="btn"
+                style={plainBtn}
+                title="地图定位线"
+                onClick={() => setGuides((on) => !on)}
+              >
+                定位线 {guides ? '开' : '关'}
               </button>
               <button className="btn" style={plainBtn} onClick={() => play.quit()}>
                 退出

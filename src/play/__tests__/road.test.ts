@@ -84,7 +84,7 @@ describe('按格子取图', () => {
     expect(roadPickAt(map, map.nodes[1], ROAD)).toEqual({ slot: 'straight', src: 'straight_ns.png', rotate: 90 })
   })
 
-  it('断头路按朝向取姿态角，同一张图复用', () => {
+  it('尽端路按朝向取姿态角，同一张图复用', () => {
     expect(roadPickAt(map, map.nodes[0], ROAD)).toEqual({ slot: 'dead_end', src: 'dead_end.png', rotate: 270 })
     expect(roadPickAt(map, map.nodes[2], ROAD)).toEqual({ slot: 'dead_end', src: 'dead_end.png', rotate: 90 })
   })

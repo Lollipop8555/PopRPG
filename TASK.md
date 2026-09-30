@@ -65,7 +65,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 | [task/01-build.md](task/01-build.md) | Phase A BUILD（构建页） | 信息架构/数据模型/布局/图层/组件库/模式/画布/属性编辑/引擎纯函数/校验/预设/导入导出 | **已完成首轮实现**（build + 78 项单测全绿） |
 | [task/02-play.md](task/02-play.md) | Phase B PLAY（游玩页） | 框架加载/开局/移动回合/战斗UI/骰子公示/技能交互/状态/遭遇/商店/装备背包/存档 | **已完成**（B0–B10 与 B 验收 1–14 全部勾选） |
 | [task/03-polish.md](task/03-polish.md) | Phase C 收尾 | 视觉打磨 / GitHub Pages 部署 | 部分已完成 |
-| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地；D3 进行中：运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条 ＋ `window` 容器衬底 ＋ `misc` 地图标记与骰子 ＋ `item` / `building` ＋ `startup` / `lobby` ＋ `window` 按钮 `normal` 态 ＋ `misc` 图标按名替换 ＋ `window` 固定族格子 ＋ `window` 条 / 提示条 / 分隔线（九宫格随批落地）已接；**优先级 ②**；端到端依赖 B） |
+| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地；D3 进行中：运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条 ＋ `window` 容器衬底 ＋ `misc` 地图标记与骰子 ＋ `item` / `building` ＋ `startup` / `lobby` ＋ `window` 按钮 `normal` 态 ＋ `misc` 图标按名替换 ＋ `window` 固定族格子 ＋ `window` 条 / 提示条 / 分隔线（九宫格随批落地）已接；**D4 Creative 模式已接线可用**（`#/creative` 三支路由 ＋ 三栏三页 ＋ 预览复用游玩页渲染 ＋ 打开本地目录 ＋ 导入入库；余「目标尺寸表」与九宫格分区高亮/可拖预览框两处留白）；**优先级 ②**；端到端依赖 B） |
 | [task/05-npc.md](task/05-npc.md) | **V2.0** 新增 NPC 与对话（跨 A / B） | NPC 数据模型与对话树（**全树同一个结构**；给道具 `give`；本层掷骰 `dice` / 各项 `hit`）/ 组件库与组件页 / **NPC 模组面板（思维导图，命中覆盖检查）** / 建筑实例页与校验 / 运行时抽取与弹层（掷定锁死 / **重入三选项 ＋ 三标记** / `give` 一次性交付）/ 皮肤侧接口约定 | **已完成**（E0–E3 编辑器侧 ＋ E4 运行时 ＋ 19 项原子验收；E5 皮肤侧接口约定并入 [task/04-skin.md](task/04-skin.md)） |
 
 ---
@@ -130,6 +130,13 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 ---
 
 ## 进度同步
+
+**2026-09-30 · D4 Creative 模式接线（第三个顶层模式可用）**
+- **补上「最后一段」**：`src/creative/*`（11 个文件）与 `src/store/creative.ts` 此前已写好但**无页面装配、无路由**；本批接上——[`src/app/router.ts`](src/app/router.ts) 扩为 `Route = 'play' | 'build' | 'creative'`（`#/creative`），[`src/app/App.tsx`](src/app/App.tsx) 三支渲染，入口挂[构建页顶栏](src/build/TopBar.tsx)菜单。
+- **三栏 ＋ 三页**：[`src/creative/CreativeApp.tsx`](src/creative/CreativeApp.tsx)（顶栏 / 槽位 / 中栏「预览 · 命中检查 · 道路矩阵」/ 检视器 ＋ 提示条）；**预览复用游玩页渲染**：[`src/creative/CreativePreview.tsx`](src/creative/CreativePreview.tsx) 把靶子 `.pmod` 起一局后以**入参覆盖**顶进 [`src/play/MapView.tsx`](src/play/MapView.tsx)（不写全局皮肤）——`MapView` 新增三个**可选**入参 `manifest` / `assets` / `onlyAssets`，`onStep` 改可省（省掉即只读预览），缺省全走原路径。
+- **补齐两处 D4 缺口**：「打开**本地目录**」（`pickDirectory()` ＋ `readSkinDirectory()`，剥公共顶层目录后走同一条 `readSkinEntries()`）；「导入即入皮肤库」（裁决 15，`createSkinLibrary().add()`，不自动启用）。检视器补缩略图 ＋ 原始尺寸。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **54 个文件 / 658 项**全绿；`npm run build` 通过；真浏览器实测三路由无 console 报错。
+- **两处留白（不臆造数据 / 不越设计）**：① 检视器「目标尺寸 / 是否成整倍数」需设计侧一份**目标尺寸表**（文档只有尺寸行、无机器可读数据）；② 九宫格面板的**分区高亮实时预览**与「可拖尺寸的拉伸预览框」未落地。两项已记于 [`task/04-skin.md`](task/04-skin.md) D4 顶部、[`docs/design/skin/09-creative.md`](docs/design/skin/09-creative.md) §六「已知边界」与 [`docs/DESIGN.md`](docs/DESIGN.md) 进度同步。
 
 **2026-09-30 · D3 第十四屏（按钮 `hover` / `active` / `disabled` 三态接入）**
 - **四态各查自己的态**：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `ButtonState` / `BUTTON_STATES` 与 `buttonStatesOf(win, kind)`——**只交出真写了的态**（缺 `normal` 即整块作废，只写 `hover` 不会凭空多出一张底图），`buttonOf()` 退化成它取 `normal` 那一项，老调用点一行不动。
