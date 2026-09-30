@@ -14,8 +14,10 @@
  * 通过 `import.meta.glob` 自动收录——**新增一个预设 = 加一个 JSON 文件，更新一个 = 改一个文件**，
  * 本文件无需改动。每个 id 一个文件，便于单独维护、单独更新。
  *
- * 首次启动时由 `ensureSeeded`（store/library）播种进组件库，之后就是用户的资产。
- * 来源判定（§3.2）：id 命中这张表 = `预设`，否则 = `自建`。七大类一视同仁。
+ * 播种规则见 `ensureSeeded`（store/library）：**首次启动播种一次**，此后组件库是用户的资产；
+ * 但**本文件的 `PRESET_VERSION` 推进时**会再补入一次缺失的预设项——否则新版本新增的预设
+ * （例如 V2.0 才加入的 NPC）永远不会出现在老用户的组件库中（其 `seeded` 早已是 `true`）。
+ * 来源判定（§3.2）：id 命中这张表 = `预设`，否则 = `自建`。八大类一视同仁。
  */
 
 import type {
@@ -33,6 +35,15 @@ import type {
 } from '../types'
 import { LIBRARY_KEYS } from '../types'
 import { fallbackColor } from '../lib/color'
+
+/**
+ * **预设集版本**：改动 `./data/**` 里任何一个预设（新增 / 改名 / 删条目）时 **+1**。
+ *
+ * 组件库只在两处补入预设：① 首次播种；② 本版本号高于本地记录的版本（`ensureSeeded`）。
+ * 补入只补「库中既无同 `id`、也无同名」的条目，绝不覆盖用户修改过的版本（§6.1 ①「重名以本地优先」）。
+ * 因此**改动预设必须同时 +1**，否则老用户的组件库中不会出现该改动。
+ */
+export const PRESET_VERSION = 1
 
 type JsonModule = { default: AnyComponent }
 

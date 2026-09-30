@@ -124,6 +124,23 @@
 
 ## 进度同步
 
+**2026-09-30 · NPC 预设到达老库 ＋ NPC 模组面板直接新建（§6.1 ① / §5.6.1）**
+- **新增预设的到达机制**：`ensureSeeded` 原先只在**首次播种**时补入预设（`seeded` 为真即跳过），
+  致使 V2.0 才加入的 NPC 预设**永远不会出现在老用户的组件库中**（NPC 面板始终为空，现象近似"预设 JSON 没有被读取"）。
+  现引入**预设集版本** `PRESET_VERSION`（[`src/presets/index.ts`](../src/presets/index.ts)）：本地记录**已补入到哪一版**，
+  **版本推进之后再次补入一次缺失项**——仍守「重名以本地优先」，同一版内不重复补入（用户主动删除的预设不会自行出现）。
+  **改动内置预设必须同时把该版本号 +1**。代码 [`src/store/library.ts`](../src/store/library.ts) 的 `ensureSeeded` 与 persist `merge`
+  （后者原先漏了 `npcs` 的语义色回填）；单测 [`src/store/__tests__/library.test.ts`](../src/store/__tests__/library.test.ts)
+  （旧库补入 / 同版内不重复补入 / 改过的预设不被覆盖）。
+- **NPC 模组面板可直接新建**：左栏「全部 NPC」标题行新增「＋ 新建」，**库中一条 NPC 都没有时同一按钮直接给在空态提示框内**，
+  一次点击即建出一条空 NPC 并选中（与组件库「＋ 新建」同一构造 `blankComponent`），取消「先到组件库新建、再回到本页写对话」的多余往返；
+  **删除**仍归组件库（与其它组件一致）。代码 [`src/build/NpcModScreen.tsx`](../src/build/NpcModScreen.tsx)；
+  单测 [`src/build/__tests__/npcMod.test.tsx`](../src/build/__tests__/npcMod.test.tsx)。
+- 正文同步：[`design/04-editor.md`](design/04-editor.md) §5.6.1（操作表新增一行）、
+  [`design/05-mvp.md`](design/05-mvp.md) §6.1 ①（补入时机与版本号义务）、
+  [`design/07-decisions.md`](design/07-decisions.md) §8（「预设与本地冲突」一行补「补入时机」）；
+  任务见 [`task/05-npc.md`](../task/05-npc.md) 与 [`TASK.md`](../TASK.md)。
+
 **2026-09-29 · 新增素材皮肤模块（skin）**
 - 新增 [`design/skin.md`](design/skin.md)（总纲索引）与 [`design/skin/01-road.md`](design/skin/01-road.md)（道路分节）：素材是可选增强、缺位回退程序绘制；旋转 / 镜像 / 九宫格复用三件套；贴图渲染器 `drawTexture` 统一接口；道路 15 槽位 / 47 姿态 / 15 张素材；样式标签优先级（空标签通配、非空优先、命中数降序、声明顺序兜底）。
 - 三条用户已确认取舍同步登记到 [`design/07-decisions.md`](design/07-decisions.md) §8.1：素材定位、`tee` 系列定名（`tee_corner_nw` / `tee_corner_ne`）、角位只认夹角（外侧角不细分）、道路样式优先级。

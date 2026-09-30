@@ -7,6 +7,9 @@
  *   顺带把公共字段里的**描述**与**颜色**也放在这儿（本页盖住整屏、组件页看不见，来回切换太别扭）
  * - **地图实例页** —— 谁挂这个 NPC（NPC 没有位置字段，只能被建筑实例引用）
  *
+ * 本页也提供**新建 NPC** 入口（库中无 NPC 时按钮直接位于提示框内，一次点击即建出一条并选中）：
+ * 由此取消「先到组件库新建、再回到本页写对话」的多余往返；**删除**仍归组件库（与其它组件一致）。
+ *
  * 方案名**不写权重**：多套方案等权，由实例的骰子（规则面板 `talk.dice`）抽一套。
  */
 
@@ -19,6 +22,7 @@ import { useProjectStore } from '../store/project'
 import { useUiStore } from '../store/ui'
 import { npcReferenceCounts } from '../lib/refs'
 import { summarizeNpc } from '../lib/dialog'
+import { blankComponent } from '../lib/blank'
 import Overlay from '../ui/Overlay'
 import { Badge, Field, TextBox } from '../ui/primitives'
 import { randomComponentColor } from '../lib/color'
@@ -127,6 +131,13 @@ export default function NpcModScreen() {
     })
   }
 
+  /** 新建一条空 NPC 并选中：与组件库「＋ 新建」采用同一构造（`blankComponent`），区别仅在于无须先离开本页 */
+  const createNpc = () => {
+    const def = blankComponent('npc')
+    commit(() => useLibraryStore.getState().upsert('npc', def))
+    setSelectedId(def.id)
+  }
+
   return (
     <Overlay onClose={() => setOpen(false)}>
       <div
@@ -152,16 +163,29 @@ export default function NpcModScreen() {
           <div className="hintbox warn" style={{ margin: 'auto', maxWidth: 520 }}>
             组件库里<b>还没有任何 NPC</b>。
             <div style={{ marginTop: 6 }}>
-              先回 <b>组件库</b> 新建一条 NPC（或使用预设），再回到这里写它的对话树。
+              点下面的<b>新建</b>即可在本页建出一条（也可以到组件库新建、或使用内置预设），随后在这里写它的对话树。
               NPC 不含位置字段，出场位置由所挂的建筑决定（§4.9.3）：要让它在游戏中出现，请到地图实例页把它挂到某栋建筑上。
+            </div>
+            <div className="row" style={{ marginTop: 8, justifyContent: 'center' }}>
+              <button className="btn primary" onClick={createNpc} title="新建一条空 NPC">
+                <Plus size={12} /> 新建 NPC
+              </button>
             </div>
           </div>
         ) : (
           <div className="row" style={{ flex: 1, minHeight: 0, gap: 8, alignItems: 'stretch' }}>
             {/* 左：全部 NPC —— 引用数只作标注，未被引用者同样可选中并撰写对话 */}
             <div className="panel" style={{ width: 210, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div className="panel-title" style={{ fontSize: 12 }}>
-                <Users size={12} /> 全部 NPC
+              <div
+                className="panel-title"
+                style={{ fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <span className="row" style={{ gap: 4 }}>
+                  <Users size={12} /> 全部 NPC
+                </span>
+                <button className="btn small ghost" onClick={createNpc} title="新建一条空 NPC">
+                  <Plus size={11} /> 新建
+                </button>
               </div>
               <div className="scroll" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {listed.map((n) => {
@@ -187,7 +211,7 @@ export default function NpcModScreen() {
                 })}
               </div>
               <div className="faint" style={{ fontSize: 11 }}>
-                NPC 的新建与删除在组件库中完成；此处编辑对话，兼改「描述」与「颜色」。
+                NPC 可在此新建（删除仍在组件库中进行）；此处编辑对话，兼改「描述」与「颜色」。
               </div>
             </div>
 

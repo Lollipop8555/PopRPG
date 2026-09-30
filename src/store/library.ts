@@ -3,21 +3,25 @@
  *
  * - 预设 + 自建**同一份列表、同等地位**（能改 / 删 / 复制 / 恢复默认）
  * - 来源**不存字段**：拿 id 查内置预设表当场派生（§3.2）
- * - **重名以本地优先**：内置预设固定不变，用户改过的版本存在本地；播种时本地已有同名条目
+ * - **重名以本地优先**：内置预设固定不变，用户改过的版本存在本地；补入时本地已有同名条目
  *   （无论那条是改过的预设还是自建）即**不再补入该预设**，既不覆盖也不并列插入
+ * - **补入只在两处发生**：首次播种，以及内置预设集版本推进（`PRESET_VERSION`）之后的一次补入——
+ *   否则新版本新增的预设（例如 V2.0 的 NPC）永远不会出现在老用户的组件库中
  * - **不存组件定义以外的东西**：项目只记「启用哪些 + 铺到哪」
  */
 
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { KIND_TO_LIBRARY_KEY, LIBRARY_KEYS, emptyLibrary, type AnyComponent, type ComponentKind, type Library } from '../types'
-import { isPresetId, presetDef, presetKind, presetLibrary } from '../presets'
+import { PRESET_VERSION, isPresetId, presetDef, presetKind, presetLibrary } from '../presets'
 import { fallbackColor } from '../lib/color'
 import { pickStorage } from './storage'
 
 export interface LibraryStore extends Library {
-  /** 是否已经播种过内置预设（首次启动一次，之后不再自动重播） */
+  /** 是否已经播种过内置预设（首次启动一次） */
   seeded: boolean
+  /** 已补入到哪一版预设集（`PRESET_VERSION`）；`0` = 从未按版本补入过 */
+  presetVersion: number
   replaceAll: (data: Library) => void
   upsert: (kind: ComponentKind, def: AnyComponent) => void
   remove: (kind: ComponentKind, id: string) => void
@@ -27,7 +31,16 @@ export interface LibraryStore extends Library {
 
 type PersistedLibrary = Pick<
   LibraryStore,
-  'roads' | 'buildings' | 'items' | 'monsters' | 'classes' | 'skills' | 'npcs' | 'backgrounds' | 'seeded'
+  | 'roads'
+  | 'buildings'
+  | 'items'
+  | 'monsters'
+  | 'classes'
+  | 'skills'
+  | 'npcs'
+  | 'backgrounds'
+  | 'seeded'
+  | 'presetVersion'
 >
 
 function replaceInList(list: AnyComponent[], def: AnyComponent): AnyComponent[] {
@@ -43,11 +56,14 @@ export const useLibraryStore = create<LibraryStore>()(
     (set, get) => ({
       ...emptyLibrary(),
       seeded: false,
+      presetVersion: 0,
 
       ensureSeeded: () => {
         const cur = get()
         const seed = presetLibrary()
-        const next: Partial<LibraryStore> = { seeded: true }
+        /** 是否补入预设：首次播种，或内置预设集版本已推进（新增预设依赖这一条才能到达老用户的库） */
+        const needMerge = !cur.seeded || cur.presetVersion !== PRESET_VERSION
+        const next: Partial<LibraryStore> = { seeded: true, presetVersion: PRESET_VERSION }
         let changed = false
         for (const key of LIBRARY_KEYS) {
           const existing = (cur[key] as AnyComponent[]) ?? []
@@ -57,9 +73,9 @@ export const useLibraryStore = create<LibraryStore>()(
           /** 本地已有名称：重名以本地优先（预设固定、改过的版本在本地，两者不得并存） */
           const takenNames = new Set(existing.map((c) => c.name))
           let arr = existing
-          // 首次/未播种：补入缺失的预设项（保留用户自建与主动删除的项）
+          // 补入缺失的预设项（首次播种 / 预设集版本推进时各跑一次）
           // 同 id 已有 → 保留本地那一条；同名不同 id → 同样保留本地、该预设不补入
-          if (!cur.seeded) {
+          if (needMerge) {
             const missing = seedArr.filter((c) => !existingIds.has(c.id) && !takenNames.has(c.name))
             if (missing.length) {
               arr = [...existing, ...missing]
@@ -76,7 +92,7 @@ export const useLibraryStore = create<LibraryStore>()(
           })
           next[key] = backfilled as never
         }
-        set(changed ? next : { seeded: true } as Partial<LibraryStore>)
+        set(changed ? next : { seeded: true, presetVersion: PRESET_VERSION })
       },
 
       replaceAll: (data) => set({ ...data }),
@@ -112,6 +128,7 @@ export const useLibraryStore = create<LibraryStore>()(
         npcs: s.npcs,
         backgrounds: s.backgrounds,
         seeded: s.seeded,
+        presetVersion: s.presetVersion,
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<LibraryStore>
@@ -126,7 +143,10 @@ export const useLibraryStore = create<LibraryStore>()(
           monsters: fix(p.monsters),
           classes: fix(p.classes),
           skills: fix(p.skills),
+          npcs: fix(p.npcs),
           backgrounds: fix(p.backgrounds),
+          // 本字段出现之前写下的库没有这一项：记为 `0`，从而触发一次按版本补入
+          presetVersion: p.presetVersion ?? 0,
         } as LibraryStore
       },
     },

@@ -102,6 +102,30 @@ describe('顶栏「NPC 模组」入口', () => {
   })
 })
 
+describe('新建 NPC 入口（无须先到组件库）', () => {
+  it('库为空时按钮位于空态提示内，点击即建出一条并选中', () => {
+    useLibraryStore.getState().replaceAll({ ...librarySnapshot(), npcs: [] })
+
+    openPanel()
+    fireEvent.click(screen.getByTitle('新建一条空 NPC'))
+
+    const npcs = useLibraryStore.getState().npcs
+    expect(npcs).toHaveLength(1)
+    expect(npcs[0].name).toBe('新建 NPC')
+    // 建完即选中：右栏换为该 NPC 的编辑区，并提示尚无方案
+    expect(screen.getByText(/还没有任何对话方案/)).toBeTruthy()
+  })
+
+  it('列表非空时左栏也有「新建」入口，列表随之多一条并选中', () => {
+    openPanel()
+    const before = useLibraryStore.getState().npcs.length
+    fireEvent.click(screen.getByTitle('新建一条空 NPC'))
+
+    expect(useLibraryStore.getState().npcs).toHaveLength(before + 1)
+    expect(screen.getByText(/共 3 条/)).toBeTruthy()
+  })
+})
+
 describe('方案（`dialogs` 的键）', () => {
   it('下拉里是全部方案，且说明多套等权', () => {
     openPanel()

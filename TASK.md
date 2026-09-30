@@ -131,6 +131,11 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 
 ## 进度同步
 
+**2026-09-30 · NPC 预设到达老库 ＋ NPC 模组面板直接新建（§6.1 ① / §5.6.1）**
+- 缺陷一：`ensureSeeded` 原先只在**首次播种**时补入预设，**V2.0 新增的 NPC 预设因此进不了老用户的组件库**（NPC 面板始终为空）。现引入 **`PRESET_VERSION`**：本地记录已补入到哪一版，**版本推进之后再次补入一次缺失项**（守「重名以本地优先」；同一版内不重复补入）；**改动内置预设必须同时 +1**。同步修 persist `merge` 漏掉的 `npcs` 语义色回填。
+- 缺陷二：**NPC 模组面板原先没有新建入口**（空态仅提示"先回组件库新建"）。现左栏「全部 NPC」标题行给「＋ 新建」，**库中无 NPC 时按钮直接位于空态提示框内**，点击即建出一条空 NPC 并选中；**删除**仍归组件库。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **28 个文件 / 336 项**全绿。设计侧同步 [`docs/DESIGN.md`](docs/DESIGN.md)、[`docs/design/04-editor.md`](docs/design/04-editor.md) §5.6.1、[`docs/design/05-mvp.md`](docs/design/05-mvp.md) §6.1 ①、[`docs/design/07-decisions.md`](docs/design/07-decisions.md) §8；任务见 [`task/05-npc.md`](task/05-npc.md)。
+
 **2026-09-29 · 末轮裁决 14–21（素材皮肤 / 三件套）**
 - `Q12` zip 能力：**引入 `fflate`**（读＋写，约 8 KB gzip，浏览器端零 Node 依赖）——满足 GitHub Pages 纯静态与离线约束，不自实现 deflate（裁决 14；依赖边界登记于 [`docs/design/08-deploy.md`](docs/design/08-deploy.md) §9）。
 - `Q17` 皮肤库与解压：本地只记录**导入过**的 `.pp`（游戏自带皮肤不入库）；**运行时一次只解压一套**，切换皮肤先清空当前解压结果；本地保存 `.pp` 原包体（条目索引进 `localStorage`，**包体进 IndexedDB**）；**不设体积硬上限**；`.psave` **不记录**皮肤名（裁决 15）。
