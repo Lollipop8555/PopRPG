@@ -28,7 +28,8 @@ import Overlay from '../ui/Overlay'
 import { useSkinStore } from '../store/skin'
 import { portraitOf, roleSprite } from '../engine/skin'
 import { RoleGlyph } from '../ui/RoleGlyph'
-import { Portrait, portraitTile } from '../ui/Portrait'
+import { Portrait, portraitHurtTile, portraitTile } from '../ui/Portrait'
+import { useHitPulse } from '../ui/useHitPulse'
 import { navigate } from '../app/router'
 
 type Drawer = 'status' | 'bag' | 'log' | 'equip' | null
@@ -68,8 +69,11 @@ export default function GameScreen({ session }: { session: Session }) {
   const assets = useSkinStore((s) => s.assets)
   const role = useSkinStore((s) => s.skin?.manifest.role)
   // 主角立绘：落点 1（底栏）。取不到即整块不渲染、hud-face 原样留着（§4.3）
-  const hudPortrait = portraitTile(portraitOf(role, 'player'), assets)
+  const heroOf = portraitOf(role, 'player')
+  const hudPortrait = portraitTile(heroOf, assets)
   const { player } = session
+  // 受击这一拍（§4.4）：底栏立绘与地图棋子看的是同一个锚点（主角 hp）
+  const hudHit = useHitPulse(player.resources.hp)
   const env = currentNodeInfo(session)
   const gate = env.gate
 
@@ -180,7 +184,12 @@ export default function GameScreen({ session }: { session: Session }) {
             <div className="hud-vitals">
               {/* 主角立绘替代整块 hud-face；没有立绘就原样留着 hud-face（§4.1 落点 1） */}
               {hudPortrait ? (
-                <Portrait tile={hudPortrait} size="hud" />
+                <Portrait
+                  tile={hudPortrait}
+                  hurt={portraitHurtTile(heroOf, assets)}
+                  hit={hudHit}
+                  size="hud"
+                />
               ) : (
                 <div className="hud-face">
                   <RoleGlyph sprite={roleSprite(role, 'class', player.cls?.id)} assets={assets} icon={player.cls?.icon} />{' '}

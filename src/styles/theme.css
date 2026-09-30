@@ -91,6 +91,24 @@ textarea {
   align-items: flex-end;
   justify-content: center;
   max-width: 25%;
+  /* 受击形变的基准是**底边**（§4.4）：压扁时不会陷进脚下 */
+  transform-origin: 50% 100%;
+  transition: transform 120ms ease-out;
+}
+
+/* 挨打这一拍（§4.4 没有 `hurt` 素材时的退路）：横向 ×1.15、纵向 ×0.9，
+   **瞬间**压下去、离开时由上面那条 `transition` 约 120ms 弹回 */
+.portrait-hit {
+  transform: scale(1.15, 0.9);
+  transition: none;
+}
+
+/* 棋子形象的同一套形变：基准是**格中心**（§4.4），`fill-box` 让 `50% 50%` 落在形象自己的外框中心 */
+.piece-hit {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  transform: scale(1.15, 0.9);
+  transition: transform 120ms ease-out;
 }
 
 .portrait-hud {

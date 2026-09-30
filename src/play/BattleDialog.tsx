@@ -16,7 +16,8 @@ import { useSkinStore } from '../store/skin'
 import { portraitOf, roleSprite } from '../engine/skin'
 import Overlay from '../ui/Overlay'
 import { RoleGlyph } from '../ui/RoleGlyph'
-import { Portrait, portraitTile } from '../ui/Portrait'
+import { Portrait, portraitHurtTile, portraitTile } from '../ui/Portrait'
+import { useHitPulse } from '../ui/useHitPulse'
 import { DieFace } from './DiceLog'
 import { Bar } from './StatusPanel'
 
@@ -101,8 +102,15 @@ export default function BattleDialog({ session }: { session: Session }) {
 
   // VS 区立绘（`skin/02-role.md` §4.1 落点 2）：主角在左、怪物在右；怪物侧**不跨怪物借用**，
   // 任一方画得出来即渲染整个 VS 区，缺的一侧留空（`undefined` 即该侧为空）
-  const heroPortrait = portraitTile(portraitOf(role, 'player'), assets)
-  const foePortrait = portraitTile(portraitOf(role, 'monster', monster.id), assets)
+  const heroOf = portraitOf(role, 'player')
+  const foeOf = portraitOf(role, 'monster', monster.id)
+  const heroPortrait = portraitTile(heroOf, assets)
+  const foePortrait = portraitTile(foeOf, assets)
+
+  // 受击（§4.4）：两侧各管各的，谁掉血谁抖——怪物那一侧以 `monster.id` 为主体，
+  // 换了怪物只挪基准、不算是挨打（`useHitPulse()`）
+  const heroHit = useHitPulse(player.resources.hp)
+  const foeHit = useHitPulse(monster.resources.hp, monster.id)
 
   return (
     <Overlay>
@@ -119,11 +127,21 @@ export default function BattleDialog({ session }: { session: Session }) {
         {(heroPortrait || foePortrait) && (
           <div className="vs-area">
             <div className="vs-side">
-              <Portrait tile={heroPortrait} size="vs" />
+              <Portrait
+                tile={heroPortrait}
+                hurt={portraitHurtTile(heroOf, assets)}
+                hit={heroHit}
+                size="vs"
+              />
             </div>
             <span className="vs-text hand">VS</span>
             <div className="vs-side">
-              <Portrait tile={foePortrait} size="vs" />
+              <Portrait
+                tile={foePortrait}
+                hurt={portraitHurtTile(foeOf, assets)}
+                hit={foeHit}
+                size="vs"
+              />
             </div>
           </div>
         )}

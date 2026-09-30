@@ -12,7 +12,8 @@ import RadarChart from './RadarChart'
 import { portraitOf, roleSprite } from '../engine/skin'
 import { useSkinStore } from '../store/skin'
 import { RoleGlyph } from '../ui/RoleGlyph'
-import { Portrait, portraitTile } from '../ui/Portrait'
+import { Portrait, portraitHurtTile, portraitTile } from '../ui/Portrait'
+import { useHitPulse } from '../ui/useHitPulse'
 
 export default function StatusPanel({
   session,
@@ -30,14 +31,22 @@ export default function StatusPanel({
   const assets = useSkinStore((s) => s.assets)
   const role = useSkinStore((s) => s.skin?.manifest.role)
   // 落到面板头的立绘与底栏同源同图（§4.1 落点 4）：取不到即整块不渲染、留 emoji ＋ 名称
-  const headPortrait = portraitTile(portraitOf(role, 'player'), assets)
+  const heroOf = portraitOf(role, 'player')
+  const headPortrait = portraitTile(heroOf, assets)
+  // 受击这一拍（§4.4）：与底栏、地图棋子同一个锚点（主角 hp）
+  const headHit = useHitPulse(player.resources.hp)
 
   return (
     <div className="panel">
       <div className="panel-head" style={{ justifyContent: 'space-between' }}>
         {/* 与底栏同源同图：立绘在则替代 emoji ＋ 职业名（§4.1 落点 4） */}
         {headPortrait ? (
-          <Portrait tile={headPortrait} size="hud" />
+          <Portrait
+            tile={headPortrait}
+            hurt={portraitHurtTile(heroOf, assets)}
+            hit={headHit}
+            size="hud"
+          />
         ) : (
           <span>
             <RoleGlyph sprite={roleSprite(role, 'class', player.cls?.id)} assets={assets} icon={player.cls?.icon} />{' '}

@@ -3,7 +3,7 @@
  * 共同的底线：**取不到就整块不出现**（不占位、不回退 emoji，§4.3）。
  */
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render } from '@testing-library/react'
 import GameScreen from '../GameScreen'
 import StartScreen from '../StartScreen'
@@ -26,6 +26,7 @@ import type { Session } from '../../types/session'
 afterEach(() => {
   cleanup()
   useSkinStore.getState().release()
+  vi.useRealTimers()
 })
 
 const scenario = scenarioFromProject(presetLibrary(), fixtureProject())
@@ -37,10 +38,12 @@ const HERO = 'art/portrait/hero.png'
 const KNIGHT = 'art/portrait/knight.png'
 const FOE = 'art/portrait/goblin.png'
 const CHILD = 'art/portrait/child.png'
+const HERO_HURT = 'art/portrait/hero_hurt.png'
+const FOE_HURT = 'art/portrait/goblin_hurt.png'
 
 function portraitPaths(p?: SkinPortrait): string[] {
   if (!p) return []
-  return typeof p === 'string' ? [p] : [p.img]
+  return typeof p === 'string' ? [p] : [p.img, ...(p.hurt ? [p.hurt] : [])]
 }
 
 /**
@@ -217,5 +220,78 @@ describe('落点 3：对话弹层不设立绘区（§4.1 / S-29）', () => {
     expect(document.querySelector('.talk-modal')).not.toBeNull()
     expect(document.querySelector('.talk-modal .portrait')).toBeNull()
     expect(document.querySelector('.vs-area')).toBeNull()
+  })
+})
+
+describe('受击表现（§4.4）：谁掉血谁抖', () => {
+  // 受击只看「hp 掉下来的那一帧」，故这一档的时间不许走
+  beforeEach(() => vi.useFakeTimers())
+
+  /** 把某一侧的 hp 调低一点（其余字段不动） */
+  function struck(session: Session, side: 'player' | 'monster'): Session {
+    if (side === 'player') {
+      const { resources } = session.player
+      return { ...session, player: { ...session.player, resources: { ...resources, hp: resources.hp - 1 } } }
+    }
+    const monster = session.monster!
+    return { ...session, monster: { ...monster, resources: { ...monster.resources, hp: monster.resources.hp - 1 } } }
+  }
+
+  /** 左侧是主角、右侧是怪物（§4.1 落点 2） */
+  const sides = () => document.querySelectorAll('.vs-area .vs-side')
+
+  it('怪物掉血：只有怪物那一侧形变（没给 `hurt` 素材的退路）', () => {
+    paint({ portraits: { player: HERO, monsters: { goblin: FOE } } })
+    const battle = inCombat()
+    usePlayStore.setState({ session: battle })
+    const { rerender } = render(<BattleDialog session={battle} />)
+    expect(document.querySelector('.portrait-hit')).toBeNull()
+
+    rerender(<BattleDialog session={struck(battle, 'monster')} />)
+
+    expect(sides()[0].querySelector('.portrait-hit')).toBeNull()
+    expect(sides()[1].querySelector('.portrait-hit')).not.toBeNull()
+  })
+
+  it('主角掉血：只有主角那一侧形变（两侧各管各的）', () => {
+    paint({ portraits: { player: HERO, monsters: { goblin: FOE } } })
+    const battle = inCombat()
+    usePlayStore.setState({ session: battle })
+    const { rerender } = render(<BattleDialog session={battle} />)
+
+    rerender(<BattleDialog session={struck(battle, 'player')} />)
+
+    expect(sides()[0].querySelector('.portrait-hit')).not.toBeNull()
+    expect(sides()[1].querySelector('.portrait-hit')).toBeNull()
+  })
+
+  it('给了 `hurt` 素材就换图、不形变：也只有挨打那一侧换', () => {
+    paint({
+      portraits: {
+        player: { img: HERO, hurt: HERO_HURT },
+        monsters: { goblin: { img: FOE, hurt: FOE_HURT } },
+      },
+    })
+    const battle = inCombat()
+    usePlayStore.setState({ session: battle })
+    const { rerender } = render(<BattleDialog session={battle} />)
+    expect(sides()[1].querySelector('img')!.getAttribute('src')).toBe(`blob:${FOE}`)
+
+    rerender(<BattleDialog session={struck(battle, 'monster')} />)
+
+    expect(sides()[0].querySelector('img')!.getAttribute('src')).toBe(`blob:${HERO}`)
+    expect(sides()[1].querySelector('img')!.getAttribute('src')).toBe(`blob:${FOE_HURT}`)
+    expect(document.querySelector('.portrait-hit')).toBeNull()
+  })
+
+  it('底栏立绘同一拍：主角掉血时那一块也抖（§4.4 与棋子同一套规则）', () => {
+    paint({ portraits: { player: HERO } })
+    usePlayStore.setState({ session })
+    const { container, rerender } = render(<GameScreen session={session} />)
+    expect(container.querySelector('.hud-vitals .portrait-hit')).toBeNull()
+
+    rerender(<GameScreen session={struck(session, 'player')} />)
+
+    expect(container.querySelector('.hud-vitals .portrait-hit')).not.toBeNull()
   })
 })

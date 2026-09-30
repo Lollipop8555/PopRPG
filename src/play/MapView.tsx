@@ -16,6 +16,7 @@ import { centerCamera } from '../lib/map'
 import { MapMarker } from '../ui/Marker'
 import { Footprint } from '../ui/Footprint'
 import { SvgTexture, textureProps } from '../ui/Texture'
+import { useHitPulse } from '../ui/useHitPulse'
 import { useSkinStore } from '../store/skin'
 import { fallbackColor, withAlpha } from '../lib/color'
 
@@ -78,6 +79,9 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
     assets,
     { x: px * CELL, y: py * CELL, w: CELL, h: CELL },
   )
+  // 受击这一拍（§4.4）：棋子形象与立绘同一套规则（没素材就形变）。结算全在纯函数里，
+  // 故信号只能取自「主角 hp 掉下来的那一帧」——地图上看得到的场合是回合开始的持续效果扣血
+  const pawnHit = useHitPulse(session.player.resources.hp)
 
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
     movedRef.current = false
@@ -187,26 +191,29 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
             strokeDasharray="3 3"
             opacity={0.7}
           />
-          {pawn ? (
-            <SvgTexture {...pawn} />
-          ) : (
-            <>
-              <rect
-                x={session.pos[0] * CELL + 7}
-                y={session.pos[1] * CELL + 7}
-                width={CELL - 14}
-                height={CELL - 14}
-                rx={11}
-                fill="rgba(140,190,150,.55)"
-                stroke="var(--ink)"
-                strokeWidth={2}
-              />
-              {/* 图标 = 当前职业的 icon（无职业时给个中性兜底） */}
-              <text x={px * CELL + CELL / 2} y={py * CELL + CELL / 2 + 7} fontSize={20} textAnchor="middle">
-                {session.player.cls?.icon ?? '🙂'}
-              </text>
-            </>
-          )}
+          {/* 受击形变只包**形象**这一层（§4.4，基准是格中心）；定位环不跟着压扁 */}
+          <g className={pawnHit ? 'piece-hit' : undefined}>
+            {pawn ? (
+              <SvgTexture {...pawn} />
+            ) : (
+              <>
+                <rect
+                  x={session.pos[0] * CELL + 7}
+                  y={session.pos[1] * CELL + 7}
+                  width={CELL - 14}
+                  height={CELL - 14}
+                  rx={11}
+                  fill="rgba(140,190,150,.55)"
+                  stroke="var(--ink)"
+                  strokeWidth={2}
+                />
+                {/* 图标 = 当前职业的 icon（无职业时给个中性兜底） */}
+                <text x={px * CELL + CELL / 2} y={py * CELL + CELL / 2 + 7} fontSize={20} textAnchor="middle">
+                  {session.player.cls?.icon ?? '🙂'}
+                </text>
+              </>
+            )}
+          </g>
         </g>
       </g>
 

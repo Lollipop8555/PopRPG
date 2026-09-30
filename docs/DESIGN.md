@@ -124,6 +124,14 @@
 
 ## 进度同步
 
+**2026-09-30 · D3 `role` 收口：受击表现（[`design/skin/02-role.md`](design/skin/02-role.md) §4.4 / §十一）**
+- **「受击瞬间」怎么判**：结算全在纯函数里、会话里没有「正在挨打」字段，故信号取自 **`hp` 掉下来的那一帧**——新增 [`src/ui/useHitPulse.ts`](../src/ui/useHitPulse.ts)（`useHitPulse(anchor, key?)`，`HIT_MS = 120`）：回血 / 原地不动不发作，`key`（怪物 id 之类）一变只挪基准，**换怪物不算挨打**。
+- **两条路在渲染件里收口**：[`src/ui/Portrait.tsx`](../src/ui/Portrait.tsx) 的 `Portrait` 收 `hurt` ＋ `hit`——有 `hurt` 素材（`portraitHurtTile()`，只认对象写法、`flip` 跟主图）且正挨打就**改显示那张图**，没有才挂 `.portrait-hit` 走**形变**；棋子形象没有 `hurt` 字段（§三 写法里没有这一项），故**恒走形变**。一次受击动作 ＝ 这一拍 `HIT_MS`。
+- **基准与幅度全在 CSS**（[`src/styles/theme.css`](../src/styles/theme.css)）：`.portrait` 以底边 `50% 100%` 为变换基准、约 `120ms` 回弹，`.portrait-hit` 是 `scale(1.15, 0.9)`；棋子那一层是 `.piece-hit`，用 `transform-box: fill-box` ＋ `transform-origin: 50% 50%` 把基准钉在**格中心**（按元素自身外框算，与格大小无关）。
+- **接线**：对战 VS 区两侧**各管各的**（主角锚 `player.resources.hp`、怪物锚 `monster.resources.hp` ＋ `monster.id`）；底栏、状态面板、地图棋子锚**同一个主角 `hp`**（地图上看得到的场合是回合开始的持续效果扣血）。棋子形变层**只包形象**——绿色定位环在它外面、不跟着压扁；形象格的文字落点（`RoleGlyph`）不做形变，`dead` 变体仍不设。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **38 个文件 / 437 项**全绿（新增 15 项：`hitPulse.test.tsx` 3、`portrait.test.tsx` 5、`portraitLandings.test.tsx` 4、`mapView.test.tsx` 3）。
+- 至此 **`role` 一条（裁决 24 / 25 / 26）全部落地**；D3 余下各屏（`window`、`misc`、`item` / `building`、`startup` / `lobby`、`audio`）待做。
+
 **2026-09-30 · D3 第四屏：立绘 `role.portraits` 接入（[`design/skin/02-role.md`](design/skin/02-role.md) §4.1 / §十一）**
 - 渲染件：[`src/ui/Portrait.tsx`](../src/ui/Portrait.tsx)（`portraitTile()` ＋ `Portrait`），借**行内层** `InlineTexture` 出图——立绘只吃 `src` / `flip`，尺寸全部交给 CSS：`W = min(视口宽, 视口高)` 本就是 `100vmin`，于是高度档是 `.portrait-hud / -vs / -card` 的 `6 / 18 / 10vmin`，宽度由素材宽高比推出、`max-width: 25%` 为上限（撞上限由替换元素规则**按比例整体回缩**，故不拉伸），默认底边对齐、出身卡 `.portrait-center` 居中。`Texture.tsx` 抽出 `CSS_SIZED_BOX`（行内层「尺寸交给 CSS」的名义盒）供形象格与立绘共用。
 - 四个落点（[`design/skin/02-role.md`](design/skin/02-role.md) §4.1）：① [`src/play/GameScreen.tsx`](../src/play/GameScreen.tsx) 底栏 `.hud-vitals` 内、hp / mp 条左侧（**替代整个 `hud-face`**，血蓝条包进 `.hud-vitals-main` 与之底边对齐）、④ [`src/play/StatusPanel.tsx`](../src/play/StatusPanel.tsx) 面板头（与 ① 同源同图）、② [`src/play/BattleDialog.tsx`](../src/play/BattleDialog.tsx) 新增 `.vs-area`（**任一方画得出来即整块渲染**，主角左 / 怪物右，缺侧留空、不补 emoji）、⑤ [`src/play/StartScreen.tsx`](../src/play/StartScreen.tsx) 出身卡 `.class-card-head` 替代 `.class-icon`（逐卡查职业、缺位先回退 `portraits.player`）。

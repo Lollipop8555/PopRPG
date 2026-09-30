@@ -1,6 +1,6 @@
 /** 地图层接入皮肤（`skin/01-road.md` + `skin/05-canvas.md`；§四 降级链）：有素材画图，没素材画脚印 / 纸面 */
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render } from '@testing-library/react'
 import MapView from '../MapView'
 import { nextRound, startSession } from '../flow'
@@ -32,6 +32,7 @@ const CELL = 48
 afterEach(() => {
   cleanup()
   useSkinStore.getState().release()
+  vi.useRealTimers()
 })
 
 /** 一份素材的三写法（字符串 / 对象 / 数组）都摊成路径 */
@@ -235,5 +236,50 @@ describe('接管主角棋子', () => {
 
     expect(pawn.querySelector('image')).toBeNull()
     expect(pawn.querySelector('text')?.textContent).toBe(session.player.cls?.icon)
+  })
+})
+
+/** 棋子的受击形变（`skin/02-role.md` §4.4）：与立绘同一套规则，基准是**格中心** */
+describe('棋子的受击形变', () => {
+  /** 主角掉一点血（受击信号只看这个锚点） */
+  function struck(): Session {
+    const { resources } = session.player
+    return { ...session, player: { ...session.player, resources: { ...resources, hp: resources.hp - 2 } } }
+  }
+
+  it('掉血：形象那一层挂 `.piece-hit`（定位环在它外面，不跟着压扁）', () => {
+    vi.useFakeTimers()
+    paint(undefined, undefined, [], { player: HERO })
+    const { container, rerender } = draw()
+    expect(container.querySelector('.piece-hit')).toBeNull()
+
+    rerender(<MapView session={struck()} onStep={() => {}} />)
+
+    const deform = container.querySelector('g[data-role-pawn] .piece-hit')
+    expect(deform).not.toBeNull()
+    expect(deform!.querySelector('image')).not.toBeNull()
+    expect(deform!.querySelector('circle')).toBeNull()
+  })
+
+  it('没素材（回退方框 ＋ emoji）时照样抖：形变那一层不挑有没有图', () => {
+    vi.useFakeTimers()
+    const { container, rerender } = draw()
+    expect(container.querySelector('.piece-hit')).toBeNull()
+
+    rerender(<MapView session={struck()} onStep={() => {}} />)
+
+    expect(container.querySelector('.piece-hit text')).not.toBeNull()
+  })
+
+  it('回血不算挨打', () => {
+    const { container, rerender } = draw()
+    const healed: Session = {
+      ...session,
+      player: { ...session.player, resources: { ...session.player.resources, hp: session.player.resources.hp + 3 } },
+    }
+
+    rerender(<MapView session={healed} onStep={() => {}} />)
+
+    expect(container.querySelector('.piece-hit')).toBeNull()
   })
 })

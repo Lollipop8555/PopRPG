@@ -28,7 +28,7 @@
 |---|---|---|---|
 | **V1** | Phase 0 基座 / Phase A BUILD / Phase B PLAY | **已冻结口径**：七大类 · 13 项配置 · `encounter` 五选一 | **已完成**（A 首轮 ＋ B 全部 58 项勾选；全量 197 项单测绿） |
 | **V2.0** | **新增 NPC 与对话**（第 8 类组件 ＋ **进入建筑后的 NPC 触发节点**） | **追加设定 / 结构改造**（不属于 V1 的阶段性设计） | **已完成**（编辑器侧 E0–E3 ＋ 运行时 E4 ＋ 19 项原子验收；E5 皮肤落点并入 **V2.1**） |
-| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ 棋子形象（`role` 的 `player` / `classes` / `monsters` / `npcs`）＋ 立绘（`role.portraits` 四落点）已接，受击表现（§4.4）与余下各屏待做） |
+| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条（棋子形象 / 立绘四落点 / 受击表现）**已收口**，余下各屏待做） |
 | **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 九宫格切片消费 / 皮肤校验 / 音频播放 | 叠加层 | V2.1 之后 |
 
 > **V1 口径冻结、不改写**：`task/00-foundation.md` / `task/01-build.md` 里的「七大类 / 13 项 / 五选一」是 **V1 史实**；
@@ -130,6 +130,13 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 ---
 
 ## 进度同步
+
+**2026-09-30 · D3 `role` 收口（受击表现 §4.4）**
+- **信号**：新增 [`src/ui/useHitPulse.ts`](src/ui/useHitPulse.ts)——结算里没有「正在挨打」这个字段，故锚 **`hp` 掉下来的那一帧**；`HIT_MS = 120`（与 CSS 回弹同值），`key`（怪物 id）一变只挪基准，换怪物不算挨打。
+- **两条路**：`Portrait` 收 `hurt` / `hit`——有 `hurt` 素材换图（`portraitHurtTile()`，只认对象写法、`flip` 跟主图），没有才挂 `.portrait-hit` 走形变（底边基准、`scale(1.15, 0.9)`、约 `120ms` 回弹）；棋子形象没有 `hurt` 字段 ⇒ 恒走形变，`.piece-hit` 用 `transform-box: fill-box` ＋ `transform-origin: 50% 50%` 把基准钉在**格中心**。
+- **接线**：对战 VS 区两侧各管各的（怪物锚 `monster.resources.hp` ＋ `monster.id`）、底栏 / 状态面板 / 地图棋子锚同一个主角 `hp`；棋子形变层**只包形象**，绿色定位环不跟着压扁；形象格的文字落点（`RoleGlyph`）不做形变，`dead` 仍不设变体。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **38 个文件 / 437 项**全绿（新增 15 项）。设计侧同步 [`docs/design/skin/02-role.md`](docs/design/skin/02-role.md) §十一（新增「受击表现」、撤掉「未落地」）；任务侧 [`task/04-skin.md`](task/04-skin.md) 的 `role` 与受击两条勾选。
+- 至此 **`role` 一条（裁决 24 / 25 / 26）全部落地**，D3 余下各屏待做。
 
 **2026-09-30 · D3 第四屏（立绘 `role.portraits` 接入）**
 - 渲染件：[`src/ui/Portrait.tsx`](src/ui/Portrait.tsx)（`portraitTile()` ＋ `Portrait`），借**行内层** `InlineTexture` 出图；尺寸全在 CSS——`W = min(视口宽, 视口高)` 即 `100vmin`，故高度档是 `.portrait-hud / -vs / -card` 的 `6 / 18 / 10vmin`，宽度由素材宽高比推出、`max-width: 25%` 为上限（撞上限按比例整体回缩，不拉伸）；默认底边对齐、出身卡居中。`Texture.tsx` 相应抽出 `CSS_SIZED_BOX`（行内层「尺寸交给 CSS」的名义盒，形象格与立绘共用）。
