@@ -7,9 +7,13 @@ import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import type { Session } from '../types/session'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { useDieBodyStyle, useDieFace } from '../ui/useDieSkin'
+import { InlineTexture } from '../ui/Texture'
 
-/** 骰面：1–6 用点阵，更大的点数值（如 2D6=7）回退为数字 */
+/** 骰面：1–6 用点阵，更大的点数值（如 2D6=7）回退为数字；配了素材则素材优先（`04-misc.md` §三） */
 export function DieFace({ pips }: { pips: number }) {
+  const face = useDieFace(pips)
+  if (face) return <InlineTexture {...face} />
   if (pips < 1 || pips > 6) return <span>{pips}</span>
   const layout: Record<number, number[]> = {
     1: [4],
@@ -61,6 +65,8 @@ export default function DiceLog({ session, onClose }: { session: Session; onClos
 
   // 抽屉纸面底纹（`skin/03-window.md` §四）：流水也在抽屉里，与三个面板同吃 `surfaces.drawer`
   const surface = useSurfaceStyle('drawer')
+  // 骰子本体（`skin/04-misc.md` §三）：铺进 `.die` 盒，三档尺寸共用一张
+  const dieBody = useDieBodyStyle()
 
   const replay = () => {
     if (lastRoll) setDie({ pips: lastRoll.pips, key: Date.now() })
@@ -78,7 +84,7 @@ export default function DiceLog({ session, onClose }: { session: Session; onClos
                 className="die rolled"
                 title="最近一次掷骰（点击重看）"
                 onClick={replay}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'pointer', ...dieBody }}
               >
                 <DieFace pips={die.pips} />
               </span>

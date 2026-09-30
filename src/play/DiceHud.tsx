@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react'
 import { StepForward } from 'lucide-react'
 import type { Session } from '../types/session'
+import { useDieBodyStyle } from '../ui/useDieSkin'
 import { DieFace } from './DiceLog'
 
 export default function DiceHud({
@@ -21,6 +22,8 @@ export default function DiceHud({
 }) {
   const last = session.rolls[session.rolls.length - 1]
   const [spinPips, setSpinPips] = useState<number | null>(null)
+  // 骰子本体（`skin/04-misc.md` §三）：三档尺寸共用一张，底下这盒就是最大那一档
+  const dieBody = useDieBodyStyle()
 
   // 旋转期间点数快速滚动，营造「正在掷」的手感
   useEffect(() => {
@@ -39,7 +42,7 @@ export default function DiceHud({
       <span
         key={spinning ? 'spinning' : `pips-${session.rolls.length}`}
         className={`die ${spinning ? 'spinning' : 'rolled'}`}
-        style={{ width: 46, height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        style={{ width: 46, height: 46, display: 'flex', alignItems: 'center', justifyContent: 'center', ...dieBody }}
       >
         {shown ? <DieFace pips={shown} /> : '🎲'}
       </span>

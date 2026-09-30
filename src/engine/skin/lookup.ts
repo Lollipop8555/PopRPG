@@ -1,6 +1,6 @@
 /**
- * 形象 / 立绘 / 道具 / 建筑 / 衬底 / 容器的取值（`skin/02-role.md`、`skin/03-window.md`、
- * `skin/06-item-building.md`）。
+ * 形象 / 立绘 / 道具 / 建筑 / 衬底 / 容器 / 标记与骰子的取值（`skin/02-role.md`、
+ * `skin/03-window.md`、`skin/04-misc.md`、`skin/06-item-building.md`）。
  *
  * 全部为「**有则取、无则 `undefined`**」的查表：回退链只在本文件明确写出，
  * 渲染侧拿到 `undefined` 即走程序绘制形态，不再自行猜测上级素材。
@@ -10,15 +10,19 @@
  * - 立绘：职业缺位**先回退 `role.portraits.player`**；怪物与 NPC 缺位即不渲染，**不跨条借用**。
  * - 衬底：字符串写法等价于只写 `fill`；`stroke` 独立设置，未给即不绘制描边。
  * - 容器：对话框 / 抽屉 / 气泡三种容器各查 `window.surfaces` 一个键，**互不借用**。
+ * - 地图标记：起点 / 终点 / 脚印三键各查 `misc.marks` 自己的键，**互不借用**（缺了照旧画程序图形）。
+ * - 骰子：本体与骰面各一张；骰面 1–6 取点阵 `d1`–`d6`、其余点数取数字面 `numeric`。
  */
 
 import type {
   SkinBuilding,
   SkinBuildingSkin,
+  SkinDieFace,
   SkinGround,
   SkinGroundField,
   SkinItem,
   SkinItemSkin,
+  SkinMisc,
   SkinPortrait,
   SkinPortraitObject,
   SkinRole,
@@ -83,6 +87,34 @@ export type SurfaceKind = 'dialog' | 'drawer' | 'popover'
 /** 取容器底纹；`window.surfaces` 未配该键即 `undefined` */
 export function surfaceOf(win: SkinWindow | undefined, kind: SurfaceKind): SkinTexture | undefined {
   return win?.surfaces?.[kind]
+}
+
+/**
+ * **地图标记三键**（`skin/04-misc.md` §二）：起点旗 / 终点藏宝图 X / 道路脚印。
+ *
+ * 三键都是「1 格、整图居中、不旋转」，各有落点、**不互相借用**；未配即照旧画程序图形
+ * （起点 / 终点的手绘 SVG、脚印）。脚印那一条只在**道路素材缺失**时才用得上（`01-road.md` §一）。
+ */
+export type MarkKind = 'start' | 'end' | 'footprint'
+
+/** 取地图标记素材；`misc.marks` 未配该键即 `undefined` */
+export function markOf(misc: SkinMisc | undefined, kind: MarkKind): SkinSprite | undefined {
+  return misc?.marks?.[kind]
+}
+
+/** 取骰子本体；**三档尺寸（46 / 38 / 34）共用这一张**、按盒等比缩放（`04-misc.md` §三） */
+export function dieBodyOf(misc: SkinMisc | undefined): SkinTexture | undefined {
+  return misc?.dice?.body
+}
+
+/**
+ * 取骰面：1–6 走点阵 `d1`–`d6`；其余点数（`2D6` 之类的合计值、或流程里的异常值）
+ * 一律交给数字面 `numeric`（可选）——未配即回退程序点阵 / 数字文本。
+ */
+export function dieFaceOf(misc: SkinMisc | undefined, pips: number): SkinTexture | undefined {
+  const faces = misc?.dice?.faces
+  if (faces === undefined) return undefined
+  return faces[pips >= 1 && pips <= 6 ? (`d${pips}` as SkinDieFace) : 'numeric']
 }
 
 /** 规整衬底字段：字符串写法等价于只写 `fill` */

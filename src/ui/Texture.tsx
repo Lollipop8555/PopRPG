@@ -66,19 +66,28 @@ export function textureProps(
 }
 
 /**
- * **容器衬底**（`skin/03-window.md`）：与上三层同吃「取图结果 → 可用地址」，差别在落法——
- * 不摆到坐标、不量盒，而是把图**铺满所在容器的整个背景**（`background-size: 100% 100%`）。
+ * 衬底铺法（`skin/03-window.md` §五、`skin/04-misc.md` §三）：
+ * - `stretch`：**铺满整盒**——随视口族容器的衬底（尺寸由窗口决定，量不出「多大一个盒」）；
+ * - `contain`：**等比缩放进盒内**、绝不拉伸——骰子本体（三档尺寸共用一张，`04-misc.md` §三）。
+ */
+export type SurfaceFit = 'stretch' | 'contain'
+
+/**
+ * **衬底 / 本体**：与上三层同吃「取图结果 → 可用地址」，差别在落法——
+ * 不摆到坐标、不量盒，而是把图**铺在所在元素的背景**上（铺法由 `fit` 定）。
  *
- * 只服务**尺寸由窗口决定**的随视口族容器（对话框 / 抽屉 / 气泡，§二）：它们量不出「多大一个盒」，
- * 底纹也不需要 `rotate` / `flip`，故这里只取 `src`；圆角、描边、阴影仍归容器自己的 CSS——
- * 素材铺在 `background-color` 之上、被圆角剪裁，正是 §五「素材只提供纸面底纹」的落法。
+ * 尺寸交给 CSS：随视口族容器（对话框 / 抽屉 / 气泡，`03-window.md` §二）与骰子盒
+ * （`.die` 三档尺寸，`04-misc.md` §三）都是「盒由 CSS 定」，底纹也不需要 `rotate` / `flip`，
+ * 故这里只取 `src`；圆角、描边、阴影仍归元素自己的 CSS——素材铺在 `background-color` 之上、
+ * 被圆角剪裁，正是 `03-window.md` §五「素材只提供纸面底纹」的落法。
  *
  * 返回 `undefined`（未配该键、包里缺这张图）即调用方不传 `style`，CSS 纸面照旧。
- * V1 一律拉伸；D6 落地九宫格时，这里改出 `border-image` 即可，调用方接口不变。
+ * 容器 V1 一律拉伸；D6 落地九宫格时，这里改出 `border-image` 即可，调用方接口不变。
  */
 export function surfaceStyle(
   ref: TextureRef | undefined,
   assets: SkinAssets,
+  fit: SurfaceFit = 'stretch',
 ): CSSProperties | undefined {
   if (ref === undefined) return undefined
   const src = assets.urlOf(ref.src)
@@ -88,7 +97,7 @@ export function surfaceStyle(
   // 纸面底色得留着（衔接处不露白）
   return {
     backgroundImage: `url("${src}")`,
-    backgroundSize: '100% 100%',
+    backgroundSize: fit === 'contain' ? 'contain' : '100% 100%',
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'center',
   }

@@ -1,7 +1,7 @@
 # skin 分节：标记、骰子与图标 `misc`
 
 > 上层索引：[`../skin.md`](../skin.md)　依据：[`../00b-style.md`](../00b-style.md)、`src/ui/Marker.tsx`（起终点）、`src/ui/Footprint.tsx`（道路脚印）、`src/play/DiceLog.tsx`（骰面）、`src/play/MapView.tsx`（节点与引导线）
-> **状态**：已补（由既有游玩态实现推算，待校正）。
+> **状态**：已补（由既有游玩态实现推算，待校正）。**地图标记与骰子已接入**（§十）。
 > **收容范围**：不属于形象（`role`）、不属于容器（`window`）的其余全部可见图形。
 
 ## 一、覆盖范围
@@ -91,6 +91,43 @@
 
 ## 九、待确认
 
-1. 起点 / 终点是否接受素材覆盖（当前为程序绘制 SVG，[`../00b-style.md`](../00b-style.md) 已定形态）？
+1. ~~起点 / 终点是否接受素材覆盖（当前为程序绘制 SVG，[`../00b-style.md`](../00b-style.md) 已定形态）？~~ **已定**：接受覆盖（§二 表已写「程序绘制为主、**素材可覆盖**」），实现见 §十——**缺图时照旧画程序图形**，故覆盖是纯加法。
 2. 掷骰中动画是否需要专属素材，或沿用 `🎲` 兜底？
 3. `node.building` 的填充与描边比例（现有为描边 100% alpha ＋ 填充 30% alpha）在套素材后是否保留？
+
+## 十、实现落点（2026-09-30）
+
+> **本批落「地图标记 ＋ 骰子」两组**：起点 / 终点 / 脚印三键与骰子本体 / 骰面已接入 `misc`。
+> **图标与引导线尚未接入**，`node.building` 与骰子动画态按原因后置，见文末「未接部分」。
+
+### 取图与落图
+
+- **取图**：[`src/engine/skin/lookup.ts`](../../../src/engine/skin/lookup.ts) 的三条查表——`markOf(misc, kind)`（`start` / `end` / `footprint` 各查自己的键、**不跨键借用**）、`dieBodyOf(misc)`（本体一张通吃三档、**不分尺寸档**）、`dieFaceOf(misc, pips)`（`1`–`6` → 点阵 `d1`–`d6`；**其余点数一律交给 `numeric`**：`2D6` 的合计值、以及流程里的异常值都走这一条）。三条都只出形状、不碰 IO，「缺位」一律是 `undefined`——如包里只有 `d1` / `d6` 时 `d2` 取不到 → **那一面自己回退程序点阵，不倒借别的面**。
+- **落图**（三种落法各归其位）：
+  - **标记**走 **SVG 层**（`textureProps` ＋ `SvgTexture`）：盒＝**整格**，与道路同一约定（[`01-road.md`](01-road.md) §3.1）——素材按 `cellSize × cellSize` 正方形交付、图形**自己居中留白**。原先程序绘制时旗 / 叉占格 86%、脚印占格 60%，素材接管后**内缩比例由素材自己决定**。多格节点取短边居中，与道路一致。
+  - **骰子本体**走 **CSS 背景**（`surfaceStyle(…, 'contain')`）：`.die` 盒已有尺寸、底色与描边，素材**等比缩放进盒、绝不拉伸**（§三「不拉伸」）；描边与圆角照旧归 CSS（[`03-window.md`](03-window.md) §五「素材只提供纸面底纹」的同一规矩）。
+  - **骰面**走 **行内层**（`InlineTexture` ＋ `.die-face` 的 `100% × 100%`）：尺寸随本体、**交给 CSS**，`contain` 沿用行内层的等比规矩。
+- **§三 的镜像 / 旋转复用关系由包里显式声明**：写对象式（如 `"d6": { "img": "d6.png", "rotate": 90 }`），运行期经 `textureRef()` 归一后照此落图——**默认不启用镜像**（[`../skin.md`](../skin.md) §3.2），`d2` / `d3` 想复用就得在包里写出来。
+- **接线**：[`src/ui/useDieSkin.ts`](../../../src/ui/useDieSkin.ts) 的 `useDieBodyStyle()` / `useDieFace(pips)`；标记三键在 `MapView` 里就地接线（与 `road` / `background` 同一处读 `store/skin`，不另设 hook）。三条链都遵循同一条底线：**未启用皮肤 / 未配该键 / 包里缺图 → `undefined`**，于是标记交回 `<MapMarker>` / `<Footprint>`，骰面交回程序点阵或数字文本（§二、§三 的「兜底」列即此）。
+- **不套手绘滤镜**（§六）：贴图是位图，`SvgTexture` 不给画笔加滤镜；程序图形与 lucide 照旧套。
+
+### 落点
+
+| 落点 | 键 | 文件 | 说明 |
+|---|---|---|---|
+| 起点 / 终点 | `mark.start` / `mark.end` | [`MapView.tsx`](../../../src/play/MapView.tsx) | 游玩态地图；缺图回退手绘旗 / 藏宝图 X |
+| 道路脚印 | `mark.footprint` | 同上 | **只在 `road` 素材缺失时**顶替程序脚印（[`01-road.md`](01-road.md) §一）；该格有道路图就轮不到它 |
+| 骰子本体 | `die.body` | [`DiceHud.tsx`](../../../src/play/DiceHud.tsx)（46）、[`BattleDialog.tsx`](../../../src/play/BattleDialog.tsx)（38 掷骰中 / 30 定格）、[`TalkDialog.tsx`](../../../src/play/TalkDialog.tsx)（34）、[`DiceLog.tsx`](../../../src/play/DiceLog.tsx)（34 流水） | 五处 `.die` 盒同吃一张；`🎲` 兜底时**也铺**（本体属于那个空骰盒，不属于某一次点数） |
+| 骰面 | `die.face.d1`–`d6` / `numeric` | [`DiceLog.tsx`](../../../src/play/DiceLog.tsx) 的 `DieFace` | 四个调用处（HUD / 对话 / 对战 / 流水）共用同一份骰面逻辑，换面只此一处 |
+
+- **`mark.end` 与 `mark.footprint` 的「不共用」是刻意的**：脚印只在道路缺图的格子上出现，与终点标记无缘，故两者绝不会在同一格上争位。
+
+### 未接部分
+
+- **图标**（§四）：lucide 与内容 emoji 的替换要一个**按图标名索引**的入口组件（现各处直接写 `<Sword />` 这样的元件），留到专门的一批；**兜底字形**（`🙂` / `✦` / `❔` / `🎲` / `🔒`）按 §四 **永远不可覆盖**，与接线无关。
+- **`node.building`**（§二）：**随格数拉伸**，必须九宫格（`KM-1`），V1 的 `drawTexture` 还没有 `slice` → 留到 **V1.1**（与容器衬底的九宫格同一批）。
+- **引导线**（§五）：属**平铺**（`tile` 策略），V1 没有该策略、且游玩态目前只画每 10 格的参照线 → 留到 **V2.2**。
+- **骰子动画态 `die.rolling`**（§三）：**待确认 2 未裁决**，暂时沿用 `🎲` 兜底。
+- **构建页**：`src/build/Canvas.tsx` 的起终点与脚印**不接**（与构建页画布 `background`、构建页 `.modal` 同一处理）。
+- **加载屏封面的三枚装饰骰**（`.cover-die`，写死数字、并非 `DieFace`）**不接本体**：它们尺寸虽也是 46，却属于封面插画那一张图的事，归 `startup.bg`（[`08-pages.md`](08-pages.md)）；`die.body` 只管真正会变点数的骰盒。
+- **校验项**：`KM-1` / `KM-2` / `KM-3` 都没落进校验层（`SkinIssueCode` 目前只有 `KP-*`），等汇总批统一接。

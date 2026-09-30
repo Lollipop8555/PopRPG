@@ -14,6 +14,7 @@ import { canUseSkill, costText } from '../engine/skill'
 import { usePlayStore } from '../store/play'
 import { useSkinStore } from '../store/skin'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { useDieBodyStyle } from '../ui/useDieSkin'
 import { portraitOf, roleSprite } from '../engine/skin'
 import Overlay from '../ui/Overlay'
 import { RoleGlyph } from '../ui/RoleGlyph'
@@ -68,6 +69,8 @@ export default function BattleDialog({ session }: { session: Session }) {
   const role = useSkinStore((s) => s.skin?.manifest.role)
   // 对话框纸面底纹（`skin/03-window.md` §四）：未配 `surfaces.dialog` 即不传 `style`，CSS 纸面照旧
   const surface = useSurfaceStyle('dialog')
+  // 骰子本体（`skin/04-misc.md` §三）：战中那两枚（定格 30 / 掷骰中 38）同吃一张
+  const dieBody = useDieBodyStyle()
 
   const monster = session.monster
   if (!monster) return null
@@ -194,7 +197,7 @@ export default function BattleDialog({ session }: { session: Session }) {
           <div className="battle-dice">
             <span
               className="die rolled"
-              style={{ width: 30, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ width: 30, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...dieBody }}
             >
               <DieFace pips={lastRoll.pips} />
             </span>
@@ -228,7 +231,7 @@ export default function BattleDialog({ session }: { session: Session }) {
               <span
                 key="spinning"
                 className="die spinning"
-                style={{ width: 38, height: 38, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ width: 38, height: 38, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...dieBody }}
               >
                 {spin !== null ? <DieFace pips={spin} /> : '🎲'}
               </span>

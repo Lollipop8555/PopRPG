@@ -32,6 +32,7 @@ import { talkView } from './talk'
 import { roleSprite } from '../engine/skin'
 import { useSkinStore } from '../store/skin'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
+import { useDieBodyStyle } from '../ui/useDieSkin'
 import { DieFace } from './DiceLog'
 import Overlay from '../ui/Overlay'
 import { RoleGlyph } from '../ui/RoleGlyph'
@@ -81,6 +82,8 @@ export default function TalkDialog({
   const role = useSkinStore((s) => s.skin?.manifest.role)
   // 对话框纸面底纹（`skin/03-window.md` §四）：两个分支（重入菜单 / 正常对话）共用一个壳
   const surface = useSurfaceStyle('dialog')
+  // 骰子本体（`skin/04-misc.md` §三）：对话里那枚骰子与底栏那枚同吃一张
+  const dieBody = useDieBodyStyle()
 
   const view = talkView(session)
   if (!view) return null
@@ -191,7 +194,7 @@ export default function TalkDialog({
                 <span
                   key={rolling ? 'spinning' : `pips-${talk.rolled ?? 0}`}
                   className={`die ${rolling ? 'spinning' : 'rolled'}`}
-                  style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', ...dieBody }}
                 >
                   {rolling ? (spinPips ? <DieFace pips={spinPips} /> : '🎲') : talk.rolled ? <DieFace pips={talk.rolled} /> : '🎲'}
                 </span>

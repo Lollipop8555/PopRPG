@@ -124,6 +124,16 @@
 
 ## 进度同步
 
+**2026-09-30 · D3 第六屏：`misc` 地图标记 ＋ 骰子接入（[`design/skin/04-misc.md`](design/skin/04-misc.md) §二 / §三 / §十）**
+- **两组一起落**：起点 / 终点 / 脚印（地图标记族）与骰子本体 / 骰面（骰子族）已接 `misc`；**图标与引导线未接**、`node.building` 与骰子动画态按原因后置，见文末。
+- **取图**：[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `markOf(misc, kind)`（`start` / `end` / `footprint` 各查自己的键、**不跨键借用**）、`dieBodyOf(misc)`（本体**一张通吃 46 / 38 / 34 三档**、不分尺寸档）、`dieFaceOf(misc, pips)`（`1`–`6` → 点阵 `d1`–`d6`；**其余点数一律 `numeric`**——`2D6` 的合计值与流程里的异常值都走这条）。缺位一律 `undefined`：包里只有 `d1` / `d6` 时 `d2` 取不到，**那一面自己回退程序点阵、不倒借别的面**。
+- **三种落法各归其位**：**标记**走 SVG 层（`textureProps` ＋ `SvgTexture`），盒＝**整格**、与道路同一约定（[`design/skin/01-road.md`](design/skin/01-road.md) §3.1）——素材按 `cellSize × cellSize` 正方形交付、图形自己居中留白，原先程序绘制旗 / 叉占格 86%、脚印占格 60%，**素材接管后内缩比例由素材自己定**；**骰子本体**走 **CSS 背景**、`surfaceStyle(…, 'contain')`（等比缩放进 `.die` 盒、**绝不拉伸**，§三「不拉伸」；描边与圆角照旧归 CSS，同 §五「素材只提供纸面底纹」的规矩）；**骰面**走**行内层**（`InlineTexture` ＋ 新增 `.die-face` 的 `100% × 100%`，尺寸随本体、交给 CSS）。
+- **镜像 / 旋转复用由包里显式声明**（§三 的 `d2` / `d3` 镜像、`d6` 旋转）：写对象式如 `"d6": { "img": "d6.png", "rotate": 90 }`，运行期经 `textureRef()` 归一后照此落图——**默认不启用镜像**（[`design/skin.md`](design/skin.md) §3.2）。
+- **落点**：起点 / 终点 / 脚印在 [`src/play/MapView.tsx`](../src/play/MapView.tsx)（**脚印只在 `road` 缺图时**顶替 `<Footprint>`；该格有道路图就轮不到它）；**五处 `.die` 盒**同吃本体一张（HUD 46 / 对战 38 掷骰中 ＋ 30 定格 / 对话 34 / 流水 34，`🎲` 兜底时**也铺**——本体属于那个空骰盒，不属于某一次点数）；骰面由 [`src/play/DiceLog.tsx`](../src/play/DiceLog.tsx) 的 `DieFace` 一处收口（四个调用处共用）。接线 [`src/ui/useDieSkin.ts`](../src/ui/useDieSkin.ts)；标记三键在 `MapView` 就地接线。**缺图一律回退程序图形**（旗 / 藏宝图 X / 脚印 / 点阵 / 数字文本）；**贴图不套手绘滤镜**（§六）。
+- **构建页不接**：`src/build/Canvas.tsx` 的起终点与脚印照旧程序绘制（与构建页画布 `background`、构建页 `.modal` 同一处理）。
+- **未接**：`node.building` **随格数拉伸、必须九宫格**（`KM-1`，V1 无 `slice` → **V1.1**）；**图标**（lucide 与内容 emoji 要一个按名索引的入口组件，兜底字形 `🙂` `✦` `❔` `🎲` `🔒` 按 §四**永远不可覆盖**）；**引导线**属**平铺**（`tile` → **V2.2**）；`die.rolling`（**待确认 2** 未裁决，暂用 `🎲`）；`KM-1`–`KM-3` 等校验层（`SkinIssueCode` 现只有 `KP-*`）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **42 个文件 / 471 项**全绿（新增 2 个用例文件 / 18 项：`engine/skin/__tests__/misc.test.ts`、`play/__tests__/miscSkin.test.tsx`）。里程碑状态：V2.1 行与 [`task/04-skin.md`](../task/04-skin.md) 的 `misc` 条拆分并勾选；§九 待确认 1（起终点是否接受素材覆盖）由实现定下——**接受、缺图照旧画程序图形**。
+
 **2026-09-30 · D3 第五屏：容器衬底 `window.surfaces` 接入（[`design/skin/03-window.md`](design/skin/03-window.md) §二 / §四 / §八）**
 - **先落「随视口族」那一族**：对话框 / 抽屉 / 气泡（§二「尺寸由窗口决定」）已接 `window.surfaces`；其余三族（随内容 / 单向 / 固定）要么必须九宫格、要么会与 `item.background` 抢同一个落点，见文末。
 - **取图**：[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `surfaceOf(win, kind)`——`dialog` / `drawer` / `popover` 各查自己的键、**不跨键借用**（对话框没配就用不回抽屉的图）；`textureRef()` 归一三写法（衬底不需要 `rotate` / `flip`）。

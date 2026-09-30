@@ -5,13 +5,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import type { GameMap, MapNode, SkinRoad } from '../types'
+import type { GameMap, MapNode, SkinMisc, SkinRoad } from '../types'
 import type { Session } from '../types/session'
 import type { SkinAssets } from '../io/skin-assets'
 import { currentMap, neighbors } from './kit'
 import { canStep } from './flow'
 import { roadPickAt } from './road'
-import { backgroundOf, backgroundPlacement, backgroundUsable, roleSprite, spriteRef } from '../engine/skin'
+import { backgroundOf, backgroundPlacement, backgroundUsable, markOf, roleSprite, spriteRef, type MarkKind } from '../engine/skin'
 import { centerCamera } from '../lib/map'
 import { MapMarker } from '../ui/Marker'
 import { Footprint } from '../ui/Footprint'
@@ -33,6 +33,7 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
   const assets = useSkinStore((s) => s.assets)
   const road = useSkinStore((s) => s.skin?.manifest.road)
   const background = useSkinStore((s) => s.skin?.manifest.background)
+  const misc = useSkinStore((s) => s.skin?.manifest.misc)
   const role = useSkinStore((s) => s.skin?.manifest.role)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [size, setSize] = useState({ w: 800, h: 600 })
@@ -176,7 +177,15 @@ export default function MapView({ session, onStep }: { session: Session; onStep:
         </g>
 
         {map.nodes.map((node) => (
-          <NodeShape key={`${node.x},${node.y}`} node={node} session={session} map={map} road={road} assets={assets} />
+          <NodeShape
+            key={`${node.x},${node.y}`}
+            node={node}
+            session={session}
+            map={map}
+            road={road}
+            misc={misc}
+            assets={assets}
+          />
         ))}
 
         {/* 主角：绿色虚线环只是「你在这儿」的定位标记，与棋子形象无关，故一直画 */}
@@ -246,12 +255,14 @@ function NodeShape({
   session,
   map,
   road,
+  misc,
   assets,
 }: {
   node: MapNode
   session: Session
   map: GameMap
   road?: SkinRoad
+  misc?: SkinMisc
   assets: SkinAssets
 }) {
   const w = Math.max(1, node.w ?? 1) * CELL
@@ -283,6 +294,20 @@ function NodeShape({
     { x: x + (w - side) / 2, y: y + (h - side) / 2, w: side, h: side },
   )
 
+  // 地图标记（`04-misc.md` §二）：起点 / 终点 / 脚印三键都是「1 格、整图居中、不旋转」，
+  // 素材按 `cellSize × cellSize` 正方形交付、图形自己居中留白（与道路同一约定，`01-road.md` §3.1）。
+  // 三键各查各的、**不互相借用**；取不到图就交回给下面的程序图形（旗 / 藏宝图 X / 脚印）。
+  const markBox = { x: x + (w - side) / 2, y: y + (h - side) / 2, w: side, h: side }
+  const mark = isMarker
+    ? textureProps(spriteRef(markOf(misc, node.type as MarkKind)), assets, markBox, {
+        className: `mark-${node.type}`,
+      })
+    : undefined
+  // 脚印那条只在**道路素材缺失**时才顶上来（`04-misc.md` §二）
+  const footprint = textureProps(spriteRef(markOf(misc, 'footprint')), assets, markBox, {
+    className: 'mark-footprint',
+  })
+
   return (
     <g>
       <rect
@@ -299,11 +324,17 @@ function NodeShape({
       {isRoad &&
         (tile ? (
           <SvgTexture {...tile} />
+        ) : footprint ? (
+          <SvgTexture {...footprint} />
         ) : (
           <Footprint cx={x + w / 2} cy={y + h / 2} size={Math.min(w, h) * 0.6} color={nodeColor} />
         ))}
       {isMarker ? (
-        <MapMarker kind={node.type as 'start' | 'end'} x={x + (w - markSize) / 2} y={y + (h - markSize) / 2} size={markSize} />
+        mark ? (
+          <SvgTexture {...mark} />
+        ) : (
+          <MapMarker kind={node.type as 'start' | 'end'} x={x + (w - markSize) / 2} y={y + (h - markSize) / 2} size={markSize} />
+        )
       ) : isRoad ? null : (
         <text x={x + w / 2} y={y + h / 2 + 7} fontSize={Math.min(22, CELL * 0.46)} textAnchor="middle">
           {def?.icon ?? '·'}
