@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import type { Session } from '../types/session'
+import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 
 /** 骰面：1–6 用点阵，更大的点数值（如 2D6=7）回退为数字 */
 export function DieFace({ pips }: { pips: number }) {
@@ -58,12 +59,15 @@ export default function DiceLog({ session, onClose }: { session: Session; onClos
     if (box) box.scrollTop = box.scrollHeight
   }, [session.log.length])
 
+  // 抽屉纸面底纹（`skin/03-window.md` §四）：流水也在抽屉里，与三个面板同吃 `surfaces.drawer`
+  const surface = useSurfaceStyle('drawer')
+
   const replay = () => {
     if (lastRoll) setDie({ pips: lastRoll.pips, key: Date.now() })
   }
 
   return (
-    <div className="panel" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+    <div className="panel" style={{ display: 'flex', flexDirection: 'column', minHeight: 0, ...surface }}>
       <div className="panel-head" style={{ justifyContent: 'space-between' }}>
         <span>流水</span>
         <span className="row" style={{ gap: 6, alignItems: 'center' }}>

@@ -1,7 +1,7 @@
 # skin 分节：容器与控件 `window`
 
 > 上层索引：[`../skin.md`](../skin.md)　依据：[`../00b-style.md`](../00b-style.md)、`src/styles/play.css`／`theme.css`、`src/ui/Overlay.tsx`／`Popover.tsx`
-> **状态**：已补（由既有游玩态实现推算，待校正）。
+> **状态**：已补（由既有游玩态实现推算，待校正）。**容器衬底已接入**（对话框 / 抽屉 / 气泡，见 §八）。
 > **划分原则**：**容器 = 带底纹或边框、且尺寸由内容或视口决定的元素**。内容自适应与九宫格强相关，因此单独成节。
 
 ## 一、覆盖范围（按游玩态屏划分）
@@ -128,3 +128,34 @@ V1 不解析九宫格，因此：
 3. 按钮四态素材的**接入排期**：是否与九宫格（V1.1）同批实现？（结构已定稿，见 §四.1）
 
 > **已裁决（13）**：按钮 `hover` / `active` / `disabled` 三态**结构现在就定稿**（§四.1：字段名 ＋ 缺省回退链），**实现顺序可后置**。
+
+## 八、实现落点（2026-09-30）
+
+> **本批只落「容器衬底」**：三种**随视口族**容器（§二）——对话框 / 抽屉 / 气泡——已接入 `window.surfaces`。
+> 按钮四态（§4.1）与其余三族（格子 / 条 / 提示条 / 分隔线）**尚未接入**，原因见文末「未接部分」。
+
+### 取图与落图
+
+- **取图**：[`src/engine/skin/lookup.ts`](../../../src/engine/skin/lookup.ts) 的 `surfaceOf(win, kind)`——`dialog` / `drawer` / `popover` 各查自己的键，**不跨键借用**（对话框没配就用不回抽屉的图）；`SurfaceKind` 与 §四 字段同名。拿到 `SkinTexture` 后由 `textureRef()` 归一三写法（衬底不需要 `rotate` / `flip`）。
+- **落图**：[`src/ui/Texture.tsx`](../../../src/ui/Texture.tsx) 的 `surfaceStyle(ref, assets)`——与 SVG 层 / 行内层 / DOM 层**同吃「取图结果 → 可用地址」**，差别只在落法：**铺满容器的整个背景**（`background-size: 100% 100%`）。尺寸交给 CSS（§二：随视口族「尺寸由窗口决定」，量不出「多大一个盒」，故这里只取 `src`）；**不写 `background-color`**——底纹可以带透明，纸面底色得留给容器的 CSS，衔接处才不露白。
+- **接线**：[`src/ui/useSurfaceStyle.ts`](../../../src/ui/useSurfaceStyle.ts) 的 `useSurfaceStyle(kind)` 把 `store/skin` 的两份状态（素材源 ＋ `manifest.window`）接到上面两个纯函数上；**未启用皮肤 / 未配该键 / 包里缺这张图**一律返回 `undefined`，调用方**不传 `style`**，CSS 纸面照旧（§一：皮肤是可选叠加层）。
+- **V1 一律拉伸**（§五）：`nine` 落地（V1.1）时只改 `surfaceStyle()` 内部出 `border-image`，三个调用方一行都不动。
+
+### 三个落点
+
+| 落点 | 元素 | 文件 | 说明 |
+|---|---|---|---|
+| 对话框 | `.modal` | [`BattleDialog.tsx`](../../../src/play/BattleDialog.tsx)、[`TalkDialog.tsx`](../../../src/play/TalkDialog.tsx)（重入菜单 / 正常对话两个分支共用一份）、[`EncounterView.tsx`](../../../src/play/EncounterView.tsx)、[`GameScreen.tsx`](../../../src/play/GameScreen.tsx)（菜单弹层与结算弹层）、[`LoadScreen.tsx`](../../../src/play/LoadScreen.tsx)（更新记录） | 凡是 `.modal` 都是对话框 |
+| 抽屉 | `.panel` | [`StatusPanel.tsx`](../../../src/play/StatusPanel.tsx)、[`BagPanel.tsx`](../../../src/play/BagPanel.tsx)、[`EquipPanel.tsx`](../../../src/play/EquipPanel.tsx)、[`DiceLog.tsx`](../../../src/play/DiceLog.tsx) | 抽屉的定位壳 `.hud-drawer` 自身没有纸面，故衬底落在卡片上；骰流水也在抽屉里，一并吃同一张 |
+| 气泡 | `.popover` | [`Popover.tsx`](../../../src/ui/Popover.tsx) | 固定定位那几项（`position` / `top` / `left` / `minWidth` / `zIndex`）照旧，衬底只补背景 |
+
+- **按组件给、不按类名给**：`.panel` 是通用类名，出身卡网格等其它 `.panel` 各有自己的节，故衬底在各组件里显式设置，不做全局选择器。
+- **构建页不接**：`src/build/*` 的 `.modal`（校验清单 / NPC 方案 / 规则页弹层）不铺游玩态底纹，与「构建页画布未接」（[`05-canvas.md`](05-canvas.md) §八）保持一致。
+- **加载屏的「页面卡片」不铺纸面底纹**：`LoadScreen` 的 `.load-cover` 是整屏容器、本来就没有卡片外观，该屏封面归 `startup.bg`（[`08-pages.md`](08-pages.md)）。
+
+### 未接部分
+
+- **按钮四态**（§4.1）：`window.buttons` 结构已定稿，本批不接——除 `normal` 外三态仍由 CSS 表现（`KW-6`）。
+- **随内容族与单向族**（§二：提示条 / 条 / 分隔线）**必须九宫格 / 单轴九宫格**，V1 硬拉伸会违反「随内容族禁止拉伸」（`KW-3`），故整批留到 V1.1：提示条与分隔线继续由 CSS 绘制。
+- **固定族格子**（技能格 / 奖励卡 / 部位标签）：尺寸固定、可整图等比拉伸，留到 **`item` / `building` 批**一并接——它们与 `item.background` 会落在同一类元素上，避免两节抢同一个落点。
+- **校验项**：`KW-1`（随视口族无 `slice`，V1 会整体拉伸）与 `KW-5`（路径不存在）的清单提示**尚未落进校验层**（`SkinIssueCode` 目前只有 `KP-*`），等汇总批（D6）统一接。

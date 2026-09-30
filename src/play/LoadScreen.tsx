@@ -16,12 +16,15 @@ import { downloadLibrary, pickLibraryFile, pickSaveFile } from '../io/psave'
 import { navigate } from '../app/router'
 import { APP_VERSION, changelog } from '../lib/version'
 import Overlay from '../ui/Overlay'
+import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 
 export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario) => void }) {
   const [warnings, setWarnings] = useState<string[]>([])
   const [moreOpen, setMoreOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
   const startSaved = usePlayStore((s) => s.setSession)
+  // 更新记录弹窗也是对话框（`skin/03-window.md` §四）：封面本身归 `startup.bg`（`08-pages.md`）
+  const surface = useSurfaceStyle('dialog')
 
   const fromBuild = () => {
     const library = useLibraryStore.getState()
@@ -152,7 +155,7 @@ export default function LoadScreen({ onLoaded }: { onLoaded: (scenario: Scenario
 
       {versionOpen && (
         <Overlay onClose={() => setVersionOpen(false)}>
-          <div className="modal changelog">
+          <div className="modal changelog" style={surface}>
             <div className="panel-head" style={{ justifyContent: 'space-between' }}>
               <span className="hand" style={{ fontSize: 16 }}>
                 更新记录

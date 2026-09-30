@@ -28,7 +28,7 @@
 |---|---|---|---|
 | **V1** | Phase 0 基座 / Phase A BUILD / Phase B PLAY | **已冻结口径**：七大类 · 13 项配置 · `encounter` 五选一 | **已完成**（A 首轮 ＋ B 全部 58 项勾选；全量 197 项单测绿） |
 | **V2.0** | **新增 NPC 与对话**（第 8 类组件 ＋ **进入建筑后的 NPC 触发节点**） | **追加设定 / 结构改造**（不属于 V1 的阶段性设计） | **已完成**（编辑器侧 E0–E3 ＋ 运行时 E4 ＋ 19 项原子验收；E5 皮肤落点并入 **V2.1**） |
-| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条（棋子形象 / 立绘四落点 / 受击表现）**已收口**，余下各屏待做） |
+| **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条（棋子形象 / 立绘四落点 / 受击表现）＋ `window` 容器衬底（对话框 / 抽屉 / 气泡）**已收口**，余下各屏待做） |
 | **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 九宫格切片消费 / 皮肤校验 / 音频播放 | 叠加层 | V2.1 之后 |
 
 > **V1 口径冻结、不改写**：`task/00-foundation.md` / `task/01-build.md` 里的「七大类 / 13 项 / 五选一」是 **V1 史实**；
@@ -65,7 +65,7 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 | [task/01-build.md](task/01-build.md) | Phase A BUILD（构建页） | 信息架构/数据模型/布局/图层/组件库/模式/画布/属性编辑/引擎纯函数/校验/预设/导入导出 | **已完成首轮实现**（build + 78 项单测全绿） |
 | [task/02-play.md](task/02-play.md) | Phase B PLAY（游玩页） | 框架加载/开局/移动回合/战斗UI/骰子公示/技能交互/状态/遭遇/商店/装备背包/存档 | **已完成**（B0–B10 与 B 验收 1–14 全部勾选） |
 | [task/03-polish.md](task/03-polish.md) | Phase C 收尾 | 视觉打磨 / GitHub Pages 部署 | 部分已完成 |
-| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地；D3 进行中：运行期通道 ＋ `road` ＋ 画布 `background` 已接；**优先级 ②**；端到端依赖 B） |
+| [task/04-skin.md](task/04-skin.md) | **V2.1 / V2.2** SKIN（素材） | 三件套容器 / zip 读写（`fflate`）/ 贴图渲染器 / 皮肤库与单套解压 / 逐屏素材接入 / Creative 模式（含九宫格切分工具）/ 皮肤校验 `KP-1`~`KP-10` | **进行中**（D0 / D1 / D2 已落地；D3 进行中：运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条 ＋ `window` 容器衬底已接；**优先级 ②**；端到端依赖 B） |
 | [task/05-npc.md](task/05-npc.md) | **V2.0** 新增 NPC 与对话（跨 A / B） | NPC 数据模型与对话树（**全树同一个结构**；给道具 `give`；本层掷骰 `dice` / 各项 `hit`）/ 组件库与组件页 / **NPC 模组面板（思维导图，命中覆盖检查）** / 建筑实例页与校验 / 运行时抽取与弹层（掷定锁死 / **重入三选项 ＋ 三标记** / `give` 一次性交付）/ 皮肤侧接口约定 | **已完成**（E0–E3 编辑器侧 ＋ E4 运行时 ＋ 19 项原子验收；E5 皮肤侧接口约定并入 [task/04-skin.md](task/04-skin.md)） |
 
 ---
@@ -130,6 +130,13 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 ---
 
 ## 进度同步
+
+**2026-09-30 · D3 第五屏（容器衬底 `window.surfaces` 接入）**
+- 取图：[`src/engine/skin/lookup.ts`](src/engine/skin/lookup.ts) 新增 `surfaceOf(win, kind)`——`dialog` / `drawer` / `popover` 各查自己的键，**不跨键借用**；`textureRef()` 归一三写法（衬底不需要 `rotate` / `flip`）。
+- 落图：[`src/ui/Texture.tsx`](src/ui/Texture.tsx) 新增 `surfaceStyle(ref, assets)`——与三层渲染器**同吃「取图结果 → 可用地址」**，差别只在落法：**铺满容器整个背景**（`background-size: 100% 100%`）。尺寸交给 CSS（§二：随视口族「尺寸由窗口决定」，量不出「多大一个盒」，故只取 `src`）；**不写 `background-color`**——底纹可以带透明，纸面底色留给 CSS。接线走 [`src/ui/useSurfaceStyle.ts`](src/ui/useSurfaceStyle.ts)：未启用皮肤 / 未配该键 / 包里缺这张图一律 `undefined`，调用方**不传 `style`**。
+- 三个落点：`.modal`（战斗 / 对话 / 遭遇 / 菜单 / 结算 / 更新记录）、抽屉里四张 `.panel`（状态 / 背包 / 装备 / 骰流水）、[`src/ui/Popover.tsx`](src/ui/Popover.tsx) 的 `.popover`；**按组件给、不按类名给**（`.panel` 是通用类名，出身卡网格等各有自己的节）；**构建页 `.modal` 与 `LoadScreen` 的 `.load-cover` 不接**（后者封面归 `startup.bg`）。
+- 未接：按钮四态（`KW-6`）与随内容族 / 单向族（提示条 / 条 / 分隔线）**必须九宫格**（硬拉伸违反 `KW-3`）、固定族格子与 `item.background` 抢同一落点，一并留到 **V1.1 / `item` 批**；`KW-1` / `KW-5` 的清单提示也要等校验层（`SkinIssueCode` 现只有 `KP-*`）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **40 个文件 / 453 项**全绿（本轮新增 2 个用例文件 / 11 项）。设计侧同步 [`docs/design/skin/03-window.md`](docs/design/skin/03-window.md) §八（新增「实现落点」）；任务侧 [`task/04-skin.md`](task/04-skin.md) 的 `window` 条拆出「容器衬底」并勾选。
 
 **2026-09-30 · D3 `role` 收口（受击表现 §4.4）**
 - **信号**：新增 [`src/ui/useHitPulse.ts`](src/ui/useHitPulse.ts)——结算里没有「正在挨打」这个字段，故锚 **`hp` 掉下来的那一帧**；`HIT_MS = 120`（与 CSS 回弹同值），`key`（怪物 id）一变只挪基准，换怪物不算挨打。

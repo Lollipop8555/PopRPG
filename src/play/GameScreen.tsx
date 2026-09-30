@@ -26,6 +26,7 @@ import TalkDialog from './TalkDialog'
 import HeroNotice from './HeroNotice'
 import Overlay from '../ui/Overlay'
 import { useSkinStore } from '../store/skin'
+import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { portraitOf, roleSprite } from '../engine/skin'
 import { RoleGlyph } from '../ui/RoleGlyph'
 import { Portrait, portraitHurtTile, portraitTile } from '../ui/Portrait'
@@ -68,6 +69,8 @@ export default function GameScreen({ session }: { session: Session }) {
   // 职业形象（`skin/02-role.md` §三）：底栏那一格与状态面板同源同图（立绘是另一回事，§4.1）
   const assets = useSkinStore((s) => s.assets)
   const role = useSkinStore((s) => s.skin?.manifest.role)
+  // 对话框纸面底纹（`skin/03-window.md` §四）：菜单弹层与结算弹层都在这一屏，两处共用一份
+  const dialogSurface = useSurfaceStyle('dialog')
   // 主角立绘：落点 1（底栏）。取不到即整块不渲染、hud-face 原样留着（§4.3）
   const heroOf = portraitOf(role, 'player')
   const hudPortrait = portraitTile(heroOf, assets)
@@ -245,7 +248,7 @@ export default function GameScreen({ session }: { session: Session }) {
       {/* 菜单对话框：独立浮层，不挤压底栏 */}
       {menuOpen && (
         <Overlay onClose={() => setMenuOpen(false)} align="bottom">
-          <div className="modal sheet">
+          <div className="modal sheet" style={dialogSurface}>
             <div className="panel-head" style={{ justifyContent: 'space-between' }}>
               <span className="hand">菜单</span>
               <button className="btn small" onClick={() => setMenuOpen(false)}>
@@ -278,7 +281,7 @@ export default function GameScreen({ session }: { session: Session }) {
 
       {finished && (
         <Overlay>
-          <div className="modal">
+          <div className="modal" style={dialogSurface}>
             <div className="panel-head">
               <Flag size={16} /> <span className="hand">{session.phase === 'won' ? '走到终点 —— 这一局完成了' : '这一局到此为止'}</span>
             </div>

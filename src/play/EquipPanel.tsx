@@ -11,6 +11,7 @@ import { EQUIP_SLOTS, SLOT_LABEL, STAT_KEYS, STAT_LABEL } from '../types'
 import type { ItemDef, StatKey } from '../types'
 import type { Session } from '../types/session'
 import { itemDef } from './inventory'
+import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 
 function modChips(it: ItemDef): string[] {
   const mods = it.modifiers
@@ -36,6 +37,8 @@ export default function EquipPanel({
   const equipped = session.player.equipped
   const equippedIds = new Set(equipped.map((e) => e.id))
   const [open, setOpen] = useState<OpenSlot | null>(null)
+  // 抽屉纸面底纹（`skin/03-window.md` §四）：抽屉里四张卡片同吃 `surfaces.drawer`
+  const surface = useSurfaceStyle('drawer')
 
   // 背包里、能穿进该部位、且还没穿的装备
   const candidatesFor = (slot: (typeof EQUIP_SLOTS)[number]): ItemDef[] =>
@@ -46,7 +49,7 @@ export default function EquipPanel({
   const equippedIn = (slot: (typeof EQUIP_SLOTS)[number]) => equipped.filter((it) => (it.slots ?? []).includes(slot))
 
   return (
-    <div className="panel">
+    <div className="panel" style={surface}>
       <div className="panel-head" style={{ justifyContent: 'space-between' }}>
         <span>装备</span>
         <span className="row" style={{ gap: 6, alignItems: 'center' }}>

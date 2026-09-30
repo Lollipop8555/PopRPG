@@ -9,6 +9,7 @@ import { SLOT_LABEL } from '../types'
 import type { ItemDef } from '../types'
 import type { Session } from '../types/session'
 import { bagCapacityText, itemDef } from './inventory'
+import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 
 export default function BagPanel({
   session,
@@ -25,9 +26,11 @@ export default function BagPanel({
 }) {
   const entries = session.player.inventory
   const equipped = session.player.equipped
+  // 抽屉纸面底纹（`skin/03-window.md` §四）：抽屉里四张卡片同吃 `surfaces.drawer`
+  const surface = useSurfaceStyle('drawer')
 
   return (
-    <div className="panel">
+    <div className="panel" style={surface}>
       <div className="panel-head" style={{ justifyContent: 'space-between' }}>
         <span>背包</span>
         <span className="row" style={{ gap: 6, alignItems: 'center' }}>

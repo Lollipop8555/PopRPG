@@ -65,6 +65,35 @@ export function textureProps(
   return { ...placement, src, ...extra }
 }
 
+/**
+ * **容器衬底**（`skin/03-window.md`）：与上三层同吃「取图结果 → 可用地址」，差别在落法——
+ * 不摆到坐标、不量盒，而是把图**铺满所在容器的整个背景**（`background-size: 100% 100%`）。
+ *
+ * 只服务**尺寸由窗口决定**的随视口族容器（对话框 / 抽屉 / 气泡，§二）：它们量不出「多大一个盒」，
+ * 底纹也不需要 `rotate` / `flip`，故这里只取 `src`；圆角、描边、阴影仍归容器自己的 CSS——
+ * 素材铺在 `background-color` 之上、被圆角剪裁，正是 §五「素材只提供纸面底纹」的落法。
+ *
+ * 返回 `undefined`（未配该键、包里缺这张图）即调用方不传 `style`，CSS 纸面照旧。
+ * V1 一律拉伸；D6 落地九宫格时，这里改出 `border-image` 即可，调用方接口不变。
+ */
+export function surfaceStyle(
+  ref: TextureRef | undefined,
+  assets: SkinAssets,
+): CSSProperties | undefined {
+  if (ref === undefined) return undefined
+  const src = assets.urlOf(ref.src)
+  if (src === undefined) return undefined
+
+  // 只写 image / size / repeat：**不动 `background-color`**——底纹可以带透明，
+  // 纸面底色得留着（衔接处不露白）
+  return {
+    backgroundImage: `url("${src}")`,
+    backgroundSize: '100% 100%',
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center',
+  }
+}
+
 /** 千分位取整：贴图坐标不必带浮点尾巴，免得每次渲染都换属性值 */
 function num(value: number): number {
   return Math.round(value * 1000) / 1000

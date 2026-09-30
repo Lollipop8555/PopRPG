@@ -124,6 +124,14 @@
 
 ## 进度同步
 
+**2026-09-30 · D3 第五屏：容器衬底 `window.surfaces` 接入（[`design/skin/03-window.md`](design/skin/03-window.md) §二 / §四 / §八）**
+- **先落「随视口族」那一族**：对话框 / 抽屉 / 气泡（§二「尺寸由窗口决定」）已接 `window.surfaces`；其余三族（随内容 / 单向 / 固定）要么必须九宫格、要么会与 `item.background` 抢同一个落点，见文末。
+- **取图**：[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `surfaceOf(win, kind)`——`dialog` / `drawer` / `popover` 各查自己的键、**不跨键借用**（对话框没配就用不回抽屉的图）；`textureRef()` 归一三写法（衬底不需要 `rotate` / `flip`）。
+- **落图**：`drawTexture` 家族多一种落法——[`src/ui/Texture.tsx`](../src/ui/Texture.tsx) 的 `surfaceStyle(ref, assets)`：与三层渲染器**同吃「取图结果 → 可用地址」**，但**不摆坐标、不量盒**，而是**铺满容器的整个背景**（`background-size: 100% 100%`）。尺寸交给 CSS（随视口族量不出「多大一个盒」，故这里只取 `src`）；**不写 `background-color`**——底纹可以带透明，纸面底色得留给容器的 CSS，衔接处才不露白；圆角 / 描边 / 阴影仍归容器自己的 CSS（§五「素材只提供纸面底纹」）。接线 [`src/ui/useSurfaceStyle.ts`](../src/ui/useSurfaceStyle.ts)：未启用皮肤 / 未配该键 / 包里缺这张图一律 `undefined`，调用方**不传 `style`**（§一：皮肤是可选叠加层）。
+- **三个落点**：`.modal`（战斗 / 对话 / 遭遇 / 菜单 / 结算 / 更新记录）、抽屉里四张 `.panel`（状态 / 背包 / 装备 / 骰流水）、[`src/ui/Popover.tsx`](../src/ui/Popover.tsx) 的 `.popover`。**按组件给、不按类名给**——`.panel` 是通用类名，出身卡网格等各有自己的节，故不做全局选择器。**构建页 `.modal` 不接**（与构建页画布一致）；`LoadScreen` 的「页面卡片」`.load-cover` 是整屏容器、本来没有卡片外观，该屏封面归 `startup.bg`（[`design/skin/08-pages.md`](design/skin/08-pages.md)）。
+- **未接**：按钮四态（`KW-6`）、随内容族（提示条）与单向族（条 / 分隔线）**必须九宫格**（硬拉伸违反 `KW-3`）、固定族格子与 `item.background` 抢同一类元素——一并留到 **V1.1 / `item` 批**；`KW-1` / `KW-5` 的清单提示也要等校验层（`SkinIssueCode` 现只有 `KP-*`）。
+- 验收：`npx tsc --noEmit` 无错；`npx vitest run` **40 个文件 / 453 项**全绿（新增 2 个用例文件 / 11 项：`engine/skin/__tests__/window.test.ts`、`play/__tests__/windowSurfaces.test.tsx`）。里程碑状态：V2.1 行与 [`task/04-skin.md`](../task/04-skin.md) 的 `window` 条拆出「容器衬底」并勾选；其余各屏待做。
+
 **2026-09-30 · 建筑实例加「允许重新对话」开关，`dialog` 收成一个对象（[`design/07-decisions.md`](design/07-decisions.md) §8.3 设定 10）**
 - **问题**：反复进入同一栋建筑，玩家总能选择【重新对话】——对"只说一次"的剧情（遗言 / 警告 / 一次性交代）是破坏性的，作者需要一种**不收走内容、只收走"重播"**的手段。
 - **载体合并**：地图节点上的 `dialog` 从**裸方案名**改成**对象 `{ mod?, retalk? }`**（[`src/types/project.ts`](../src/types/project.ts) 新增 `NodeDialog`）——"写死哪套方案"与"是否允许重新对话"说的都是同一个实例的对话，分成两个并列字段会让人以为可以只留一半。**旧包的裸方案名照旧能读**（导入即升级成 `{ mod }`）；`{}` / `{ retalk: true }` 视同没写。归一逻辑 `normalizeNodeDialog()` 在**导入与导出两侧共用同一份**（[`src/io/pmod.ts`](../src/io/pmod.ts) ＋ [`src/lib/dialog.ts`](../src/lib/dialog.ts)），**导出只在关闭（`retalk: false`）时写出**。

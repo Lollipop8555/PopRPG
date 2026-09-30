@@ -1,5 +1,6 @@
 /**
- * 形象 / 立绘 / 道具 / 建筑 / 衬底的取值（`skin/02-role.md`、`skin/06-item-building.md`）。
+ * 形象 / 立绘 / 道具 / 建筑 / 衬底 / 容器的取值（`skin/02-role.md`、`skin/03-window.md`、
+ * `skin/06-item-building.md`）。
  *
  * 全部为「**有则取、无则 `undefined`**」的查表：回退链只在本文件明确写出，
  * 渲染侧拿到 `undefined` 即走程序绘制形态，不再自行猜测上级素材。
@@ -8,6 +9,7 @@
  * - 棋子形象：玩家 → `role.player`；职业 / 怪物 / NPC 各自分组，**不跨组借用**。
  * - 立绘：职业缺位**先回退 `role.portraits.player`**；怪物与 NPC 缺位即不渲染，**不跨条借用**。
  * - 衬底：字符串写法等价于只写 `fill`；`stroke` 独立设置，未给即不绘制描边。
+ * - 容器：对话框 / 抽屉 / 气泡三种容器各查 `window.surfaces` 一个键，**互不借用**。
  */
 
 import type {
@@ -21,6 +23,8 @@ import type {
   SkinPortraitObject,
   SkinRole,
   SkinSprite,
+  SkinTexture,
+  SkinWindow,
 } from '../../types'
 
 /** 形象分组 */
@@ -68,6 +72,17 @@ export function buildingSkinOf(
   id: string,
 ): SkinBuildingSkin | undefined {
   return building?.[id]
+}
+
+/**
+ * **随视口族容器**（`skin/03-window.md` §二）：尺寸由窗口决定，故 V1 可整体拉伸底纹（§五）。
+ * 三个键各有落点、**不互相借用**：对话框 / 抽屉 / 气泡缺图即该处照旧画 CSS 纸面。
+ */
+export type SurfaceKind = 'dialog' | 'drawer' | 'popover'
+
+/** 取容器底纹；`window.surfaces` 未配该键即 `undefined` */
+export function surfaceOf(win: SkinWindow | undefined, kind: SurfaceKind): SkinTexture | undefined {
+  return win?.surfaces?.[kind]
 }
 
 /** 规整衬底字段：字符串写法等价于只写 `fill` */

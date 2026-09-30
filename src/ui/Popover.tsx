@@ -7,6 +7,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useSurfaceStyle } from './useSurfaceStyle'
 
 export interface PopoverProps {
   /** 触发它的元素（用它算落点） */
@@ -20,6 +21,8 @@ export interface PopoverProps {
 export default function Popover({ anchor, onClose, children, align = 'right', width = 180 }: PopoverProps) {
   const ref = useRef<HTMLDivElement | null>(null)
   const [pos, setPos] = useState<{ top: number; left: number }>({ top: -9999, left: -9999 })
+  // 气泡纸面底纹（`skin/03-window.md` §四）：未配 `surfaces.popover` 即不传，CSS 纸面照旧
+  const surface = useSurfaceStyle('popover')
 
   useLayoutEffect(() => {
     const rect = anchor.getBoundingClientRect()
@@ -55,7 +58,7 @@ export default function Popover({ anchor, onClose, children, align = 'right', wi
     <div
       ref={ref}
       className="scroll popover"
-      style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: width, zIndex: 70 }}
+      style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: width, zIndex: 70, ...surface }}
     >
       {children}
     </div>,

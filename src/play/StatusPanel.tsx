@@ -14,6 +14,7 @@ import { useSkinStore } from '../store/skin'
 import { RoleGlyph } from '../ui/RoleGlyph'
 import { Portrait, portraitHurtTile, portraitTile } from '../ui/Portrait'
 import { useHitPulse } from '../ui/useHitPulse'
+import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 
 export default function StatusPanel({
   session,
@@ -30,6 +31,8 @@ export default function StatusPanel({
   // 职业形象（`skin/02-role.md` §三）：有素材出图，缺位就是原来的 `icon` emoji
   const assets = useSkinStore((s) => s.assets)
   const role = useSkinStore((s) => s.skin?.manifest.role)
+  // 抽屉纸面底纹（`skin/03-window.md` §四）：三个面板 ＋ 骰日志同吃 `surfaces.drawer`
+  const surface = useSurfaceStyle('drawer')
   // 落到面板头的立绘与底栏同源同图（§4.1 落点 4）：取不到即整块不渲染、留 emoji ＋ 名称
   const heroOf = portraitOf(role, 'player')
   const headPortrait = portraitTile(heroOf, assets)
@@ -37,7 +40,7 @@ export default function StatusPanel({
   const headHit = useHitPulse(player.resources.hp)
 
   return (
-    <div className="panel">
+    <div className="panel" style={surface}>
       <div className="panel-head" style={{ justifyContent: 'space-between' }}>
         {/* 与底栏同源同图：立绘在则替代 emoji ＋ 职业名（§4.1 落点 4） */}
         {headPortrait ? (

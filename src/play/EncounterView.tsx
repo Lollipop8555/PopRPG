@@ -9,6 +9,7 @@
 import type { Session } from '../types/session'
 import Overlay from '../ui/Overlay'
 import GainNoteView from './GainNoteView'
+import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 
 export default function EncounterView({
   session,
@@ -19,6 +20,8 @@ export default function EncounterView({
   onBuy: (index: number) => void
   onClose: () => void
 }) {
+  // 对话框纸面底纹（`skin/03-window.md` §四）：要在提前返回之前取，hook 不能落在条件之后
+  const surface = useSurfaceStyle('dialog')
   const encounter = session.encounter
   if (!encounter) return null
 
@@ -29,7 +32,7 @@ export default function EncounterView({
 
   return (
     <Overlay onClose={onClose}>
-      <div className="modal">
+      <div className="modal" style={surface}>
         <div className="panel-head" style={{ justifyContent: 'space-between' }}>
           <span className="hand" style={{ fontSize: 16 }}>
             {encounter.title}

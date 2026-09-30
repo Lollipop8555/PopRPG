@@ -31,6 +31,7 @@ import type { TalkMenuAction } from './talk'
 import { talkView } from './talk'
 import { roleSprite } from '../engine/skin'
 import { useSkinStore } from '../store/skin'
+import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { DieFace } from './DiceLog'
 import Overlay from '../ui/Overlay'
 import { RoleGlyph } from '../ui/RoleGlyph'
@@ -78,6 +79,8 @@ export default function TalkDialog({
 
   const assets = useSkinStore((s) => s.assets)
   const role = useSkinStore((s) => s.skin?.manifest.role)
+  // 对话框纸面底纹（`skin/03-window.md` §四）：两个分支（重入菜单 / 正常对话）共用一个壳
+  const surface = useSurfaceStyle('dialog')
 
   const view = talkView(session)
   if (!view) return null
@@ -98,7 +101,7 @@ export default function TalkDialog({
   if (talk.stage === 'menu') {
     return (
       <Overlay>
-        <div className="modal talk-modal">
+        <div className="modal talk-modal" style={surface}>
           <div className="panel-head">
             <span className="hand" style={{ fontSize: 16 }}>
               <RoleGlyph sprite={roleSprite(role, 'npc', talk.npc)} assets={assets} icon={npc?.icon} />{' '}
@@ -127,7 +130,7 @@ export default function TalkDialog({
 
   return (
     <Overlay>
-      <div className="modal talk-modal">
+      <div className="modal talk-modal" style={surface}>
         <div className="panel-head">
           <span className="hand" style={{ fontSize: 16 }}>
             {npc?.icon} {npc?.name ?? talk.npc}
