@@ -1,0 +1,543 @@
+schema: poprpg.design-rules
+version: 1
+purpose: >-
+  设计文件（.pmod / .pp / .pgame）结构定义的机读镜像。人读版是两份格式手册；
+  本文件供 AI 与程序读取，应用内 Guide 阅读页（#/guide）用它渲染字段速查表。
+human_docs:
+  guide: ../Guide.md
+  pmod: pmod.md
+  pp: pp.md
+  ai: ai.md
+precedence: 与格式手册冲突时以手册为准，并把差异回改到本文件
+
+common:
+  encoding:
+    pmod: "UTF-8 含 BOM，首行 <!-- charset: utf-8 -->"
+    pp_pgame: UTF-8，无 BOM 要求
+  version_key:
+    pmod: "<!-- poprpg-version: 1 -->"
+    pp: manifest.json 的 format（缺省 1）
+    pgame: pack.json 的 format（缺省 1）
+  higher_version: 照常解析，控制台警告一次
+  self_contained: 一局用到的组件随文件带走；素材一律包内、路径相对包根
+  offline: 禁绝对路径、禁 ..、禁 http(s)://
+  validation_family:
+    pmod: K 系列（K20–K37 为状态池家族），仅 K30 阻塞导出
+    pp: KP-* 加各节子编号，一律提示不阻断
+
+# ============================================================= .pmod
+pmod:
+  ext: .pmod
+  shape: 单文件 Markdown（散文 ＋ 围栏 yaml）
+  id_rules:
+    shape_decides_origin: 预设 = 固定可读词；自建 = 类型前缀 ＋ 随机串
+    prefixes: { monster: m_, item: i_, building: b_, class: k_, npc: n_ }
+    forbidden: 顺序编号（b_1 / b_2 这类自增）
+    immutable: 删除不回收、新增不复用、导出导入原样带出
+    collision: 导入时同 id 不同内容 → 另分配新 id，并同步改名该定义的全部引用
+    derived_only: 预设 / 自建不存字段、不写进文件，由内置预设表查得
+  inclusion:
+    enabled: [consumable, equipment, monster, class, skill]
+    laid: [road, building]
+    npc: 被某个建筑实例节点的 npcs 引用即入（NPC 不走启用）
+    always: [background, rules, maps]
+    roundtrip: 导出导入后启用集合、铺设节点、地图顺序、组件定义全一致
+  blocks:
+    - { level: "#", name: 游戏名, required: true }
+    - { level: "##", name: Background, required: true, fields: 无，多段纯文本 }
+    - { level: "##", name: Components, required: true, fields: "八类 ### 分组，见 components" }
+    - { level: "##", name: Rules, required: true, fields: "14 项前置配置，见 rules" }
+    - { level: "##", name: Pool, required: false, fields: "三段，见 pool" }
+    - { level: "##", name: Maps, required: true, fields: "每张地图一个 ###，见 maps" }
+  components:
+    common:
+      required: [id, name, icon]
+      optional: [tags, desc]
+      shape: "每类一个 ### 分组，组内为 YAML 数组"
+    Monsters:
+      fields:
+        - { name: stats, req: true, type: "{hp,mp,patk,matk,pdef,mdef}", values: "每项为区间数组 [min,max]", desc: 登场按 combat.stat_dice 一次摇定 }
+        - { name: attack_weights, req: true, type: "map<skillId,int>", desc: 按 combat.pick_dice 掷骰挑技能 }
+        - { name: tags, req: false, type: "string[]", desc: "如 [精英]" }
+        - { name: reward_pool, req: false, type: pool, desc: 战利品池 }
+        - { name: atk_roll, req: false, type: object, desc: 覆盖 Rules.combat.atk_roll }
+        - { name: desc, req: false, type: string }
+    Items:
+      fields:
+        - { name: kind, req: true, values: [equipment, consumable] }
+        - { name: slots, req: "kind=equipment", type: "string[]", desc: "如 [weapon] / [hands] / [feet]" }
+        - { name: modifiers, req: "kind=equipment", type: "{六维:int}", desc: 整数增量、非区间 }
+        - { name: usable, req: "kind=consumable", type: "enum[battle,move][]", desc: 空数组 = 不能使用、只能交易 }
+        - { name: effects, req: false, type: "effect[]", desc: 见 effects }
+        - { name: tags, req: false, type: "string[]", desc: "通行能力如 [火抗]；[货币] 仅编辑器筛选、引擎不认识；[common] 可被商店 filter 命中" }
+        - { name: desc, req: false, type: string }
+    Buildings:
+      fields:
+        - { name: encounter, req: true, values: [empty, treasure, monster, event, shop, talk] }
+        - { name: reward_pool, req: "encounter=treasure", type: pool }
+        - { name: mimic, req: false, type: "{chance,monster,reward_pool}", desc: 概率变成怪物屋 }
+        - { name: monster_pool, req: "encounter=monster", type: pool, desc: 单只 = 单元素池 }
+        - { name: event, req: "encounter=event", type: "{text,gate?,check?,on_success,on_fail,once?}" }
+        - { name: stock, req: "encounter=shop", type: pool, desc: 上架池，与 reward_pool 同构 }
+        - { name: price, req: false, type: "{currency,algo,dice?,range?|n?}", desc: "algo = value 或 fixed" }
+        - { name: restock, req: false, type: string, desc: 补货时机，如 on_enter }
+        - { name: desc, req: false, type: string }
+      event_sub:
+        gate: { tags: "string[]", mode: all, on_missing: "blocked | penalty" }
+        check: { dice: dice, add: int, target: int, default_dice: Rules.event.dice }
+        on_success: { text: string, point_reward: int, grant: "itemId[]", effects: "effect[]" }
+        on_fail: { text: string, cost: "{hp: int}", effects: "effect[]" }
+        once: boolean
+      note: NPC 不写在建筑定义上，挂在地图节点 npcs / dialog
+    Roads:
+      fields:
+        - { name: cost, req: false, type: "{step:int}", default: "{step:1}", desc: step 0 = 不耗步 }
+        - { name: gate, req: false, type: "{tags,mode?,missing,penalty?}", missing_values: [block, penalty], penalty: "{hp:int}" }
+    Classes:
+      fields:
+        - { name: base_stats, req: true, type: "{六维:int}" }
+        - { name: free_points, req: true, type: int }
+        - { name: buffs, req: true, type: "map<维度,int%>", desc: "{patk:120} = ×1.2" }
+        - { name: inventory_size, req: false, type: int, default: 50, desc: 0 = 无限 }
+        - { name: starting_items, req: false, type: "itemId[]"}
+        - { name: desc, req: false, type: string }
+      note: 职业不限定能学什么（无 skills 字段）
+    Skills:
+      fields:
+        - { name: dim, req: true, values: [hp, mp, patk, matk, pdef, mdef] }
+        - { name: target, req: true, values: [opponent, self] }
+        - { name: vs, req: true, values: [auto, none], desc: "auto 按 dim 配对（patk→pdef / matk→mdef）" }
+        - { name: bonus, req: true, type: int }
+        - { name: apply, req: true, values: [hp, mp, none] }
+        - { name: cost, req: false, type: "{mp:int}", default: "{} 免费" }
+        - { name: effects, req: false, type: "effect[]"}
+      note: basic_attack / basic_magic 人人开局都有、cost 为空
+    NPCs:
+      fields:
+        - { name: tags, req: false, type: "string[]"}
+        - { name: desc, req: false, type: string }
+        - { name: dialogs, req: true, type: "map<方案名, dialogNode[]>", desc: 多套方案，方案名即 key }
+      dialog_node:
+        fields:
+          - { name: message, req: true, type: "string | string[]", desc: 字符串数组逐条展示 }
+          - { name: dice, req: false, type: dice, desc: 写了则本层先列全部选项与骰子，点了才掷、按 hit 命中 }
+          - { name: if, req: false, type: cond, desc: 同层按 if-else 链自上而下取第一条成立者；末尾无 if 者 = else }
+          - { name: pool, req: false, type: "writeOp[]", desc: 门锁 / 触发判定 }
+          - { name: items, req: false, type: "dialogNode[]", desc: 子节点与本层同构 }
+          - { name: result, req: false, type: string, desc: 仅作为父层选项时展示；根层不写 }
+          - { name: hit, req: false, type: '"1-2"', desc: 与父层 dice 配套 }
+          - { name: give, req: false, type: "itemId[]", desc: 交付清单叫 give，不是 items；写两次 = 给两份 }
+        rules:
+          - 无 items = 交付后结束，此后只回放该台词
+          - 同层 if 与 dice / hit 二选一，混用取 if（K33）
+          - 旧写法 when 读作单分支 if；dialog.retalk 已退役，读取忽略、导出不写
+    Backgrounds:
+      note: 全局底色组件，至少提供一条；字段仅 id / name / icon / desc
+  effects:
+    ops:
+      - { op: add_stat, params: [target, stat, delta], desc: 即时改数值，stat 取六维之一 }
+      - { op: add_tag, params: [tag, duration, "per_turn?", "modifiers?"], desc: 挂持续状态，duration 受 Rules.state.max_duration 夹制 }
+      - { op: remove_tag, params: [tag] }
+      - { op: learn_skill, params: [skill] }
+  pools:
+    note: reward_pool / monster_pool / stock 共用结构
+    fields: [source, ids, filter, pick]
+    source_values: [ids, filter]
+    ids_item: { id: 组件 id, weight: int }
+    filter_example: { itemKind: consumable, tags: [common] }
+    algo:
+      - { name: tiers, desc: 掷 dice，自上而下取第一个 upto ≥ 点数的档，取该档 n, slots: [treasure.pick] }
+      - { name: count, desc: 掷 dice，按 range 映射为件数, slots: [loot.pick, stock.pick, monster_pool.pick] }
+      - { name: multiplier, desc: 掷 dice，按 steps 查档得倍率, slots: [treasure.copies] }
+      - { name: value, desc: 掷 dice，按 range 映射为数值, slots: [price] }
+      - { name: fixed, desc: 不掷骰、取字段 n, slots: [loot.copies, price] }
+    algo_note: 没有 algo all；pick 省略时取 Rules 对应项
+  rules:
+    note: 共 14 项；难度值与后果写在组件上，此处只给默认骰与兜底
+    items:
+      - { n: 1, key: move, shape: "{dice}", desc: 每回合掷骰定步数 }
+      - { n: 2, key: combat.stat_dice, desc: 怪物区间 → 具体值 }
+      - { n: 3, key: combat.pick_dice, desc: 随机挑技能 }
+      - { n: 4, key: combat.atk_roll, shape: "{add_dice,mult:{dice,steps}}", optional: true, desc: 攻方力值链骰 }
+      - { n: 5, key: combat.def_roll, shape: "{add_dice}" }
+      - { n: 6, key: treasure.pick, shape: pool_pick }
+      - { n: 7, key: treasure.copies, shape: pool_copies }
+      - { n: 8, key: loot.pick, shape: pool_pick }
+      - { n: 9, key: loot.copies, shape: pool_copies }
+      - { n: 10, key: state.max_duration, desc: 状态时限上限 }
+      - { n: 11, key: shop.price, shape: "{algo,dice,range}" }
+      - { n: 12, key: event.dice, desc: 事件默认判定骰 }
+      - { n: 13, key: talk.dice, desc: 抽 NPC / 抽方案 }
+      - { n: 14, key: class_pool, type: "classId[]", desc: 开局可选职业；长度 1 = 唯一 }
+    removed_fields: [combat.attacks, dice.available, dice.default, damage.algo, "pick.algo: all", crit]
+  pool:
+    note: 状态池声明段，只登记作者空间（usr-）；三段为 pool / conds / checks
+    variables:
+      section: pool
+      fields:
+        - { name: key, req: true, type: 短名, desc: 不含空间词；落盘补 usr- }
+        - { name: type, req: true, values: [string, number, boolean] }
+        - { name: value, req: true, desc: 默认值，须与 type 相符 }
+        - { name: desc, req: false }
+      rules:
+        - 同段同短名只允许一次（K21）
+        - 短名含 - 或为空即 K27
+        - 落盘强制补 usr- 前缀，故无法覆写引擎键
+    templates:
+      section: conds
+      fields:
+        - { name: key, req: true, type: 短名 }
+        - { name: desc, req: false }
+        - { name: when, req: true, type: cond }
+      rules:
+        - CondTpl 是纯条件、随处即时求值，可用在所有能用判定的地方
+        - 模板不含动作；需条件 ＋ 效果按回合复用请用 checks 的 alias
+        - 模板不引用模板；模板短名与变量短名共用，重名即 K36
+        - 引用未声明模板名即 K35，运行时恒不成立
+    round_checks:
+      section: checks
+      fields:
+        - { name: alias, req: false, desc: 只有带别名者才能被依赖 }
+        - { name: deps, req: false, type: "alias[]", desc: 前置依赖，可多条 }
+        - { name: when, req: true, type: cond }
+        - { name: pool, req: true, type: "writeOp[]"}
+      execution:
+        - 每回合开始执行一次
+        - 来源三批：pmod → state（Rules.state 派生的 buff tick）→ engine（内置基础判定，强制最后）
+        - 批内：有名判定按 deps 稳定拓扑排序（同层按声明顺序），匿名判定排在本批有名判定之后
+        - 依赖不存在（K28）或对方无别名（K31）时只忽略该条依赖，本判定照常执行
+        - 成环即 K30，唯一阻塞校验；手写文件按声明顺序兜底
+        - 条件不成立则本判定不执行 pool，依赖它的判定照常执行
+    cond:
+      shape: "{ mode?: all|any, items: [ { name, op, value | ref } ] }"
+      shorthand: 整体替换为一个模板名
+      empty: 空判定集合视为成立（K25）
+      read_ops: [equals, notEquals, greater, less, greaterEqual, lessEqual, contain, notContain]
+      value_or_ref: value 为字面量，ref 为另一池键引用，二选一；同写只认 ref（K37）
+    write_op:
+      shape: "{ name, op, value }[]"
+      write_ops: [set, append, add, minus, multiply, divide, toggle]
+      value: 一律字面量；每条修改只作用一个键
+      divide_by_zero: 不执行（K22）
+    key_matching:
+      exact: 使用处按规范全名精确匹配（usr-aaa / engine-hpMax），不做前缀补齐
+      missing: K20，运行时该判定不成立 / 该修改不执行
+      writable_engine_keys: [engine-hpValue, engine-mpValue, engine-points, "engine-item.<道具 id>", engine-stepsLeft]
+      readonly_engine: 其余 engine- 键写入即 K23，运行时不执行
+  maps:
+    shape: ["### <地图名>", "{ start: [x, y], end: [x, y], nodes: node[] }"]
+    node_fields:
+      - { name: "x / y", req: true, desc: 格坐标 }
+      - { name: type, req: true, values: [start, end, road, building] }
+      - { name: ref, req: "type in [road, building]", desc: 引用组件 id }
+      - { name: "w / h", req: false, default: 1, desc: 只对 building 有意义；导出只写 > 1 的值 }
+      - { name: npcs, req: false, type: "npcId[]", desc: 只对 building 有意义；省略 = 不触发对话 }
+      - { name: dialog, req: false, type: "{ mod? }", desc: 只对 building 有意义；省略 = 单套即用、多套掷骰 }
+    rules:
+      - 一座建筑 = 一个节点；多格建筑用 w×h 覆盖、整座共享同一身份；绝不按相邻同种聚合
+      - road / start / end 恒 1×1，写 w / h 归一为 1 并提示
+      - 地图名是建筑实例 key 的一部分，必须唯一且稳定；重名时导出与开局自动加后缀（第 2 张起 名字 (2)）
+      - 每张地图 start / end 各一个
+  codecs:
+    chinese_heading: 匹配不上，组件静默丢弃；务必用英文标题
+    decl_without_prefix: 按 usr- 补齐并提示
+    decl_engine_prefix: 改写为 usr-engine- 并提示
+    ref_without_prefix: 按 usr- 补齐后匹配，仍匹配不到出 K20
+    ref_engine_prefix: 按引擎空间读取，读得到即可用，否则 K20
+    higher_version: 照常解析，控制台警告一次
+  validations:
+    blocking: [K30]
+    codes:
+      - { n: K20, check: 引用规范全名未声明，或 engine- 键不在引擎总表内, runtime: 判定不成立 / 修改不执行，导出不剔除 }
+      - { n: K21, check: pool 段内重复 name, runtime: 取先出现者 }
+      - { n: K22, check: divide 且值为 0, runtime: 不执行 }
+      - { n: K23, check: 写算子落在只读 engine- 键上, runtime: 不执行 }
+      - { n: K24, check: 声明项 value 与 type 不符, runtime: 按 type 取零值 }
+      - { n: K25, check: 判定集合为空, runtime: 视为成立 }
+      - { n: K26, check: 算子不适用于该键的声明类型, runtime: 不执行 }
+      - { n: K27, check: 短名含 - 或为空, runtime: 提示改用下划线 / 补名 }
+      - { n: K28, check: deps 引用不存在的别名, runtime: 仅忽略该条依赖 }
+      - { n: K29, check: checks 内别名重复, runtime: 取先出现者作为被依赖目标 }
+      - { n: K30, check: 回合判定依赖成环, runtime: 阻塞，禁止保存 / 导出该依赖 }
+      - { n: K31, check: deps 指向无别名的判定, runtime: 仅忽略该条依赖 }
+      - { n: K32, check: "engine-item.<id> 的道具不在组件库", runtime: 按件数正常读写 }
+      - { n: K33, check: 对话同层混用 if 与 dice / hit, severity: warn, runtime: 以 if 优先 }
+      - { n: K34, check: if-else 链中无 if 记录不在末尾, severity: warn, runtime: 其后的 if 永不求值 }
+      - { n: K35, check: 引用未声明的判定模板名, runtime: 该条件恒不成立 }
+      - { n: K36, check: 模板名与变量短名重名, runtime: 取先出现者 }
+      - { n: K37, check: 条件项同写 value 与 ref，或 ref 与 name 类型不一致, runtime: 只认 ref 并提示 }
+    component_side:
+      note: 与状态池家族编号各自独立，全部只提示、不阻塞导出
+      checks:
+        - 起 / 终点：每张地图恰好各一个
+        - 引用完整性：池 / stock / currency / mimic.monster / class_pool / starting_items / learn_skill.skill / attack_weights 键 / npcs / dialog.mod / give / grant 指向的组件必须存在且已启用（NPC 例外：库中存在即可）
+        - 悬空引用导出剔除；dialog.mod 例外，不剔除、运行时时跳过
+        - 技能指向失效 / 技能无法获得 / 技能自相矛盾 / 池筛空 / 权限死路 / 事件必成必败 / 商店缺货币 / 说了要对话却没配人 / 空宝箱
+        - 状态无上限：add_tag.duration 必填，缺失禁止保存；超限夹到 Rules.state.max_duration
+        - dialog.mod 方案名悬空：标红，导出不剔除
+        - 非建筑节点带 w / h ≠ 1 归一为 1×1 并提示；建筑 w / h 非法归一为 1
+        - 地图名重复：导出与开局自动加后缀
+        - 空对话 / 赠予悬空 / 根层写了 result / 命中覆盖不全 / hit 重叠无所属越界 / 道路缺 ref
+        - 背包容量小于开局要发的道具条目数：提示不拦截
+# ============================================================= .pp
+pp:
+  ext: .pp
+  shape: zip 容器，纯渲染、不含玩法语义
+  package:
+    forced: ["manifest.json 必须在包根，无 kind 类标识键", "preview.png 可选，存在时须在包根"]
+    free: 其余目录名、层级、文件名一律自由；加载器不得依赖推荐目录
+    preview_fallback: 缺失或损坏回退为文件名展示（KP-6）
+  manifest_top_keys:
+    - { key: format, desc: 包格式版本，整数，缺省 1 }
+    - { key: name, desc: 皮肤名；缺失时列表显示文件名 }
+    - { key: author, desc: 作者 }
+    - { key: description, desc: 描述 }
+    - { key: startup, section: startup, desc: APP 欢迎页 }
+    - { key: lobby, section: lobby, desc: 游戏首页 ＋ 出身页 }
+    - { key: extends, desc: 继承包内另一套皮肤 }
+    - { key: theme, desc: 全局 token → CSS 变量 }
+    - { key: background, section: background }
+    - { key: road, section: road }
+    - { key: role, section: role }
+    - { key: item, section: item }
+    - { key: building, section: building }
+    - { key: window, section: window }
+    - { key: misc, section: misc }
+    - { key: audio, section: audio }
+  removed_top_keys: [resource]
+  paths:
+    base: 一律相对包根写全；描述文件是素材位置的唯一权威来源
+    loader: 不得推断前缀、不假设目录约定
+    forbidden: [绝对路径, "..", "http(s)://"]
+    recommend: "<元素>_<变体>.<ext>；png 优先，jpg 用于无透明大图，svg 可用"
+    orientation: 一律按上北下南、左西右东绘制一次；其它朝向由复用推出
+    cell_asset: 单格素材按 CELL × CELL 正方形、图形居中（旋转复用的前提）；立绘不适用
+    scalable_asset: 原图尺寸可以很小，由九宫格或整图拉伸铺满；不按屏幕断点出多套图
+  asset_writer:
+    three_forms:
+      - 单张路径：引擎按朝向旋转
+      - "{ img, rotate }：硬性角度纠偏"
+      - 四张数组：不旋转；顺序固定 N/E/S/W，不得省略中间项
+    rotate_meaning: 只用于素材基准朝向与规范基准不一致时的纠偏，不表达这一格该朝哪
+  reuse:
+    rotate: { condition: 素材旋转不变 ＋ 正方形且图形居中, limit: 有方向光时放弃 }
+    flip: { condition: 必须显式声明, default: 不启用 }
+    nine: { condition: 素材带 slice 才成立, limit: 没配 slice 即整图拉伸 }
+    tile: { condition: 四边可无缝拼接, limit: 不与拉伸混用，唯一落点是定位线 }
+    slice_order: "[上, 右, 下, 左]"
+    separation_line: 走单轴九宫格，不引入 tile
+  priority:
+    order: 游戏配置 ＞ 用户配置（本机全局 pp） ＞ 缺省配置（程序绘制）
+    granularity: 单个素材节点；同屏混用素材与程序绘制是正常状态
+    version: format 整数，缺省 1；高于实现版本时照常渲染并警告一次（KP-3）
+    one_at_a_time: 任一时刻内存只保留当前生效皮肤的解压结果
+    library: 导入过的 .pp 各记一条；.pgame 内自带皮肤不入库
+  theme:
+    keys:
+      paper: ["--paper", "--paper-deep", "--paper-card"]
+      ink: ["--ink", "--ink-soft", "--ink-faint"]
+      line: ["--line", "--line-soft"]
+      semantic: ["--red", "--amber", "--green", "--blue"]
+      radius: ["--radius", "--radius-rough"]
+      font: ["--font-hand", "--font-cn"]
+    forbidden: 布局 token（--gap / --topbar-h / --play-topbar-h）不可覆盖；未知 token 忽略（KP-9）
+    injection: 以最高优先级注入 :root，卸载时还原
+  extends:
+    value: 包内相对包根的 manifest 路径
+    order: 先基座后本包，逐节点覆盖，允许多级链式
+    forbidden: 跨包引用；路径不存在或成环即 KP-8，忽略继承
+  sections:
+    background:
+      shape: 数组，下标即地图下标；只写一个对象视为单元素数组
+      fields:
+        - { name: img, type: string, desc: 背景图，相对包根 }
+        - { name: cellSize, type: int, desc: 背景图上 1 个游戏格占多少像素，同时是地图层素材的出图基准 }
+        - { name: startX, type: int, default: 0, desc: "图片上该点与格 [0,0] 中心对齐（横向）"}
+        - { name: startY, type: int, default: 0 }
+        - { name: color, type: color, desc: 图片边界之外的填充色；每层各自携带、取实际采用层；不沿下标回退 }
+      selection:
+        - 第 i 张地图取 background[i]
+        - i ≥ 长度时降级为使用最后一张
+        - 每张地图只绘制一层，命中即停
+        - 该层不可用时向更靠前的层回退
+        - 全部不可用则本节视为未接管
+      mapping: 格 [col,row] 的中心像素 = (startX + col × cellSize, startY + row × cellSize)
+      draw_order: [color 填充, 背景层, 参照线, 道路贴图, 建筑节点, 标记, 角色]
+      codes: [KB-1, KB-2, KB-3, KB-4, KB-5, KB-6, KB-7, KB-8, KB-9]
+    road:
+      layers: [样式集（由节点 tags 决定）, 槽位素材（由四邻连通决定）]
+      connectivity: 相邻两格同为道路件即连通，标签不参与连通判定
+      fields:
+        - { name: styles, type: "{tags,base,mode?}[]", desc: "tags 空数组 = 通配底样；base = 目录前缀；mode=all 时才需全匹配" }
+        - { name: tiles, type: "map<槽位名,相对文件名>", desc: 键必须与槽位表逐字一致；缺键即该槽位回退脚印 }
+      slots: [isolated, dead_end, straight, bend, corner, tee, tee_corner_nw, tee_corner_ne, tee_full, cross, cross_one_corner, cross_adjacent, cross_diagonal, cross_three_corners, plaza]
+      flags: 周围 8 格，位序自左上角起顺时针
+      direction_suffix: "_n 缺口朝北；_ns 南北向；_ne 连北 ＋ 连东；尾缀只描述该图的基准朝向"
+      no_color: 道路贴图不设背景色，透明区直接透出背景图
+      codes: [KS-1, KS-2, KS-3, KS-4, KS-5, KS-6, KS-7]
+    role:
+      no_facing: 形象不带朝向，不设旋转轨道、不要 4 向素材
+      figure_nodes:
+        - { name: player, value: 单节点直接取图, fallback: "职业 icon emoji → 🙂" }
+        - { name: "classes.<组件 id>", fallback: 该职业 icon emoji }
+        - { name: "monsters.<组件 id>", fallback: 该怪物 icon emoji }
+        - { name: "npcs.<组件 id>", fallback: 该 NPC icon emoji }
+      figure_rules:
+        - 四组不跨组借用；classes / monsters / npcs 不允许数组
+        - 键一律是组件 id
+        - player 画成 CELL × CELL、四周留白 10%；锚点为格中心
+      portraits:
+        keys:
+          - { name: portraits.player, fields: "img ＋ 可选 flip / hurt", fallback: 程序绘制 }
+          - { name: "portraits.classes.<id>", fallback: 先回退 portraits.player，再回退程序绘制 }
+          - { name: "portraits.monsters.<id>", fallback: 该落点不渲染，不跨怪物借用 }
+          - { name: "portraits.npcs.<id>", fallback: 该落点不渲染，不跨 NPC 借用 }
+        fields:
+          - { name: img, type: string, desc: 立绘图，相对包根 }
+          - { name: flip, type: bool, default: false, desc: 显式左右镜像 }
+          - { name: hurt, type: string, desc: 受击图；缺省改用形变 }
+        rules:
+          - 立绘不接受数组；flip 只翻图不翻布局，主角恒在左
+          - 落点五处：地图底栏 / 对战 VS 区 / NPC 弹层不设 / 遭遇与商店弹层预留不渲染 / 状态面板头部 / 出身卡
+          - 尺寸取窗口短边 W，高度档 6% / 18% / 10%，宽度由宽高比推出并受可用宽度 25% 上限约束
+          - 默认底边对齐，仅出身卡居中；无立绘则不占空间
+          - 立绘不含动画、不套手绘滤镜、不参与点击命中
+      hurt_effect:
+        with_asset: 受击瞬间改显示受击图
+        without_asset: 形变（横向 ×1.15、纵向 ×0.9，约 120ms 回弹）
+        base: 棋子形象以格中心为基准；立绘以底边为基准
+        note: 棋子形象没有 hurt 字段，故恒走形变；倒下不设素材
+      codes: [KR-1, KR-2, KR-3, KR-4, KR-5, KR-6, KR-7, KR-8, KR-9, KR-10]
+    window:
+      families: [随视口（九宫格）, 随内容（禁止拉伸）, 固定（整图等比）, 单向（单轴九宫格）]
+      slice: 顺序 [上,右,下,左]；随视口建议四角 12，单向建议 6；任一维切片之和须小于最小渲染尺寸（KW-2）
+      keys:
+        surfaces: [dialog, drawer, popover]
+        buttons: [plain, primary, danger, ghost, small, icon, close]
+        slots: [skill, reward, bag, equipLabel]
+        bars: [hp, mp]
+        hints: [ok, warn, error]
+        rules: [line]
+      per_key: 各查自己的键、不跨键借用；键名可自定义，引擎只读上表键，其余静默搁置
+      hints_neutral: 中性提示不设键、也不借用任何键，全由 CSS 表现
+      bag_cell: 道具衬底优先、slots.bag 兜底，同一个格子只出现一层
+      button_states: [normal（唯一必填）, hover, active, disabled]
+      button_fallback: 某态没写或图缺失即回落 normal；normal 缺位即整颗按钮走程序绘制
+      scalable: 窗体一族原图尺寸可以很小，运行期由九宫格或整图拉伸铺满
+      v1_texture: V1 把素材当纸面底纹铺，边框仍由 CSS / SVG 绘制；交付素材须无边框、四边可自由拉伸
+      codes: [KW-1, KW-2, KW-3, KW-4, KW-5, KW-7]
+    misc:
+      keys: [marks, nodes, dice, icons]
+      marks:
+        - { name: marks.start, size: 1 格, fallback: 程序绘制三角旗, note: 不旋转 }
+        - { name: marks.end, size: 1 格, fallback: 程序绘制藏宝图 X, note: 不旋转 }
+        - { name: marks.footprint, size: 1 格, fallback: 程序绘制脚印, note: 只在 road 素材缺失的格子上顶替 }
+      nodes_building: 随格数 w × h 拉伸，须九宫格；缺位回退圆角矩形
+      dice:
+        body: 三档尺寸共用一张，等比缩放、不拉伸
+        face: "d1-d6 六面；> 6 面一律走 numeric"
+        numeric: 程序数字文本
+        mirror_rotation: "d1 / d4 / d5 各 1 张；d2 / d3 镜像 1 张；d6 旋转 90°，合计 6 张"
+      icons: 按图标名提供替换素材，缺配一律原样回退内置矢量图标
+      content_emoji: 由组件定义驱动，游玩态直接以文本绘制、无独立衬底；顺序为专用素材 → emoji
+      fallback_glyphs: { player: "🙂", skill: "✦", reward: "❔", dice: "🎲", locked: "🔒" }
+      fallback_glyphs_note: 兜底字形不可被素材覆盖
+      locate_line: 属平铺而非拉伸，是叠在地图之上的辅助层；贴图本身不含间距与分割线
+      codes: [KM-1, KM-2, KM-3]
+    item:
+      fields:
+        - { name: icon, desc: 覆盖组件定义中的 icon }
+        - { name: background, type: "color | {fill,stroke,img}", desc: 图标 / 格子衬底；字符串 = fill 简写 }
+      forbidden: [img, font, fontColor]
+      note: 键一律为组件 id；background 主落点是格子衬底（含背包格、穿戴格、更换气泡候选）；item 不影响地图
+    building:
+      fields:
+        - { name: icon, desc: 覆盖组件定义中的 icon }
+        - { name: img, desc: 地图节点整体贴图；.9.png 建议配 slice }
+        - { name: background, type: "color | {fill,stroke,img}" }
+        - { name: fontColor, desc: 地图上建筑名称文字颜色 }
+        - { name: font, desc: 包内字体文件路径或内置字体名 }
+      rules:
+        - font / fontColor 只作用于地图上的名称文字，对话框文字用窗体的字体与字色
+        - 描边是独立设置项：只写 fill 不写 stroke 时不绘制描边
+        - font 指向包内文件时族名取文件名去扩展名，无效则回退内置字体
+        - img 缺省回退 misc.nodes.building，再缺程序绘制圆角矩形
+      codes: [KIB-1, KIB-2, KIB-3, KIB-4, KIB-5, KIB-6, KIB-7, KIB-8]
+    audio:
+      bgm:
+        scenes: [home, map, battle]
+        fields:
+          - { name: file, desc: 背景音乐文件，相对包根；缺省该场景静音 }
+          - { name: loop, type: bool, default: true }
+          - { name: volume, type: "0–1", default: 0.5, desc: 可被用户偏好覆盖 }
+      sfx:
+        events: [dice_roll, dice_land, hit, pickup, coin, open, close, error]
+        shape: 字符串文件路径，或 { file, volume }；volume 缺省 0.8；缺省静默
+      v1: 只做解析与校验，不加载、不解码、不播放；字段与事件键在 V1 即定稿
+      constraints:
+        - 不自动播放，BGM 在首次用户交互后才启动
+        - 素材必须来自包内，不请求外部地址
+        - 场景切换淡出淡入各 600ms，同场景重复进入不重启
+        - 同一帧内多次相同事件合并为一次播放
+      codes: [KA-1, KA-2, KA-3, KA-4, KA-5]
+    startup:
+      desc: 应用欢迎页（启动画面 / 封面主页）
+      fields:
+        - { name: bg, type: 素材对象, fallback: 纸面底纹，即该屏封面图 }
+        - { name: title, type: 素材对象, fallback: 文字标题，只替换字形不改文案 }
+        - { name: cover, type: 素材对象, fallback: 程序绘制洞穴主视觉 }
+        - { name: dice, type: 素材对象, fallback: 程序绘制骰子，骰面复用 misc.dice.face }
+    lobby:
+      desc: 游戏首页 ＋ 出身（选角）页面
+      fields:
+        - { name: bg, type: 素材对象, fallback: 纸面底纹 }
+        - { name: panel, type: 素材对象, fallback: 现纸面 }
+        - { name: card, type: 素材对象, fallback: 现手绘卡片，按内容高度拉伸 }
+        - { name: card.selected, type: "{img,slice,stroke}", fallback: 只改描边 }
+      fit_values: [cover（缺省）, contain, tile]
+      rules:
+        - 每个字段独立降级，半素材化是正常状态
+        - 封面图归皮肤侧，.pmod 不设封面图字段
+        - 两屏按钮 / 徽章 / 提示条直接复用 window
+        - 皮肤选择入口由程序绘制，不受皮肤控制
+      codes: [KPG-1, KPG-2, KPG-3, KPG-4, KPG-5, KPG-6]
+  validations:
+    package_codes:
+      - { n: KP-1, check: manifest.json 不在包根 / 无法解析, action: 该 .pp 整体被忽略，全部降级为用户配置 }
+      - { n: KP-2, check: 素材路径在包内不存在, action: 列出全部无效路径，逐节点降级 }
+      - { n: KP-3, check: format 高于实现版本, action: 提示可能读不出新增字段 }
+      - { n: KP-4, check: 路径含绝对路径 / .. / 外部地址, action: 违反纯静态约束，禁止 }
+      - { n: KP-5, check: 各节的键不在本局启用的组件 id 内, action: 无效键，忽略并提示 }
+      - { n: KP-6, check: 包根无 preview.png 或无法解码, action: 皮肤列表回退为文件名显示 }
+      - { n: KP-7, check: .pgame 缺少 pack.json, action: 按约定文件名回退加载 }
+      - { n: KP-8, check: extends 路径不存在或形成环, action: 忽略继承，只按本包渲染 }
+      - { n: KP-9, check: theme 含未知 token 或试图覆盖布局 token, action: 忽略该键，其余主题照常注入 }
+      - { n: KP-10, check: manifest.json 含已废除的 resource 键, action: 忽略该键 }
+    not_checked: 皮肤体积不设硬上限，仅对超大单图提示
+    section_prefixes:
+      KB: background
+      KS: road
+      KR: role
+      KW: window
+      KM: misc
+      KIB: "item / building"
+      KA: audio
+      KPG: "startup / lobby"
+
+# ============================================================= .pgame
+pgame:
+  ext: .pgame
+  shape: zip 容器
+  entries: [pack.json（必须在包根）, game.pmod（.pmod 原文本，条目形式存放）, "skin/（一份 .pp 的内容）"]
+  pack_json:
+    - { key: format, type: int, default: 1, desc: 容器格式版本 }
+    - { key: kind, type: string, desc: 固定 "poprpg.pgame"；缺失即按 KP-7 回退探测 }
+    - { key: name, type: string, default: 文件名, desc: 整体分发的显示名 }
+    - { key: pmod, type: string, default: "game.pmod", desc: .pmod 条目路径 }
+    - { key: skin, type: string, default: "skin/", desc: 皮肤目录 }
+    - { key: entry, type: string, desc: 入口标识；留空即走默认开局流程 }
+  rules:
+    - 容器只声明内含哪些文件，不给自身增设计算语义
+    - 容器版本与 pmod / manifest 的版本号不合并计
+    - 皮肤部分沿用 .pp 规则；.pmod 格式不因容器改动
+    - 缺少 skin/ 时按无皮肤处理，游戏照常启动

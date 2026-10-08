@@ -4,6 +4,9 @@
 
 一个人，一个浏览器，就能开一场冒险。地图、怪物、道具与规则都由你写下来，然后亲自走进去。
 
+> 想直接手写或审阅设计文件（`.pmod` 游戏模组、`.pp` 皮肤模组）？从根 [`Guide.md`](Guide.md) 进入；`pmod` 与 `pp` 的格式手册分别在 [`guide/pmod.md`](guide/pmod.md) 与 [`guide/pp.md`](guide/pp.md)。给 AI 的改动流程见 [`guide/ai.md`](guide/ai.md)，字段速查的机读镜像见 [`guide/rules.yaml`](guide/rules.yaml)。
+> 同一套文档在应用里也有阅读页：构建页顶栏菜单 →「设计文件指南」，或直接访问 `#/guide`。
+
 ## 一局游戏如何展开
 
 ```mermaid

@@ -2,7 +2,7 @@
 
 > **上层索引**：[`../skin.md`](../skin.md)　**包结构**：[`00-package.md`](00-package.md)
 > **设计依据**：2026-09-29 裁决 9 / 10（build 模式可加载 pp 预览地图；新增 Creative 模式用于构建 pp）＋ 裁决 21（内置**九宫格切分工具**；字体**不做**额外处理）
-> **状态**：**已落地**（截至 2026-09-30，含 1 处待确认）——第三个顶层模式已接入（`src/app/router.ts` 三支 `#/` / `#/build` / `#/creative`），实现落点见 §六。
+> **状态**：**已落地**（截至 2026-09-30，含 1 处待确认）——第三个顶层模式已接入（`src/app/router.ts` 中 `#/creative` 一支；连同 `#/` / `#/build` 及后加的只读 `#/guide` 共四支路由），实现落点见 §六。
 
 ## 一、定位
 
@@ -111,7 +111,7 @@ Creative 模式是**第三个顶层模式**，与既有两模式并列：
 
 | 关注点 | 文件 | 要点 |
 |---|---|---|
-| 路由（第三支） | [`../../../src/app/router.ts`](../../../src/app/router.ts) | `Route = 'play' \| 'build' \| 'creative'`，`#/creative`；入口在构建页顶栏菜单（`三个顶层模式` 互相可达） |
+| 路由（第三支） | [`../../../src/app/router.ts`](../../../src/app/router.ts) | `Route = 'play' \| 'build' \| 'creative' \| 'guide'`，Creative 走 `#/creative`（`#/guide` 为后加的只读文档页，见 [`docs/DESIGN.md`](../../DESIGN.md)）；入口在构建页顶栏菜单（`三个顶层模式` 互相可达） |
 | 页面外壳 | [`../../../src/creative/CreativeApp.tsx`](../../../src/creative/CreativeApp.tsx) | §2.1 三栏：顶栏 / 左栏槽位 / 中栏（预览 · 还缺哪些图 · 路面填图板三页）/ 右栏检视器 ＋ 底部提示条；窄屏走 `.drawer-toggle` 抽屉 |
 | 工程状态 | [`../../../src/store/creative.ts`](../../../src/store/creative.ts) | `persist`（`localStorage` 键 `poprpg_creative`，只存描述与素材清单）＋ 素材字节走 IndexedDB（与皮肤库同一套 `BlobStore`）；`hydrate()` 刷新后回捞字节并按存下的 `.pmod` 文本重建靶子 |
 | 靶子与骨架 | [`../../../src/creative/target.ts`](../../../src/creative/target.ts) | `readPmodTarget()` 读出该局启用组件与全部道路 flag；`skeletonManifest()` / `blankManifest()` 出骨架与空白 |

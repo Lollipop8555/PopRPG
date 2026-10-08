@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState } from 'react'
-import { ClipboardList, Download, MessageSquareText, MoreHorizontal, Palette, Redo2, SlidersHorizontal, Undo2, Upload } from 'lucide-react'
+import { BookOpen, ClipboardList, Download, MessageSquareText, MoreHorizontal, Palette, Redo2, SlidersHorizontal, Undo2, Upload } from 'lucide-react'
 import { useProjectStore } from '../store/project'
 import { useHistoryStore } from '../store/history'
 import { redo, undo } from '../store/commit'
@@ -91,6 +91,16 @@ export default function TopBar() {
             }}
           >
             新建空白场景
+          </button>
+          <button
+            className="btn small"
+            onClick={() => {
+              navigate('guide')
+              setMenuOpen(false)
+            }}
+            title="设计文件指南：.pmod / .pp / .pgame 的读写规范、字段与校验"
+          >
+            <BookOpen size={13} /> 设计文件指南
           </button>
           <button
             className="btn small"
