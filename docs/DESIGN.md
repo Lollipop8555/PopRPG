@@ -74,7 +74,7 @@
 | [design/06-future.md](design/06-future.md) | §7 | 后续阶段：游玩/骰子/存档/**NPC 与对话（已落地形态）**/明确不做 |
 | [design/07-decisions.md](design/07-decisions.md) | §8 | 已确认决策记录 |
 | [design/08-deploy.md](design/08-deploy.md) | §9 | 部署（GitHub Pages） |
-| [design/state-pool.md](design/state-pool.md) | 新增 | **全局状态池（V2.x 结构改造）**：全局唯一键值表 / 三类型（`string` / `number` / `boolean`）/ **`engine-` 与 `usr-` 双空间前缀隔离（声明侧强制补 `usr-`，防覆写）** / **存储不分空间、读写接口按 `space` 参数化（仅用于自动追加前缀）** / **主角六维属性并入池**，引擎变量扩充（**累计步数 / 位置 / 道具件数**）/ 读算子与写算子两个维度（写不提供读反馈）/ **判定两类：回合判定（每回合开始、**按来源自然排序**：`pmod` 业务 → `state` buff → **`engine` 内置基础判定（存活 / 死亡）最后**；批内别名 ＋ 依赖（可多条）＋ 拓扑排序、匿名后置、缺依赖忽略、禁止回环）与触发判定（就地内联）** / `.pmod` 顶级段 `## Pool`（`pool` ＋ `conds` ＋ `checks`）/ **判定模板（命名条件 `conds`，与变量共用命名空间、不支持模板引用模板）** / **键对键比较（读算子右值可为另一池键 `ref`）** / 对话（**`if` if-else 链、可嵌套**）与门锁的接入 / **对话记账退役（`cursor` / `talkDone` / `deliveredNode` / `retalk`）、改由池标记 ＋ `if` / 模板表达（「一次性对话」预设）** / 定义面板（表格列 `key` · 说明 · 类型 · 引用数 · **空间 tag**，**内置变量打「引擎」tag**，含自动推荐与自动收录，**三页签：变量表 / 判定模板 / 回合判定**）/ 校验 `K20`–`K37` |
+| [design/state-pool.md](design/state-pool.md) | 新增 | **全局状态池（V2.x 结构改造）**：全局唯一键值表 / 三类型（`string` / `number` / `boolean`）/ **`engine-` 与 `usr-` 双空间前缀隔离（声明侧强制补 `usr-`，防覆写）** / **存储不分空间、读写接口按 `space` 参数化（仅用于自动追加前缀）** / **主角六维属性并入池**，引擎变量扩充（**累计步数 / 位置 / 道具件数**）/ 读算子与写算子两个维度（写不提供读反馈）/ **判定两类：回合判定（每回合开始、**按来源自然排序**：`pmod` 业务 → `state` buff → **`engine` 内置基础判定（存活 / 死亡）最后**；批内别名 ＋ 依赖（可多条）＋ 拓扑排序、匿名后置、缺依赖忽略、禁止回环）与触发判定（就地内联）** / `.pmod` 顶级段 `## Pool`（`pool` ＋ `conds` ＋ `checks`）/ **判定模板（命名条件 `conds`，与变量共用命名空间、不支持模板引用模板）** / **键对键比较（读算子右值可为另一池键 `ref`）** / 对话（**`if` if-else 链、可嵌套**）与门锁的接入 / **对话记账退役（`cursor` / `talkDone` / `deliveredNode` / `retalk`）、改由池标记 ＋ `if` / 模板表达（「一次性对话」预设）** / **抽定与对话执行记录键族 `engine-roll.*`（抽定按槽位、值 ＝ 落地的 npc `id`；执行记录按"人 ＋ 方案"、值 ＝ `true`；**引擎写、作者只读**；「mod 一次性」由引擎提供的判定模板表达，裁决 61）** / 定义面板（表格列 `key` · 说明 · 类型 · 引用数 · **空间 tag**，**内置变量打「引擎」tag**，含自动推荐与自动收录，**三页签：变量表 / 判定模板 / 回合判定**）/ 校验 `K20`–`K37` |
 | [design/skin.md](design/skin.md) | 新增 | **素材皮肤规范总纲（索引）**：素材存放 / 旋转镜像九宫格复用 / 贴图渲染器接口 / 三层优先级 / 覆盖边界 / 跨节取舍登记 |
 | [design/skin/00-package.md](design/skin/00-package.md) | 新增 | 皮肤包 `.pp` / `.pgame`（**皮肤包视角**；上位规范见 `design/00a-formats.md`）：包结构与路径规则 / manifest 顶层键（`format`/`preview.png`/`extends`/`theme`）/ 五条加载入口 / 三层优先级 / 皮肤库与单套解压 / 版本迁移 |
 | [design/skin/05-canvas.md](design/skin/05-canvas.md) | 新增 | 画布背景 `background`（**数组下标即地图下标、逐图对应，越界用最后一层，每张地图只渲染一层**）：`cellSize` / `startX` / `startY` / 图外填充色 / 坐标映射 |
@@ -83,7 +83,7 @@
 | [design/skin/08-pages.md](design/skin/08-pages.md) | 新增 | 欢迎页与游戏首页 `startup` / `lobby`：封面背景（封面图归皮肤）、标题图形、主视觉、出身卡片（可缺省、走降级） |
 | [design/skin/09-creative.md](design/skin/09-creative.md) | 新增 | Creative 模式：新建／打开／编辑／导出 `.pp`（zip 走 `fflate`），**九宫格切分工具**，以 `.pmod` 为靶子的命中检查与预览 |
 | [design/skin/01-road.md](design/skin/01-road.md) | 新增 | 道路 `road` 分节：位模式（8 位顺时针）与 256 查表 / 15 槽位 / 47 姿态 / 样式标签优先级 |
-| [design/skin/02-role.md](design/skin/02-role.md) | 新增 | 形象 `role` 分节：玩家棋子 / 职业、怪物与 **NPC 形象 `npcs`**（无朝向）／**受击：素材优先、缺了形变**／**尺寸按窗口尺度 `W` 缩放**／**立绘 `portraits`**（纯皮肤元素，`.pmod` 不设字段）
+| [design/skin/02-role.md](design/skin/02-role.md) | 新增 | 形象 `role` 分节：玩家棋子 / 职业、怪物与 **NPC 形象 `npcs`**（无朝向；**V2.4 起按 `name` ＋ 通配 `"*"`、另有地图槽位落点**）／**受击：素材优先、缺了形变**／**尺寸按窗口尺度 `W` 缩放**／**立绘 `portraits`**（纯皮肤元素，`.pmod` 不设字段）
 | [design/skin/03-window.md](design/skin/03-window.md) | 新增 | 容器与控件 `window` 分节：四族划分 / 九宫格切片 / V1 底纹策略 |
 | [design/skin/04-misc.md](design/skin/04-misc.md) | 新增 | 标记与骰子 `misc` 分节：地图标记 / 建筑节点 / 骰子与骰面 / 图标兜底 / 引导线 |
 | [guide/pmod.md](../guide/pmod.md) | 新增（**面向"直接改文件"**，非设计细节） | **`.pmod` 格式手册**：骨架 / 八类组件 / `## Rules` / `## Pool` / ID 规则 / 校验 / 检查清单。总入口见根 [Guide.md](../Guide.md) |
@@ -132,6 +132,21 @@
 禁止后端 API/SSR/服务端存储/外部在线接口；数据只走 `localStorage` + 浏览器文件导入导出；依赖只选可打包进 `dist/` 的库；Vite `base` 按页路径配置，优先单页避免深链 404（详见 `design/08-deploy.md`）。
 
 ## 进度同步
+
+**2026-10-09 · V2.4 NPC 槽位 SlotN（裁决 62–66，设计侧，未开工）**
+- **`npcs` 升级为槽位数组**（裁决 62）：元素一律是槽位对象 `{ ids, dialog?, at? }` —— `ids` ＝ 该槽候选（**1 位固定 / 多位掷 `talk.dice` 等权抽一位 / 空 ＝ 该槽留空**）、`dialog` ＝ `{ mod? }`（写死**该槽**方案）、`at` ＝ 落点格。**槽位按声明顺序**编号 `slot0` / `slot1`…，**槽位数 ≤ `w × h`**；**旧包 `npcs: [a, b]`（裸字符串）导入即升级为 `[ { ids: [a, b] } ]`** —— 整个数组升为**一个槽位**、语义不变（与旧 `dialog: Mod1` → `{ mod: Mod1 }` 同一套**读时兼容、写时新形态**）。**节点级 `dialog` 退役**。
+- **槽位坐标与不重叠**（裁决 63）：`at: [dx, dy]` 是**建筑自身格坐标系**（左上 `(0,0)`），缺省按声明顺序取**先 y 后 x 字典序**第 N 格；**同实例两槽 `at` 不得相同**（`K40`）、越界出 `K39`。**NPC 不走动**；**玩家与 NPC 可以重叠**（踩到它那一格就是找它说话）。
+- **触发语义拆成两条**（裁决 64）：**① 建筑交互** —— 从建筑外**踏入任意一格** → **一次性抽定全部槽位**（按声明序写 `engine-roll.npc.<建筑实例 key>.<slotN>`；空 `ids` 的槽留空、不建键）→ 再跑该建筑的 `encounter`；**只一次**，内部走位不重复。**② NPC 交互** —— 玩家移动到**某槽落点格** → 与该槽已抽定的 NPC 对话；**每次踩到都触发**（"只说一次"仍由池标记 ＋ `if`）。**抽定即锁死、重入不重掷**。`engine-roll.mod.*` 仍按"人 ＋ 方案"、`<npcId>` 不含槽位（**不推翻裁决 61**）。
+- **构建页以 SlotN 表达**（裁决 65）：实例页 NPC 区改为**槽位列表**（每槽一行：候选池 ＋ 方案 ＋ 落点 ＋【一次性对话】预设）；画布上按 `at` 画**槽位标记**（小圆点 ＋ 槽号）**可直接拖动**改 `at`（**槽号不变**）；**颜色按槽号从固定调色板分配**，**面板该槽行与画布标记同色**；上限 `w × h`（`[+ 槽位]` 到顶禁用）。
+- **皮肤按 `name` 命中 ＋ 通配；无皮肤画圆环**（裁决 66）：`role.npcs` / `portraits.npcs` 键由**组件 `id`** 改为 **NPC 的 `name`** ＋ **通配 `"*"`**，命中顺序 **精确 `name` → `"*"` → `icon` emoji**（立绘 → 不渲染）。**V2.4 起 NPC 有地图落点**（`skin/02-role.md` §4.1 **落点 6**）：命中画**皮肤**、未命中画**槽位色圆环**（颜色 ＝ 构建页该槽行颜色，调色板**构建页与游玩态共用**，越界循环取色 `KM-4`）。**"NPC 不占地图格"原口径作废**。
+- **校验**：`K38`（槽位数 > `w × h`）/ `K39`（`at` 越界）/ `K40`（两槽 `at` 相同）/ `KR-11`（`npcs` 键与任一 `name` 都不重名却配了图）/ `KM-4`（槽位数超调色板色数）。均**只提示、不阻塞**。
+- 同步：[`design/02-data-model.md`](design/02-data-model.md) §4.9.3、[`design/01-pmod.md`](design/01-pmod.md) §3.1、[`design/03-engine.md`](design/03-engine.md) §4.8.12、[`design/state-pool.md`](design/state-pool.md) §3.6 / §十、[`design/04-editor.md`](design/04-editor.md) §5.6 / §5.7、[`design/skin/02-role.md`](design/skin/02-role.md) §三 / §4.1 落点 6 / §4.3、[`design/skin/04-misc.md`](design/skin/04-misc.md) §二 / §八、[`design/skin.md`](design/skin.md) §六 `S-33` / §七 `Q32`、[`design/07-decisions.md`](design/07-decisions.md) **§8.6 新增**、[`TASK.md`](../TASK.md) 版本表 / 里程碑索引与「进度同步」、[`task/05-npc.md`](../task/05-npc.md) / [`task/04-skin.md`](../task/04-skin.md) / [`task/06-state-pool.md`](../task/06-state-pool.md)。
+
+**2026-10-08 · V2.3 抽定与对话执行记录键族定稿（裁决 61，设计侧，未开工）**
+- **抽定按槽位记账**（`engine-roll.npc.<建筑实例 key>.<slotN>` ＝ 该槽位落地的 **npc `id`**）：槽位即该建筑里**对玩家可见的 NPC 位**——一位可见就只有 `slot0`，两位即 `slot0` ＋ `slot1`；每槽在自己的候选里 **N 选 1**，值不会是空串。**没抽过的槽不建键**，读得空串 —— 判据即此。
+- **对话执行记录按"人 ＋ 方案"**（`engine-roll.mod.<建筑实例 key>.<npcId>.<modId>` ＝ `true`）：**引擎执行完该套方案就无脑写**，不判断"是否已执行过"。`<npcId>` 段**不可省** —— 判定通过后 `Mod1` 换 `Mod2` 时互不阻拦、不重复执行；也避免不同人身上的同名方案混成一条。
+- **两族键均由引擎写、作者只读**（写即 `K23`）；**只写"发生了的事"、绝不预建键**，缺省分别读**空串**（＝ 该槽还没抽）与 `false`（＝ 该套还没执行过）。引擎**不做任何"一次性"拦截** —— 只判定一次 / 只出现一次 / 每次都能聊，全由作者在该 mod 模板的 `conds` 里写；引擎与编辑器只提供**「mod 一次性」判定模板**。（**裁决 61 修订裁决 54 的数据形态**：不再写作者空间 `usr-NPC_Mod.*` 标记。）
+- 同步：[`design/state-pool.md`](design/state-pool.md)（**§3.6 新增** / §3.2 / §3.5 / §6.7 / §8.6 / §9.7 / §十 `K20`）、[`design/07-decisions.md`](design/07-decisions.md) §8.5（裁决 61）；[`TASK.md`](../TASK.md) 版本表 / 里程碑索引与「进度同步」、[`task/06-state-pool.md`](../task/06-state-pool.md)。本文件模块映射（state-pool 行）已更新。
 
 **2026-10-08 · V2.3 定义收口（裁决 51–60，`SP-2`–`SP-10` 全清，设计侧，未开工）**
 - **写权限扩为四类**（裁决 51，`SP-2`）：新增 **`engine-stepsLeft`** 可写，写引擎键时编辑器固定给空间提醒。

@@ -6,6 +6,7 @@
  */
 
 import { diceMax, parseDice } from '../engine/dice'
+import { normalizeCheckRef, normalizeEffects } from './poolRefs'
 import type { DialogNode, NodeDialog, NpcDef } from '../types'
 
 /* ------------------------------------------------------------------ */
@@ -170,13 +171,22 @@ function fixNode(
   const kids = fixItems(loose.items as DialogNode[] | undefined, false, !!dice, path, notes)
   const give = Array.isArray(loose.give) ? loose.give.map((g) => String(g)) : []
 
+  // V2.3 §6.3：条件 `if`（判定或判定模板名）；旧拟用的 `when` 读作单分支 `if`（§7.3）
+  if (loose.if === undefined && loose.when !== undefined) {
+    notes.push({ path, text: '旧的 `when` 已按单分支 `if` 读取' })
+  }
+  const cond = normalizeCheckRef(loose.if !== undefined ? loose.if : loose.when)
+  const poolEffects = normalizeEffects(loose.pool)
+
   return {
     ...(result ? { result } : {}),
+    ...(cond ? { if: cond } : {}),
     message,
     ...(dice ? { dice } : {}),
     ...(hit ? { hit } : {}),
     ...(kids && kids.length > 0 ? { items: kids } : {}),
     ...(give.length > 0 ? { give } : {}),
+    ...(poolEffects.length > 0 ? { pool: poolEffects } : {}),
   }
 }
 

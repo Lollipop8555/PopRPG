@@ -171,6 +171,9 @@ export async function importPmodFile(): Promise<void> {
       enabledIds: enabledFromComponents(fixed),
       rules: parsed.rules,
       maps: parsed.maps.length > 0 ? parsed.maps : [{ id: newMapId(), name: '地图 1', nodes: [] }],
+      pool: parsed.pool,
+      conds: parsed.conds,
+      checks: parsed.checks,
     },
     idMap,
   )

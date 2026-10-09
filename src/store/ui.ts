@@ -49,6 +49,8 @@ export interface UiStore {
   npcModOpen: boolean
   /** 打开模组面板时要选中的那条 NPC（没给就选列表里第一条） */
   npcModTargetId?: string
+  /** 「状态池」面板（§5.6 / §6）—— 与「规则」「NPC 模组」并列的整页入口 */
+  poolOpen: boolean
   toast?: Toast
 
   setCurrentMap: (id?: string) => void
@@ -68,6 +70,7 @@ export interface UiStore {
   setChecklistOpen: (open: boolean) => void
   setRulesOpen: (open: boolean) => void
   setNpcModOpen: (open: boolean, npcId?: string) => void
+  setPoolOpen: (open: boolean) => void
   notify: (text: string, tone?: Toast['tone']) => void
   dismissToast: () => void
 }
@@ -102,6 +105,7 @@ export const useUiStore = create<UiStore>((set, get) => ({
   checklistOpen: false,
   rulesOpen: false,
   npcModOpen: false,
+  poolOpen: false,
 
   setCurrentMap: (id) => set({ currentMapId: id }),
 
@@ -149,6 +153,8 @@ export const useUiStore = create<UiStore>((set, get) => ({
   setRulesOpen: (open) => set({ rulesOpen: open }),
 
   setNpcModOpen: (open, npcId) => set({ npcModOpen: open, npcModTargetId: open ? npcId : undefined }),
+
+  setPoolOpen: (open) => set({ poolOpen: open }),
 
   notify: (text, tone = 'info') => set({ toast: { text, tone } }),
 

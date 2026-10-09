@@ -18,7 +18,16 @@ function enabledFrom(library: Library): string[] {
 
 export function scenarioFromLibrary(
   library: Library,
-  meta: { version: number; name: string; background: string; rules: Scenario['rules']; maps: Scenario['maps'] },
+  meta: {
+    version: number
+    name: string
+    background: string
+    rules: Scenario['rules']
+    maps: Scenario['maps']
+    pool?: Scenario['pool']
+    conds?: Scenario['conds']
+    checks?: Scenario['checks']
+  },
 ): Scenario {
   return {
     version: meta.version,
@@ -28,6 +37,9 @@ export function scenarioFromLibrary(
     maps: meta.maps,
     enabledIds: enabledFrom(library),
     library,
+    pool: meta.pool ?? [],
+    conds: meta.conds ?? [],
+    checks: meta.checks ?? [],
   }
 }
 
@@ -44,6 +56,9 @@ export function scenarioFromPmod(text: string): { scenario: Scenario | null; war
       background: parsed.background,
       rules: parsed.rules,
       maps: parsed.maps,
+      pool: parsed.pool,
+      conds: parsed.conds,
+      checks: parsed.checks,
     }),
     warnings: parsed.warnings,
   }
@@ -71,5 +86,8 @@ export function scenarioFromProject(library: Library, project: Project, version 
     maps: project.maps.map((m, i) => ({ ...m, name: names[i], nodes: m.nodes.map((n) => ({ ...n })) })),
     enabledIds: enabledFrom(merged),
     library: merged,
+    pool: project.pool,
+    conds: project.conds,
+    checks: project.checks,
   }
 }

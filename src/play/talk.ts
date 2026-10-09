@@ -19,6 +19,7 @@ import { nodeAtPath } from '../lib/dialogTree'
 import type { Session, TalkRecord, TalkState } from '../types/session'
 import { buildingKey, log, nodeAtCell, recordRoll } from './kit'
 import { heroGain } from './gain'
+import { applyEngineToSession, applyPoolEffects, testCheckRef } from './pool'
 
 /* ------------------------------------------------------------------ */
 /* 基础查表                                                            */
@@ -69,6 +70,46 @@ function drawOne(s: Session, label: string, dice: string, count: number, rng?: R
   const t = rollRangeAt([1, count], dice, pips)
   const index = Math.min(count - 1, Math.max(0, t - 1))
   return { session: recordRoll(s, label, dice, pips), index }
+}
+
+/* ------------------------------------------------------------------ */
+/* 同层求值（§6.3）：if-else 链 / 顺序展示 / 随机选择                    */
+/* ------------------------------------------------------------------ */
+
+/** 本层是否含 `if`（含 `if` 即走 if-else 链，不再"按顺序逐条推进"） */
+function layerHasIf(nodes: DialogNode[]): boolean {
+  return nodes.some((n) => n.if !== undefined)
+}
+
+/**
+ * 本层该进哪一条（§6.3）：
+ * - **不含 `if`** → 从 `from` 起的这一条（顺序展示 / 掷骰层用 `from = 0`）
+ * - **含 `if`** → if-else 链：自上而下找**第一条 `if` 成立**的记录；**一条不写 `if` 的记录 ＝ `else`**，
+ *   仅当它之前的所有 `if` 都不成立时被选中
+ *
+ * 返回 `-1` ＝ 本层结束（所有 `if` 都不成立、又没有 `else` —— 隐含空 `else`）。
+ */
+function entryIndex(nodes: DialogNode[], session: Session, from = 0): number {
+  if (!layerHasIf(nodes)) return from >= 0 && from < nodes.length ? from : -1
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i]
+    if (n.if === undefined) return i // else 兜底
+    if (testCheckRef(session, session.pool ?? {}, n.if)) return i
+  }
+  return -1
+}
+
+/**
+ * 掷骰层的**候选下标**（§6.3「`if` 与 `dice` 正交」）：先用 if-else 口径筛出候选，再在候选里按点数命中。
+ * - 不含 `if` → 全层都是候选（沿用既有口径）
+ * - 含 `if` → `if` 成立的记录；一条都不成立则退到末尾的 `else`（若有）；仍没有 → 空候选（本层结束）
+ */
+function diceCandidates(nodes: DialogNode[], session: Session): number[] {
+  if (!layerHasIf(nodes)) return nodes.map((_, i) => i)
+  const hit = nodes.map((_, i) => i).filter((i) => nodes[i].if !== undefined && testCheckRef(session, session.pool ?? {}, nodes[i].if))
+  if (hit.length > 0) return hit
+  const els = nodes.findIndex((n) => n.if === undefined)
+  return els >= 0 ? [els] : []
 }
 
 /* ------------------------------------------------------------------ */
@@ -135,8 +176,11 @@ export function openTalk(s: Session, building: BuildingDef, cell: [number, numbe
   session = { ...session, talks: { ...(session.talks ?? {}), [key]: record } }
   session = log(session, `遇到 ${npc?.icon ?? ''}${npc?.name ?? npcId}（方案 ${plan}）`, 'info')
 
-  // 从方案根节点开始（根层数组按顺序展示，起点是第 1 条）
-  return enterNode(session, key, building.id, cell, npcId, plan, [0])
+  // 从方案根节点开始：根层含 `if` 即走 if-else 链（§6.3），否则顺序展示第 1 条
+  const root = dialogPlan(session, npcId, plan) ?? []
+  const first = entryIndex(root, session)
+  if (first < 0) return closeTalk(session) // 所有 `if` 都不成立且没有 `else` → 本层结束
+  return enterNode(session, key, building.id, cell, npcId, plan, [first])
 }
 
 /**
@@ -182,6 +226,17 @@ function enterNode(
     const after: TalkRecord = { ...(session.talks?.[key] as TalkRecord), deliveredNode: path, talkDone: true }
     session = { ...session, talks: { ...(session.talks ?? {}), [key]: after } }
     session = log(session, '对话中交付了物品', 'good')
+  }
+
+  // 本条记录的 `pool`（§6.3）：先结算 `give`、再执行 `pool`；终态回放不再执行（防刷）
+  if (!replay && node?.pool && node.pool.length > 0) {
+    const before = session.pool ?? {}
+    const next = applyPoolEffects(before, node.pool)
+    if (next !== before) {
+      session = { ...session, pool: next }
+      // 改动到引擎当前值（血量 / 法力 / 剩余步数）时回写局面，保证池与局面不分家
+      session = applyEngineToSession(session, before, next)
+    }
   }
 
   // 每进入一条记录 → 更新 cursor
@@ -231,8 +286,11 @@ function completeNode(s: Session, talk: TalkState): Session {
   }
   if (talk.path.length === 1) {
     const nodes = dialogPlan(session, talk.npc, talk.dialog) ?? []
-    const next = talk.path[0] + 1
-    if (next < nodes.length) return enterNode(session, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [next])
+    // 根层含 `if` → if-else 链选中一条后**本层立即停止**（不再看后面）；不含 `if` 才逐条推进（§6.3）
+    if (!layerHasIf(nodes)) {
+      const next = talk.path[0] + 1
+      if (next < nodes.length) return enterNode(session, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [next])
+    }
   }
   return closeTalk(session)
 }
@@ -243,7 +301,10 @@ export function talkChoose(s: Session, index: number): Session {
   if (!talk || talk.stage !== 'choose') return s
   const nodes = dialogPlan(s, talk.npc, talk.dialog) ?? []
   const node = nodeAtPath(nodes, talk.path)
-  if (!node?.items?.[index]) return s
+  const item = node?.items?.[index]
+  if (!item) return s
+  // 条件可选项（§6.3）：`if` 不成立的选项不允许进入（UI 只列成立的，这里是兜底）
+  if (item.if !== undefined && !testCheckRef(s, s.pool ?? {}, item.if)) return s
   return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [...talk.path, index])
 }
 
@@ -262,10 +323,14 @@ export function talkRoll(s: Session, rng?: Rng): Session {
   const node = nodeAtPath(nodes, talk.path)
   if (!node?.dice) return s
 
-  const pips = rollSum(node.dice, rng)
   const items = node.items ?? []
+  // `if` 与 `dice` 正交（§6.3）：先用 if-else 口径筛出候选，再在候选里按点数命中
+  const candidate = diceCandidates(items, s)
+  if (candidate.length === 0) return completeNode(s, talk) // 筛完一条不剩 → 本层结束（不再要求掷骰）
+
+  const pips = rollSum(node.dice, rng)
   let hitIndex = -1
-  for (let i = 0; i < items.length; i++) {
+  for (const i of candidate) {
     const range = parseHit(items[i].hit)
     if (range && pips >= range[0] && pips <= range[1]) {
       hitIndex = i
@@ -418,16 +483,19 @@ export function talkView(s: Session): TalkView | undefined {
   const node = nodeAtPath(nodes, talk.path)
   const cellNode = nodeAtCell(s, talk.cell)
   const log = node ? transcript(nodes, talk.path, talk.line) : []
-  const needsRoll = talk.stage === 'choose' && !!node?.dice
-  const options =
+  // 跳出 `if` 不成立的选项（§6.3）；`index` 仍是**真实下标**，UI 回调用它继续走
+  const allItems = node?.items ?? []
+  const shown =
     talk.stage === 'choose' && !talk.replay
-      ? (node?.items ?? []).map((item, index) => ({
-          index,
-          label: optionText(item, index),
-          hit: item.hit,
-          hitLabel: hitLabel(item.hit),
-        }))
+      ? layerHasIf(allItems)
+        ? diceCandidates(allItems, s)
+        : allItems.map((_, i) => i)
       : []
+  const needsRoll = talk.stage === 'choose' && !!node?.dice && shown.length > 0
+  const options = shown.map((index) => {
+    const item = allItems[index]
+    return { index, label: optionText(item, index), hit: item.hit, hitLabel: hitLabel(item.hit) }
+  })
   return {
     talk,
     node,

@@ -10,16 +10,20 @@ import {
   DEFAULT_RULES,
   type AnyComponent,
   type ComponentKind,
+  type CondTpl,
   type GameMap,
   type Library,
   type LibraryKey,
   type NpcDef,
+  type PoolRoundCheck,
+  type PoolVar,
   type Project,
   type Rules,
 } from '../types'
 import { emptyLibrary } from '../types'
 import { npcIdsOf, referenceIdsOf } from '../lib/refs'
 import { normalizeNpc, normalizeNodeDialog } from '../lib/dialog'
+import { normalizeGatePool, normalizePoolSection, poolSectionToYaml } from '../lib/poolRefs'
 import { newMapId } from '../lib/ids'
 
 const ARRAY_OF_KIND: Record<ComponentKind, LibraryKey> = {
@@ -60,6 +64,7 @@ const SECTION_TITLE = {
   components: 'Components',
   rules: 'Rules',
   maps: 'Maps',
+  pool: 'Pool',
 } as const
 
 type SectionId = keyof typeof SECTION_TITLE
@@ -76,6 +81,7 @@ const SECTION_ALIASES: Record<string, SectionId> = {
   设定: 'components',
   规则配置: 'rules',
   地图: 'maps',
+  状态池: 'pool',
 }
 
 /** 分组标题（导出用；顺序见 `GROUP_ORDER`，§3.1） */
@@ -274,6 +280,14 @@ export function exportPmod(
     parts.push('\n')
   })
 
+  // ⑥ 状态池声明（V2.3 §7.1）：三组**全空即整段省略**，老文件不因此变长
+  const poolSection = poolSectionToYaml(project)
+  if (poolSection) {
+    parts.push(`## ${SECTION_TITLE.pool}\n\n`)
+    parts.push(yamlBlock(poolSection))
+    parts.push('\n')
+  }
+
   return { text: parts.join(''), missing, renamed }
 }
 
@@ -291,6 +305,10 @@ export interface ParsedPmod {
   rules: Rules
   maps: GameMap[]
   components: Library
+  /** `## Pool` 段的三组声明（V2.3 §7.1）：变量 / 判定模板 / 回合判定 */
+  pool: PoolVar[]
+  conds: CondTpl[]
+  checks: PoolRoundCheck[]
   warnings: string[]
 }
 
@@ -365,6 +383,10 @@ export function parsePmod(raw: string): ParsedPmod {
   let sawRules = false
   const maps: GameMap[] = []
   const components = emptyLibrary()
+  // V2.3：`## Pool` 段的三组声明（缺段 ＝ 全空，不报警，§7.1）
+  let pool: PoolVar[] = []
+  let conds: CondTpl[] = []
+  let checks: PoolRoundCheck[] = []
   let section = ''
 
   for (let i = 0; i < lines.length; i++) {
@@ -388,6 +410,14 @@ export function parsePmod(raw: string): ParsedPmod {
           sawRules = true
         }
       }
+      if (section === 'pool') {
+        const end = sectionEnd(2, i)
+        const { value } = pullYaml(lines, i + 1, end)
+        const decl = normalizePoolSection(safeLoad<unknown>(value, null, warn), warn)
+        pool = decl.pool
+        conds = decl.conds
+        checks = decl.checks
+      }
       continue
     }
     if (h.level === 3) {
@@ -410,7 +440,8 @@ export function parsePmod(raw: string): ParsedPmod {
                     }
                     return npc
                   })
-                : clean
+                : // V2.3 §6.4：建筑 / 道路的门锁 `pool` 判定补齐引用前缀（`tags` 等原样带过）
+                  clean.map((def) => normalizeGatePool(def as unknown as Record<string, unknown>) as unknown as AnyComponent)
             ;(components as unknown as Record<string, AnyComponent[]>)[key].push(...ready)
           }
         } else {
@@ -467,5 +498,5 @@ export function parsePmod(raw: string): ParsedPmod {
   if (!sawRules) warn(`这个文件没有「${SECTION_TITLE.rules}」段，已用默认规则补齐`)
   if (maps.length === 0) warn('没有解析到任何地图')
 
-  return { version, name, background, rules, maps, components, warnings }
+  return { version, name, background, rules, maps, components, pool, conds, checks, warnings }
 }

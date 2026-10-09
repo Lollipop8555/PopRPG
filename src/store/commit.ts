@@ -28,7 +28,11 @@ function unchanged(a: Snapshot, b: Snapshot): boolean {
     a.project.background === b.project.background &&
     a.project.rules === b.project.rules &&
     a.project.enabledIds === b.project.enabledIds &&
-    a.project.maps === b.project.maps
+    a.project.maps === b.project.maps &&
+    // 状态池三组声明也要比：漏了它，状态池面板里改声明会被当成"没变"而不进撤销栈（§5.4 G5 / §6）
+    a.project.pool === b.project.pool &&
+    a.project.conds === b.project.conds &&
+    a.project.checks === b.project.checks
   )
 }
 

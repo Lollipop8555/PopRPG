@@ -7,7 +7,16 @@
 
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { DEFAULT_RULES, type GameMap, type MapNode, type Project, type Rules } from '../types'
+import {
+  DEFAULT_RULES,
+  type CondTpl,
+  type GameMap,
+  type MapNode,
+  type PoolRoundCheck,
+  type PoolVar,
+  type Project,
+  type Rules,
+} from '../types'
 import { newMapId } from '../lib/ids'
 import { nodeCells, setMarker } from '../lib/map'
 import { pickStorage } from './storage'
@@ -20,6 +29,10 @@ export interface ProjectStore extends Project {
   toggleEnabled: (id: string) => void
   setEnabledMany: (ids: string[], on: boolean) => void
   setRules: (rules: Rules) => void
+  /** 全局状态池（§6）三组声明：整表替换（与 `setRules` 同口径，写操作走 `commit()`） */
+  setPool: (pool: PoolVar[]) => void
+  setConds: (conds: CondTpl[]) => void
+  setChecks: (checks: PoolRoundCheck[]) => void
   addMap: (name?: string) => string
   removeMap: (id: string) => void
   renameMap: (id: string, name: string) => void
@@ -56,6 +69,10 @@ export function newProject(name = '未命名的一局'): Project {
     enabledIds: [],
     rules: DEFAULT_RULES,
     maps: [{ id: newMapId(), name: '地图 1', nodes: [] }],
+    // V2.3：状态池三组声明随工程持久化与撤销（§9.1）
+    pool: [],
+    conds: [],
+    checks: [],
   }
 }
 
@@ -115,6 +132,12 @@ export const useProjectStore = create<ProjectStore>()(
         }),
 
       setRules: (rules) => set({ rules }),
+
+      setPool: (pool) => set({ pool }),
+
+      setConds: (conds) => set({ conds }),
+
+      setChecks: (checks) => set({ checks }),
 
       addMap: (name) => {
         const id = newMapId()
@@ -199,6 +222,9 @@ export const useProjectStore = create<ProjectStore>()(
         enabledIds: s.enabledIds,
         rules: s.rules,
         maps: s.maps,
+        pool: s.pool,
+        conds: s.conds,
+        checks: s.checks,
       }),
     },
   ),
@@ -212,6 +238,9 @@ export function projectSnapshot(): Project {
     enabledIds: s.enabledIds,
     rules: s.rules,
     maps: s.maps,
+    pool: s.pool,
+    conds: s.conds,
+    checks: s.checks,
   }
 }
 

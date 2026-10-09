@@ -6,7 +6,7 @@
  * ② **使用道具不消耗回合、不 tick**（生命值归零后仍可在当前回合使用道具）
  */
 
-import type { BuildingDef, ClassDef, RoadDef, StatKey } from '../types'
+import type { BuildingDef, ClassDef, Gate, RoadDef, StatKey } from '../types'
 import type { Rng } from '../engine/dice'
 import { remainingPoints, canPass, capabilities, payMapCost, makePlayerUnit, type PassResult, type PlayerUnit } from '../engine/units'
 import { addToInventory } from '../engine/item'
@@ -14,6 +14,7 @@ import { tickStates } from '../engine/state'
 import type { EncounterState, Session } from '../types/session'
 import { cellKey, currentMap, log, logs, neighbors, nodeAtCell, recordRoll, roll, statLabel, syncPlayer } from './kit'
 import { beginBuilding } from './encounter'
+import { applyEngineToSession, bumpSteps, runRoundChecks, seedPool, syncEngineVars, testCheckRef } from './pool'
 
 /* ------------------------------------------------------------------ */
 /* B1 开局                                                             */
@@ -48,6 +49,7 @@ export function startSession(scenario: Session['scenario'], classId: string): Se
     log: [],
     rolls: [],
     createdAt: Date.now(),
+    pool: {},
   }
 
   const skills = startingSkills(base).map((id) => scenario.library.skills.find((sk) => sk.id === id)!)
@@ -67,6 +69,8 @@ export function startSession(scenario: Session['scenario'], classId: string): Se
     log: [{ text: `开场：${scenario.name}`, tone: 'info' }],
   }
   session = log(session, `${cls?.icon ?? '🙂'} ${cls?.name ?? '无职业'} 出发，开局 ${cls?.free_points ?? 0} 点自由点`)
+  // 播种全局状态池（§8.2）：先铺引擎空间（六维 / 位置 / 背包），池自此是本局的唯一账本
+  session = { ...session, pool: seedPool(session) }
   // 第一回合交给玩家：进游戏后点骰子投掷，才掷出本回合步数（§7.2「点击投掷」）
   return { ...session, awaitingRound: true }
 }
@@ -114,28 +118,36 @@ export function nextRound(s: Session, rng?: Rng): Session {
   let next: Session = { ...s, round: s.round + 1 }
   next = log(next, `—— 第 ${next.round} 回合开始 ——`)
 
-  // ① 存活判定：玩家 hp≤0 才判败北（怪物在伤害作用时即时判负，不在此处判定）
-  if (s.player.resources.hp <= 0) {
+  // ① pmod 批：作者的回合判定（§8.3，先让业务把池改完）
+  //    先把局面刷进池（口径对齐），判定跑完后**只回写被改动的当前值**，避免池中的投影值反噬局面
+  const before = syncEngineVars(next)
+  const outcome = runRoundChecks({ ...next, pool: before }, before)
+  next = { ...next, pool: outcome.pool }
+  if (outcome.fired.length > 0) next = log(next, `回合判定成立 ${outcome.fired.length} 条`, 'info')
+  next = applyEngineToSession(next, before, outcome.pool)
+
+  // ② state 批：状态 tick（新挂的状态这回合不参一脚 —— 决策 6 的基石）
+  const playerTick = tickStates(next.player)
+  next = logs({ ...next, player: playerTick.unit }, playerTick.logs, 'info')
+  if (next.monster) {
+    const monsterTick = tickStates(next.monster)
+    next = logs({ ...next, monster: monsterTick.unit }, monsterTick.logs, 'info')
+  }
+
+  // ③ engine 批（强制最后）：存活 / 死亡判定 —— 先让业务与 buff 把血量算完，最后才判死（§8.3）
+  if (next.player.resources.hp <= 0) {
     next = log(next, '生命值归零，本局结束', 'bad')
     return { ...next, phase: 'dead', monster: undefined, combatStage: undefined }
   }
-  if (s.monster && s.monster.resources.hp <= 0) {
+  if (next.monster && next.monster.resources.hp <= 0) {
     next = log(next, '对手已被击败', 'good')
     return { ...next, phase: 'explore', monster: undefined, combatStage: undefined }
   }
 
-  // ② tick 一次（新挂的状态这回合不参与，下回合才首次扣 —— 决策 6 的基石）
-  const playerTick = tickStates(s.player)
-  next = logs({ ...next, player: playerTick.unit }, playerTick.logs, 'info')
-  if (s.monster) {
-    const monsterTick = tickStates(s.monster)
-    next = logs({ ...next, monster: monsterTick.unit }, monsterTick.logs, 'info')
-  }
-
-  // ③ 分岔
+  // ④ 分岔
   if (next.monster) {
     next = log(next, '交锋回合：由玩家先行动', 'info')
-    return { ...next, combatStage: 'player' }
+    return { ...next, pool: syncEngineVars(next), combatStage: 'player' }
   }
 
   const { session, pips } = roll(next, '移动步数', next.scenario.rules.move.dice, rng)
@@ -147,7 +159,8 @@ export function nextRound(s: Session, rng?: Rng): Session {
     `掷 ${next.scenario.rules.move.dice} = ${pips} → 本回合能走 ${pips} 步`,
     'dice',
   )
-  return stuck ? log(rolled, `${pips} 步不足以走进任何一格 —— 本回合到此为止，点「下一回合」再掷`, 'bad') : rolled
+  const settled = stuck ? log(rolled, `${pips} 步不足以走进任何一格 —— 本回合到此为止，点「下一回合」再掷`, 'bad') : rolled
+  return { ...settled, pool: syncEngineVars(settled) }
 }
 
 /* ------------------------------------------------------------------ */
@@ -217,20 +230,25 @@ export function stepTo(s: Session, cell: [number, number], rng?: Rng): StepResul
 
   // ① 权限：门槛不满足（缺=block）直接拦在门外，弹对话框说明，不移动、不标记 onceDone
   const pass: PassResult = insideSameBuilding ? { pass: true } : canPass(gate, capabilities(s.player))
-  if (!pass.pass) {
+  const poolOk = insideSameBuilding || gatePoolOk(s, gate)
+  if (!pass.pass || !poolOk) {
     const name = def?.name ?? (node.type === 'road' ? '道路' : '建筑')
-    const reason = `过不去 —— 需要 ${gate?.tags.join('、')}`
+    const tagsText = gate?.tags.length ? `需要 ${gate.tags.join('、')}` : ''
+    const poolText = !poolOk ? '状态条件不满足' : ''
+    const reason = `过不去 —— ${[tagsText, poolText].filter(Boolean).join('；') || '条件不满足'}`
     const session: Session = {
       ...log(s, reason, 'bad'),
       phase: 'encounter',
       encounter: {
         kind: 'event',
         title: `${def?.icon ?? '🔒'} ${name}`,
-        text: gate?.tags.length
-          ? `这里上着锁：需要满足「${gate.tags.join(' / ')}」才能通过${
-              gate.mode === 'all' ? '（需全部满足）' : '（满足其一即可）'
-            }。`
-          : reason,
+        text: !poolOk
+          ? `${reason}。`
+          : gate?.tags.length
+            ? `这里上着锁：需要满足「${gate.tags.join(' / ')}」才能通过${
+                gate.mode === 'all' ? '（需全部满足）' : '（满足其一即可）'
+              }。`
+            : reason,
         event: { verdict: 'blocked' },
       } as EncounterState,
     }
@@ -253,6 +271,8 @@ export function stepTo(s: Session, cell: [number, number], rng?: Rng): StepResul
     stepsLeft: s.stepsLeft - stepCost,
     visited: [...s.visited.slice(-199), cellKey(s, cell)],
   }
+  // 走成一格 → 累计步数 +1，并把位置 / 剩余步数刷进池（§3.2）
+  next = { ...next, pool: syncEngineVars(next, bumpSteps(next.pool)) }
   const costText = [cost?.hp ? `-${cost.hp} 生命` : '', cost?.mp ? `-${cost.mp} 法力` : '', pass.penalty ? '（强行通过加罚）' : '']
     .filter(Boolean)
     .join(' ')
@@ -289,12 +309,22 @@ function advanceMap(s: Session): Session {
   const nextMap = s.scenario.maps[nextIndex]
   if (!nextMap) return { ...s, phase: 'won', stepsLeft: 0 }
   const start: [number, number] = nextMap.start ?? s.pos
-  return log({ ...s, mapIndex: nextIndex, pos: start, phase: 'explore' }, `进入「${nextMap.name}」`)
+  const moved: Session = log({ ...s, mapIndex: nextIndex, pos: start, phase: 'explore' }, `进入「${nextMap.name}」`)
+  return { ...moved, pool: syncEngineVars(moved) }
 }
 
 /** 当前地图的名字（给 UI） */
 export function mapName(s: Session): string {
   return currentMap(s)?.name ?? '（没有地图）'
+}
+
+/**
+ * 门锁的 `pool` 判定（§6.4）：与 `tags` **同档并列**，两者**都**要满足才放行。
+ * 可写条件体，也可写判定模板名（由 `testCheckRef` 一并解析）。
+ */
+function gatePoolOk(s: Session, gate: Gate | undefined): boolean {
+  if (!gate?.pool) return true
+  return testCheckRef(s, s.pool ?? {}, gate.pool)
 }
 
 /** 这一格能不能踩（给 UI 高亮可走格） */
@@ -317,7 +347,7 @@ export function canStep(s: Session, cell: [number, number]): boolean {
       ? (def as BuildingDef).event?.gate
       : undefined
   const gate = def?.gate ?? eventGate
-  return canPass(gate, capabilities(s.player)).pass
+  return canPass(gate, capabilities(s.player)).pass && gatePoolOk(s, gate)
 }
 
 /**

@@ -2,6 +2,7 @@
 
 import type { RollSet } from './common'
 import type { PriceDef, RewardPick } from './component'
+import type { CondTpl, PoolRoundCheck, PoolVar } from './state-pool'
 
 export type NodeType = 'start' | 'end' | 'road' | 'building'
 
@@ -90,6 +91,13 @@ export interface Project {
   enabledIds: string[]
   rules: Rules
   maps: GameMap[]
+  /**
+   * **全局状态池的三组声明**（V2.3 §7.1，`.pmod` 的 `## Pool` 段）：
+   * `pool` 变量声明 ＋ `conds` 判定模板 ＋ `checks` 回合判定。缺省即空数组。
+   */
+  pool: PoolVar[]
+  conds: CondTpl[]
+  checks: PoolRoundCheck[]
 }
 
 /** §4.8.6 的默认前置配置 */

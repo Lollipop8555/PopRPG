@@ -29,6 +29,9 @@ function proj(nodes: MapNode[], over: Partial<Project> = {}): Project {
     enabledIds: [],
     rules: DEFAULT_RULES,
     maps: [{ id: 'm1', name: '图一', start: [0, 0], end: [9, 0], nodes }],
+    pool: [],
+    conds: [],
+    checks: [],
     ...over,
   }
 }

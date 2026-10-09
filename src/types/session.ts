@@ -4,7 +4,7 @@
  * 场景（`Scenario`）是这一局的**静态定义**（来自 `.pmod`），会话（`Session`）是**跑起来之后的状态**。
  */
 
-import type { GameMap, Library, Rules } from '../types'
+import type { CondTpl, GameMap, Library, Pool, PoolRoundCheck, PoolVar, Rules } from '../types'
 import type { InventoryEntry, MonsterUnit, PlayerUnit } from '../engine/units'
 
 /** 这一局的静态定义（加载进来的 `.pmod` 快照，自包含） */
@@ -16,6 +16,10 @@ export interface Scenario {
   maps: GameMap[]
   enabledIds: string[]
   library: Library
+  /** 全局状态池的声明（V2.3 §7.1）：变量 / 判定模板 / 回合判定 */
+  pool: PoolVar[]
+  conds: CondTpl[]
+  checks: PoolRoundCheck[]
 }
 
 export type PlayPhase =
@@ -156,6 +160,11 @@ export interface Session {
   version: number
   scenario: Scenario
   player: PlayerUnit
+  /**
+   * **全局状态池**（V2.3 §8.1）：一局一份的扁平表（规范全名 → 值），`engine-` 与 `usr-` 同容器。
+   * **`psave` ＝ 状态表**（§8.6）：本局全部运行期可变状态都落在这里。
+   */
+  pool: Pool
   /** 当前第几张图 */
   mapIndex: number
   pos: [number, number]

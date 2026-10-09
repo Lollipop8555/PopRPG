@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState } from 'react'
-import { BookOpen, ClipboardList, Download, MessageSquareText, MoreHorizontal, Palette, Redo2, SlidersHorizontal, Undo2, Upload } from 'lucide-react'
+import { BookOpen, ClipboardList, Database, Download, MessageSquareText, MoreHorizontal, Palette, Redo2, SlidersHorizontal, Undo2, Upload } from 'lucide-react'
 import { useProjectStore } from '../store/project'
 import { useHistoryStore } from '../store/history'
 import { redo, undo } from '../store/commit'
@@ -53,6 +53,14 @@ export default function TopBar() {
         title="对话树整页面板（与「规则」并列的第二个整页入口）"
       >
         <MessageSquareText size={14} /> NPC 模组
+      </button>
+
+      <button
+        className="btn small grow"
+        onClick={() => useUiStore.getState().setPoolOpen(true)}
+        title="全局状态池：变量表 / 判定模板 / 回合判定（与「规则」「NPC 模组」并列的整页入口）"
+      >
+        <Database size={14} /> 状态池
       </button>
 
       <button className="btn small grow" onClick={importPmodFile} title="导入 .pmod">

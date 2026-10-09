@@ -92,7 +92,7 @@ describe('B2 移动与回合（决策 6）', () => {
 })
 
 describe('B6 状态与“1 滴血先吃药”（决策 6 / 验收 5）', () => {
-  it('回合开始先判存活再 tick：本回合刚挂的状态不当期扣，扣到 0 也还能吃药救回来', () => {
+  it('回合判定先跑、tick 在后：本回合刚挂的状态不当期扣（§8.3）', () => {
     let s = knight(0.5)
     // 1 滴血 + 刚挂上的中毒（pending → 本次 tick 不参与）
     s = {
@@ -118,7 +118,7 @@ describe('B6 状态与“1 滴血先吃药”（决策 6 / 验收 5）', () => {
     expect(after.player.states[0].duration).toBe(4)
   })
 
-  it('hp 归零不当场死：要等下一次回合开始才判败北，中间可以吃药', () => {
+  it('基础判定强制最后：hp 在本回合结算里降到 0 即判死（旧「还活着」作废，§8.3）', () => {
     let s = knight(0.5)
     s = {
       ...s,
@@ -128,12 +128,33 @@ describe('B6 状态与“1 滴血先吃药”（决策 6 / 验收 5）', () => {
         states: [{ tag: '中毒', duration: 5, per_turn: { hp: -1 }, source: 'test' }],
       },
     }
+    // 业务 / buff 先把血量算完，最后才判死 → 本回合结算里归零即死
     const ticked = nextRound(s, fixed(0.5))
     expect(ticked.player.resources.hp).toBe(0)
-    expect(ticked.phase).toBe('explore') // ← 还活着，这一回合还有操作空间
-    const healed = useItem(ticked, 'red_potion')
-    expect(healed.player.resources.hp).toBeGreaterThan(0)
-    expect(nextRound(healed, fixed(0.5)).phase).toBe('explore')
+    expect(ticked.phase).toBe('dead')
+  })
+
+  it('缓冲改由「吃药 ＋ 次回合 buff 对冲」承担：本回合先吃药，下回合 tick 后仍 > 0', () => {
+    let s = knight(0.5)
+    s = {
+      ...s,
+      player: {
+        ...s.player,
+        resources: { ...s.player.resources, hp: 2 },
+        states: [{ tag: '中毒', duration: 5, per_turn: { hp: -1 }, source: 'test' }],
+      },
+    }
+    // 回合开始：tick -1 → hp=1，仍 > 0 → 活着
+    let next = nextRound(s, fixed(0.5))
+    expect(next.phase).toBe('explore')
+    expect(next.player.resources.hp).toBe(1)
+    // 本回合内吃药（不占回合、不 tick）
+    next = useItem(next, 'red_potion')
+    expect(next.player.resources.hp).toBeGreaterThan(1)
+    // 下回合 tick 再 -1，与吃药回血对冲后仍 > 0 → 死不掉
+    const after = nextRound(next, fixed(0.5))
+    expect(after.phase).toBe('explore')
+    expect(after.player.resources.hp).toBeGreaterThan(0)
   })
 })
 

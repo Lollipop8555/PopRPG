@@ -61,5 +61,8 @@ export function fixtureProject(): Project {
     enabledIds: fixtureEnabledIds(),
     rules: DEFAULT_RULES,
     maps: [fixtureMap()],
+    pool: [],
+    conds: [],
+    checks: [],
   }
 }

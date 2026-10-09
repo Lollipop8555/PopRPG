@@ -26,6 +26,7 @@ import { resolveItemPool, resolveMonsterPool } from '../engine/pool'
 import { makePlayerUnit } from '../engine/units'
 import { skillSources, referenceIdsOf, componentsWithTag, npcIdsOf } from '../lib/refs'
 import { hitCoverage, listPoints } from '../lib/dialog'
+import { poolIssues } from './poolValidate'
 import { SECTIONS } from '../lib/sections'
 
 export type Severity = 'error' | 'warn'
@@ -707,6 +708,9 @@ export function validateProject(library: Library, project: Project): Issue[] {
     issues.push(...classIssues(library, enabledIds, cls))
   }
 
+  /** K20~K37：状态池专项（V2.3 §十） */
+  issues.push(...poolIssues(library, project))
+
   return issues
 }
 
@@ -736,6 +740,24 @@ const KEY_LABEL: Record<string, string> = {
   K17: '地图名重复',
   K18: '对话树提示',
   K19: 'hit 越界 / 非法',
+  K20: '状态池键没有声明',
+  K21: '变量重复声明',
+  K22: '写成除以零',
+  K23: '写了只读的引擎变量',
+  K24: '默认值与类型不符',
+  K25: '判定没有任何条件',
+  K26: '算子不适用于该类型',
+  K27: '短名含连字符或为空',
+  K28: '依赖的别名不存在',
+  K29: '回合判定别名重复',
+  K30: '回合判定依赖成环',
+  K31: '依赖指向没起名的判定',
+  K32: '道具不在组件库',
+  K33: '同层混用 if 与骰子',
+  K34: '条件分支不在末尾',
+  K35: '判定模板没有声明',
+  K36: '判定模板与变量重名',
+  K37: 'value 与 ref 冲突',
 }
 
 export function groupIssues(issues: Issue[]): IssueGroup[] {

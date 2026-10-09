@@ -7,6 +7,7 @@
  */
 
 import type { PartialStatValues, RollSet, StatKey, Stats, StatValues } from './common'
+import type { PoolCheckRef, PoolEffect } from './state-pool'
 
 /** 组件所属大类（= 组件库里的分区，§5.0.1） */
 export type ComponentKind =
@@ -56,6 +57,11 @@ export interface Gate {
   mode?: GateMode
   missing?: GateMissing
   penalty?: MapCost
+  /**
+   * **触发判定**（V2.3 §6.4）：与 `tags` **同档并列**，两者都要满足才放行；
+   * 可写条件体，也可写判定模板名（§4.5）。落点即门锁的既有落点。
+   */
+  pool?: PoolCheckRef
 }
 
 /* ------------------------------------------------------------------ */
@@ -319,6 +325,16 @@ export interface DialogNode {
    * **与 `items` 可并存**：先结算 `give`，再按 `items` 继续或结束（§4.9.2）。
    */
   give?: string[]
+  /**
+   * **条件**（V2.3 §6.3）：本条记录是否进入候选。写条件体，或写一个判定模板名（`string`）；
+   * 同一层数组里的多条 `if` 组成 **if-else 链**（自上而下取第一条成立者、命中即停）。
+   */
+  if?: PoolCheckRef
+  /**
+   * **修改状态池**（V2.3 §6.3）：本条记录说完之后的操作结果，与 `give` 同级并列
+   * （先结算 `give`，再执行 `pool`）。
+   */
+  pool?: PoolEffect[]
 }
 
 /**
