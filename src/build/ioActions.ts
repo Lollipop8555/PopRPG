@@ -7,6 +7,7 @@
 
 import type { AnyComponent, GameMap, Library, LibraryKey, Project } from '../types'
 import { LIBRARY_KEY_TO_KIND, LIBRARY_KEYS, emptyLibrary } from '../types'
+import { findDependencyCycle } from '../engine/state-pool'
 import { exportPmod, parsePmod } from '../io/pmod'
 import { downloadText, pickTextFile } from '../io/download'
 import { librarySnapshot, useLibraryStore } from '../store/library'
@@ -30,6 +31,15 @@ function mapsMissing(project: Project): { noStart: string[]; noEnd: string[] } {
 export function exportCurrentPmod(): void {
   const library = librarySnapshot()
   const project = projectSnapshot()
+
+  // §8.4 / K30：回合判定依赖成环 → **禁止导出**（手写文件仍按声明顺序兜底、不卡死）
+  const cycle = findDependencyCycle(project.checks)
+  if (cycle) {
+    const path = cycle.filter((a) => a).join(' → ') || '（匿名判定之间无法成环）'
+    notify(`回合判定依赖成环（K30）：${path}，已阻止导出 —— 请先解开环`, 'error')
+    return
+  }
+
   const { text, missing, renamed } = exportPmod(library, project)
   downloadText(`${project.name || '未命名的一局'}.pmod`, text)
 

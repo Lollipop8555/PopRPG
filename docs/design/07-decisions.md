@@ -154,6 +154,8 @@
 
 > **背景**：V1 / V2.0 的反馈是一次性的，同一处内容第二次进入与第一次完全一样。本引擎**没有存量用户**，故按**结构改造类追加设定**直接重写数据结构（与 V2.0 同档授权）。
 > 细则与完整口径见 [`state-pool.md`](state-pool.md)；本表只登记裁决本身。
+>
+> **落地（2026-10-09 · V2.3 全量）**：本条裁决 **31–61 已全部落地**——类型与算子 [`state-pool.ts`](../../src/types/state-pool.ts)＋[`state-pool.ts`](../../src/engine/state-pool.ts)、运行时 [`pool.ts`](../../src/play/pool.ts)（播种 / `syncEngineVars` / `applyEngineToSession` / `runRoundChecks` / `buildPoolWatch` 反查 / `watch` 通知）、编辑器三页签面板 [`PoolScreen.tsx`](../../src/build/PoolScreen.tsx)、使用处接入 [`talk.ts`](../../src/play/talk.ts)＋[`encounter.ts`](../../src/play/encounter.ts)、校验 `K20`–`K37` [`poolValidate.ts`](../../src/check/poolValidate.ts)。端到端验收见 [`task/06-state-pool.md`](../../task/06-state-pool.md) S8 ＋ [`v23-acceptance.test.ts`](../../src/play/__tests__/v23-acceptance.test.ts)：**66 文件 / 793 用例全绿**，`npm run build` 通过。**唯一未落项**：裁决 61 键族的**多槽 / `at` 触发**变体（裁决 62–64）归 **V2.4**（§8.6），本档只落**单槽 `slot0`**。
 
 | 编号 | 裁决 | 落点 |
 |---|---|---|

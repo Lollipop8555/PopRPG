@@ -11,7 +11,7 @@ import type {
   GrantEntry,
   StatKey,
 } from '../../../types'
-import { ENCOUNTER_KINDS, STAT_KEYS, STAT_LABEL } from '../../../types'
+import { ENCOUNTER_KINDS, STAT_KEYS, STAT_LABEL, emptyCheck } from '../../../types'
 import { useLibraryStore } from '../../../store/library'
 import { useProjectStore } from '../../../store/project'
 import { useUiStore } from '../../../store/ui'
@@ -21,6 +21,7 @@ import { makePlayerUnit } from '../../../engine/units'
 import { eventText } from '../../../lib/human'
 import { Field, NumberBox, SelectBox, TextBox, Toggle } from '../../../ui/primitives'
 import { CostEditor, GateEditor } from '../controls/CostGateEditor'
+import { CheckRefEditor } from '../controls/CheckRefEditor'
 import EffectsEditor from '../controls/EffectsEditor'
 import PoolEditor from '../controls/PoolEditor'
 import PriceEditor from '../controls/PriceEditor'
@@ -45,6 +46,9 @@ export default function BuildingEditor({
 }) {
   const poolSize = (def.reward_pool?.ids ?? []).length
   const stockSize = (def.stock?.ids ?? []).length
+  const tplNames = useProjectStore((s) => s.conds)
+    .map((c) => c.name)
+    .filter(Boolean)
 
   const patchEvent = (part: Partial<EventBlock>) => {
     onChange({ event: { ...(def.event ?? {}), ...part } })
@@ -63,6 +67,29 @@ export default function BuildingEditor({
       {/* 通用：消耗 + 权限 + 给点数（§4.4 与道路同一套） */}
       <CostEditor value={def.cost} onChange={(cost) => onChange({ cost })} />
       <GateEditor value={def.gate} onChange={(gate) => onChange({ gate })} />
+
+      {/* 建筑 `encounter` 前置判定（§6.4 / §8.3③）：与门锁同构，在门锁与 NPC 之后、建筑行为之前求值 */}
+      <Field
+        label="到访触发判定（encounterPool）"
+        hint="与门锁同构：不成立 → 本次到访不触发建筑行为（也不等掷骰）；不写 ＝ 恒成立。反馈由文案 / 对话树 if 承担"
+      >
+        <Toggle
+          label="开启"
+          checked={def.encounterPool !== undefined}
+          onChange={(on) => onChange({ encounterPool: on ? emptyCheck() : undefined })}
+        />
+      </Field>
+      {def.encounterPool !== undefined && (
+        <div style={{ border: '1.2px dashed var(--line)', borderRadius: 10, padding: 6, marginBottom: 6 }}>
+          <CheckRefEditor
+            value={def.encounterPool}
+            onChange={(encounterPool) => onChange({ encounterPool })}
+            tplNames={tplNames}
+            label="判定模板"
+          />
+        </div>
+      )}
+
       <Field label="结算时给予的自由属性点（point_reward）" hint="开箱与事件成功均可给予">
         <NumberBox value={def.point_reward} min={0} onChange={(n) => onChange({ point_reward: n ?? 0 })} />
       </Field>

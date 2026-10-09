@@ -10,6 +10,7 @@ import { resolveMimic, resolveMonster } from '../engine/pool'
 import type { Session, TalkState } from '../types/session'
 import { buildingKey, log, logs, skillIndex } from './kit'
 import { startCombat } from './combat'
+import { testCheckRef } from './pool'
 import { openShop, openTreasure, runEvent } from './reward'
 import { closeTalk, hasTalked, openTalk } from './talk'
 
@@ -18,6 +19,15 @@ import { closeTalk, hasTalked, openTalk } from './talk'
  * 只有真正会掷骰 / 揭晓的行为才算：开箱、怪物房、商店、带判定的门。
  * 空地、已了结的事件、已开过的宝箱 = 不掷骰，直接走过去。
  */
+/**
+ * 建筑 `encounter` 前置判定（§6.4 / §8.3③，与门锁 `pool` 同构）：**不写 ＝ 恒成立**。
+ * 复用门锁的同一套判定解析口径（`testCheckRef`：条件体 / 判定模板名等价）。
+ */
+function encounterPoolOk(s: Session, building: BuildingDef): boolean {
+  if (building.encounterPool === undefined) return true
+  return testCheckRef(s, s.pool ?? {}, building.encounterPool)
+}
+
 export function encounterNeedsRoll(s: Session, building: BuildingDef, cell: [number, number]): boolean {
   const done = s.onceDone.includes(buildingKey(s, cell))
   switch (building.encounter) {
@@ -63,6 +73,12 @@ export function beginBuilding(
   if (!opts?.talkHandled) {
     const opened = openTalk(s, building, cell, rng)
     if (opened) return opened
+  }
+
+  // ② 建筑 `encounter` 前置判定（§6.4 / §8.3③，与门锁同构）：不成立 → 本次到访不触发建筑行为。
+  // 反馈切换由作者文案 / 对话树 `if` 承担（§6.7），引擎不记录（裁决 56）。
+  if (!encounterPoolOk(s, building)) {
+    return log(s, `${building.name}：现在没什么可做的`)
   }
 
   // 要掷骰的遭遇（开箱 / 怪物 / 商店 / 带判定的门）→ 先停在这格，等玩家点「掷骰」再结算（§7.2）

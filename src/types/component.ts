@@ -199,6 +199,14 @@ export interface BuildingDef extends ComponentBase {
   encounter: EncounterKind
   cost?: MapCost
   gate?: Gate
+  /**
+   * **建筑 `encounter` 行为前置的触发判定**（V2.3 §6.4 / §8.3③）：在门锁与 NPC 之后、建筑行为之前求值，
+   * **与门锁同构**，可写条件体或判定模板名（§4.5）；**不写 ＝ 恒成立**。
+   *
+   * **不成立 → 本次到访不触发建筑行为**（也不等掷骰），用于"到访即触发"的反馈切换。
+   * 反馈内容本身仍由作者的文案 / 对话树 `if` 承担（§6.7），引擎不额外记录、不新增内置键（裁决 56）。
+   */
+  encounterPool?: PoolCheckRef
   point_reward?: number
   reward_pool?: PoolRef
   monster_pool?: PoolRef

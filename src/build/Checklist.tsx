@@ -4,8 +4,10 @@
  */
 
 import { useMemo } from 'react'
-import { ClipboardList, X } from 'lucide-react'
+import { ClipboardList, Plus, X } from 'lucide-react'
 import { validateProject, groupIssues } from '../check/validate'
+import { shortName } from '../types'
+import { commit } from '../store/commit'
 import { useLibraryStore } from '../store/library'
 import { useProjectStore } from '../store/project'
 import { useUiStore } from '../store/ui'
@@ -33,6 +35,16 @@ export default function Checklist() {
     if (issue.mapId) ui.setCurrentMap(issue.mapId)
     if (issue.cell) ui.selectNode(`${issue.cell[0]},${issue.cell[1]}`)
     setOpen(false)
+  }
+
+  /** K20 快捷操作：替未声明的作者空间键补一条默认声明（§十 / S7-102，不阻塞保存与导出） */
+  const declare = (full: string) => {
+    commit(() => {
+      const st = useProjectStore.getState()
+      if (st.pool.some((v) => v.name === full)) return
+      const short = shortName(full)
+      useProjectStore.setState({ pool: [...st.pool, { key: short, name: full, type: 'number', value: 0 }] })
+    })
   }
 
   return (
@@ -75,6 +87,19 @@ export default function Checklist() {
                       {issue.mapName ? `${issue.mapName}` : ''}
                       {issue.cell ? ` (${issue.cell[0]}, ${issue.cell[1]})` : ''}
                     </div>
+                  )}
+                  {issue.poolKey && (
+                    <button
+                      className="btn small"
+                      style={{ marginTop: 4 }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        declare(issue.poolKey as string)
+                      }}
+                      title={`在「## Pool」的 pool 段补一条 ${issue.poolKey} 声明`}
+                    >
+                      <Plus size={12} /> 补一条声明
+                    </button>
                   )}
                 </div>
               ))}

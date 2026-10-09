@@ -1,9 +1,7 @@
 /**
  * 对话弹层（§4.9.2 / §4.8.12）。
  *
- * 一个弹层吃三种状态：
- * - `menu`：重入的**选择对话框**（继续 / 重新 / 已走完才出现的路过）——
- *   【重新对话】由实例的 `dialog.retalk` 决定是否给出（关闭时只有【继续】，已走完的另有【路过】，§4.9.3）
+ * 一个弹层吃两种状态（**没有 `menu`**：V2.3 §十一 裁决 54 / 61 —— 重入不再弹选择框，一律按对话树求值）：
  * - `line`：**逐条展示台词**，点「继续」推进（台词是**聊天记录**：一路说过的都留在上面，只往后追加）
  * - `choose`：台词播完 —— 本层没 `dice` 就列**选项按钮**（文本取子记录的 `result`）；
  *   **有 `dice`（掷骰层）就先把这层所有答复一次摆出来**，每条前面标出它的**命中区间**，
@@ -18,7 +16,7 @@
  *
  * **聊天记录不挑人**：既然是记录，**双方的话都得留在上面** —— NPC 的台词靠左，
  * 玩家挑的那一条（`result` 原文，掷骰命中的也算自己挑的）靠右，一路累积、选完不清空
- * （`talkView().log` 由 `talk.path` 反推，所以退出再【继续对话】回来记录照样在）。
+ * （`talkView().log` 由 `talk.path` 反推，所以退出再进入记录照样在）。
  *
  * **标题栏只写 NPC 那一行**（`icon` ＋ 名字）：`talk.dialog` 是**作者侧的方案名**（`Mod1` / `Mod2`…），属于编辑器内部标识，
  * 游玩态**一律不显示**——玩家看的是"跟谁说话"，不是"这套对话在库里叫什么"。玩家的名字同理：跟 NPC 说话的人是自己，
@@ -27,7 +25,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { Session } from '../types/session'
-import type { TalkMenuAction } from './talk'
 import { talkView } from './talk'
 import { roleSprite } from '../engine/skin'
 import { useSkinStore } from '../store/skin'
@@ -46,14 +43,12 @@ export default function TalkDialog({
   onNext,
   onChoose,
   onRoll,
-  onMenu,
 }: {
   session: Session
   onNext: () => void
   onChoose: (index: number) => void
   /** 点骰子 → 掷（掷出与高亮都在 store 里，进那一条由 `GameScreen` 卡一拍后调 `talkHit`） */
   onRoll: () => void
-  onMenu: (action: TalkMenuAction) => void
 }) {
   const [rolling, setRolling] = useState(false)
   const [spinPips, setSpinPips] = useState<number | null>(null)
@@ -81,7 +76,7 @@ export default function TalkDialog({
 
   const assets = useSkinStore((s) => s.assets)
   const role = useSkinStore((s) => s.skin?.manifest.role)
-  // 对话框纸面底纹（`skin/03-window.md` §四）：两个分支（重入菜单 / 正常对话）共用一个壳
+  // 对话框纸面底纹（`skin/03-window.md` §四）
   const surface = useSurfaceStyle('dialog')
   // 骰子本体（`skin/04-misc.md` §三）：对话里那枚骰子与底栏那枚共用一张
   const dieBody = useDieBodyStyle()
@@ -92,7 +87,7 @@ export default function TalkDialog({
   const view = talkView(session)
   if (!view) return null
 
-  const { talk, node, log, needsRoll, options, canPass, canRestart } = view
+  const { talk, node, log, needsRoll, options } = view
   const npc = session.scenario.library.npcs.find((n) => n.id === talk.npc)
   // "正在说的那一句" ＝ 记录里最后一条 NPC 台词（下面跟着的玩家答复已经答完了）
   const nowIdx = log.reduce((acc, e, i) => (e.who === 'npc' ? i : acc), -1)
@@ -104,43 +99,13 @@ export default function TalkDialog({
       ? `掷 ${node?.dice}`
       : `${node?.dice} = ${talk.rolled}`
 
-  // 重入：选择对话框
-  if (talk.stage === 'menu') {
-    return (
-      <Overlay>
-        <div className="modal talk-modal" style={surface}>
-          <div className="panel-head">
-            <span className="hand" style={{ fontSize: 16 }}>
-              <RoleGlyph sprite={roleSprite(role, 'npc', talk.npc)} assets={assets} icon={npc?.icon} />{' '}
-              {npc?.name ?? talk.npc}
-            </span>
-          </div>
-          <div className="row" style={{ gap: 6, marginTop: 4 }}>
-            <button className="btn primary talk-choice" style={primaryBtn} onClick={() => onMenu('continue')}>
-              继续对话
-            </button>
-            {canRestart && (
-              <button className="btn talk-choice" style={plainBtn} onClick={() => onMenu('restart')}>
-                重新对话
-              </button>
-            )}
-            {canPass && (
-              <button className="btn talk-choice" style={plainBtn} onClick={() => onMenu('pass')}>
-                路过
-              </button>
-            )}
-          </div>
-        </div>
-      </Overlay>
-    )
-  }
-
   return (
     <Overlay>
       <div className="modal talk-modal" style={surface}>
         <div className="panel-head">
           <span className="hand" style={{ fontSize: 16 }}>
-            {npc?.icon} {npc?.name ?? talk.npc}
+            <RoleGlyph sprite={roleSprite(role, 'npc', talk.npc)} assets={assets} icon={npc?.icon} />{' '}
+            {npc?.name ?? talk.npc}
           </span>
         </div>
 
@@ -166,7 +131,7 @@ export default function TalkDialog({
           </div>
         )}
 
-        {talk.stage === 'choose' && !talk.replay && needsRoll && (
+        {talk.stage === 'choose' && needsRoll && (
           <div className="talk-roll">
             {/* 本层全部答复**共用一只框**（行与行之间是分割线，不是各自描边 —— 各自描边读起来像几条台词）：
                 左格是**命中区间**，右侧是答复本身 */}
@@ -209,7 +174,7 @@ export default function TalkDialog({
           </div>
         )}
 
-        {talk.stage === 'choose' && !talk.replay && !needsRoll && (
+        {talk.stage === 'choose' && !needsRoll && (
           <div className="talk-options">
             {options.map((o) => (
               <button key={o.index} className="btn talk-option" style={plainBtn} onClick={() => onChoose(o.index)}>

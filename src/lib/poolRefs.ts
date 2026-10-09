@@ -148,13 +148,20 @@ export function normalizePoolSection(
 /* 三、组件的判定引用 归一（§6.3 对话树 / §6.4 门锁）                  */
 /* ------------------------------------------------------------------ */
 
-/** 门锁 `Gate`：补齐 `pool` 判定引用（§6.4）；`tags` / `mode` / `missing` / `penalty` 原样 */
+/**
+ * 地图件（建筑 / 道路）的判定引用：补齐**门锁 `gate.pool`**（§6.4）与**建筑 `encounter` 前置判定
+ * `encounterPool`**（§6.4 / §8.3③，与门锁同构）的引用前缀；`tags` / `mode` / `missing` / `penalty` 原样。
+ */
 export function normalizeGatePool<T extends Record<string, unknown>>(def: T): T {
+  const out: Record<string, unknown> = { ...def }
   const gate = def.gate
-  if (!gate || typeof gate !== 'object') return def
-  const g: Record<string, unknown> = { ...(gate as Record<string, unknown>) }
-  if (g.pool !== undefined) g.pool = normalizeCheckRef(g.pool)
-  return { ...def, gate: g }
+  if (gate && typeof gate === 'object') {
+    const g: Record<string, unknown> = { ...(gate as Record<string, unknown>) }
+    if (g.pool !== undefined) g.pool = normalizeCheckRef(g.pool)
+    out.gate = g
+  }
+  if (def.encounterPool !== undefined) out.encounterPool = normalizeCheckRef(def.encounterPool)
+  return out as T
 }
 
 /* ------------------------------------------------------------------ */

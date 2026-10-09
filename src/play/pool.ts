@@ -241,6 +241,8 @@ export function buildPoolWatch(scenario: Scenario): PoolWatch {
   }
   for (const b of scenario.library.buildings) {
     if (b.gate?.pool !== undefined) reg(watchKeysOfCheck(b.gate.pool, templates), watchUsage.gate(b.id))
+    // 建筑 `encounter` 前置判定（§6.4 / §8.3③）：与门锁同构，作为 `gate:<id>#encounter` 登记观察
+    if (b.encounterPool !== undefined) reg(watchKeysOfCheck(b.encounterPool, templates), watchUsage.gate(`${b.id}#encounter`))
     if (b.event?.gate?.pool !== undefined) {
       reg(watchKeysOfCheck(b.event.gate.pool, templates), watchUsage.gate(`${b.id}#event`))
     }

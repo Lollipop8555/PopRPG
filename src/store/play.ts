@@ -14,7 +14,7 @@ import { playerAttack, resolveDefense } from '../play/combat'
 import { afterTalk, closeEncounter, enterBuilding } from '../play/encounter'
 import { buyGood } from '../play/reward'
 import { dropNotice } from '../play/gain'
-import { notificationOf, talkAdvance, talkChoose, talkHit, talkMenu, talkRoll, type TalkMenuAction } from '../play/talk'
+import { notificationOf, talkAdvance, talkChoose, talkHit, talkRoll } from '../play/talk'
 import { equipItem, unequip, useItem } from '../play/inventory'
 import { buildSessionFromSave, stripSaveSession } from '../play/pool'
 import { pickStorage } from './storage'
@@ -38,7 +38,7 @@ function withNotify(before: Session, after: Session): Session {
 }
 
 /**
- * 对话动作的收尾：弹层关掉（对话谈完 / 选了【路过】）→ 接着跑这栋建筑的建筑事件；
+ * 对话动作的收尾：弹层关掉（对话谈完）→ 接着跑这栋建筑的建筑事件；
  * 之后按移动收尾（与 `stepTo` 同一口径：步数用尽 / 走不动 → 本回合结束）。
  */
 function settleTalk(before: Session, after: Session): Session {
@@ -76,7 +76,6 @@ interface PlayStore {
   talkRoll: () => void
   /** 掷骰层：骰面停住、命中的那一条高亮一拍之后进它；未命中时是空操作（等再掷） */
   talkHit: () => void
-  talkMenu: (action: TalkMenuAction) => void
 
   /** §7.2：玩家点动作后先弹骰子，点投掷才真正结算 */
   pendingAction: PendingAction | null
@@ -192,11 +191,6 @@ export const usePlayStore = create<PlayStore>()(
         const current = get().session
         if (!current) return
         set({ session: settleTalk(current, withNotify(current, talkHit(current))) })
-      },
-      talkMenu: (action) => {
-        const current = get().session
-        if (!current) return
-        set({ session: settleTalk(current, withNotify(current, talkMenu(current, action))) })
       },
 
       pendingAction: null,

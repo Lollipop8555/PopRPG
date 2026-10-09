@@ -122,7 +122,6 @@ export default function GameScreen({ session }: { session: Session }) {
             onNext={() => play.talkNext()}
             onChoose={(i) => play.talkChoose(i)}
             onRoll={() => play.talkRoll()}
-            onMenu={(a) => play.talkMenu(a)}
           />
         )}
 

@@ -1,12 +1,14 @@
 /**
- * NPC 对话运行时（§4.9.2 / §4.9.3 / §4.8.12）。
+ * NPC 对话运行时（§4.9.2 / §4.9.3 / §4.8.12 / state-pool §6.3 / §6.7）。
  *
  * - **位置**：进入建筑之后、该建筑的建筑事件之前（由 `encounter.enterBuilding` 调用）。
- * - **抽取**：抽人 / 抽方案**两级各自独立掷一次 `talk.dice`**，掷定写入 `.psave`（`talks[key]`），
- *   **整场不重掷、不换人、不换方案**（与"怪物登场掷骰一次摇定"同一原则）。
+ * - **抽取**：抽人 / 抽方案**两级各自独立掷一次 `talk.dice`**，落定写入 `.psave`（`talks[key]`）**并由引擎记账**
+ *   （`engine-roll.npc.*`，§3.6 裁决 61），**整场不重掷、不换人、不换方案**。
+ * - **重入**：**引擎不再内建「选择对话框 / 重新对话 / 交付终态」**（裁决 54 修订、裁决 61）——重入**不弹框**，
+ *   直接**从方案根节点按当前池重新求值**（if-else 链每次都按现值重算，§6.5「写入即通知」因此天然成立）。
+ *   "只说一次"由作者用**判定模板 ＋ `if`**（模板判 `engine-roll.mod.* === false`）表达，见 §6.7。
  * - **结构**：全树同构 `{ result?, message, dice?, hit?, items?, give? }`；**根层数组是「按顺序展示」的序列**，
  *   `items` 才是玩家的选项（§4.9.2「只有一个结构」）。
- * - **一次交付**：交付出带 `give` 的记录后写 `deliveredNode`，此后**继续 / 重新都只回放那条记录的 `message`**。
  *
  * 全部是纯函数（不碰 store），UI 与单测都能直接调。
  */
@@ -14,7 +16,7 @@
 import type { BuildingDef, DialogNode } from '../types'
 import type { Rng } from '../engine/dice'
 import { rollRangeAt, rollSum } from '../engine/dice'
-import { hitLabel, parseHit, retalkAllowed } from '../lib/dialog'
+import { hitLabel, parseHit } from '../lib/dialog'
 import { nodeAtPath } from '../lib/dialogTree'
 import type { Session, TalkRecord, TalkState } from '../types/session'
 import { buildingKey, log, nodeAtCell, recordRoll } from './kit'
@@ -59,11 +61,6 @@ export function notificationOf(before: Session, after: Session): string | undefi
   if (changed.length === 0) return undefined
   const usage = watchUsage.dialog(talk.npc, talk.dialog)
   return watchersOf(buildPoolWatch(after.scenario), changed).has(usage) ? usage : undefined
-}
-
-function samePath(a: number[] | undefined, b: number[] | undefined): boolean {
-  if (!a || !b) return false
-  return a.length === b.length && a.every((v, i) => v === b[i])
 }
 
 /** `['red','red','blue']` → `[{id:'red',count:2},{id:'blue',count:1}]`（按首次出现排序） */
@@ -130,13 +127,14 @@ function diceCandidates(nodes: DialogNode[], session: Session): number[] {
 }
 
 /* ------------------------------------------------------------------ */
-/* 进入：抽人 / 抽方案（首次）或重入弹选择框                            */
+/* 进入：抽人 / 抽方案（首次）或按池重求值（重入）                       */
 /* ------------------------------------------------------------------ */
 
 /**
  * 进入建筑时的对话入口（**第一步**，先于建筑事件）。
- * - **首次进入**：两级各掷一次 → 从方案**根节点**开始（不弹框）
- * - **重入**：不换人、不重掷 → 先弹**选择对话框**（`stage: 'menu'`）
+ * - **首次进入**：两级各掷一次 → 落定写入 `talks[key]` ＋ `engine-roll.npc.*`，从方案**根节点**求值
+ * - **重入**：沿用已落定的 `npc` / `dialog`（不换人、不重掷）→ **不弹框**，**从根节点按当前池重新求值**
+ *   （"只说一次"由作者 `if` / 模板判 `engine-roll.mod.*` 表达，§6.7）
  *
  * 返回 `undefined` 表示**不触发对话**（该实例没有 NPC / `dialog` 方案名悬空 / 抽到的 NPC 没方案），
  * 调用方照常跑该建筑的 `encounter`。
@@ -149,18 +147,12 @@ export function openTalk(s: Session, building: BuildingDef, cell: [number, numbe
   const key = buildingKey(s, cell)
   const existing = s.talks?.[key]
 
-  // 重入：不换人、不重掷 —— 先弹选择对话框（§4.9.2「重复进入」）
+  // 重入：不换人、不重掷、不弹框 —— 直接从根节点按当前池求值（§6.7）
   if (existing) {
-    // 关闭【重新对话】的实例（`dialog.retalk: false`）：菜单只有【继续对话】一项 —— **不弹"仅一个按钮"的空框**，
-    // 直接续上（§4.9.3）。已走完的实例另有【路过】可选，仍照旧弹框。
-    if (!retalkAllowed(node?.dialog) && !existing.talkDone) {
-      return enterNode(s, key, building.id, cell, existing.npc, existing.dialog, continuePath(existing))
-    }
-    return {
-      ...s,
-      phase: 'encounter',
-      talk: { key, ref: building.id, cell, npc: existing.npc, dialog: existing.dialog, stage: 'menu', path: existing.cursor ?? [], line: 0 },
-    }
+    const root = dialogPlan(s, existing.npc, existing.dialog) ?? []
+    const first = entryIndex(root, s)
+    if (first < 0) return closeTalk(s) // 所有 `if` 都不成立且没有 `else` → 本层结束
+    return enterNode(s, key, building.id, cell, existing.npc, existing.dialog, [first])
   }
 
   // 首次：① 抽人（1 位直接取；多位掷 talk.dice 等权抽一位）
@@ -204,17 +196,11 @@ export function openTalk(s: Session, building: BuildingDef, cell: [number, numbe
 }
 
 /**
- * 重入时【继续对话】的落点（§4.9.2）：
- * **已交付**的记录只回放交付的那条（`deliveredNode`，`enterNode` 据此判 replay），
- * 否则回到 `cursor` 接着走（没有 `cursor` 就从根节点开始）。
- */
-function continuePath(rec: TalkRecord | undefined): number[] {
-  if (rec?.deliveredNode && rec.deliveredNode.length > 0) return rec.deliveredNode
-  return rec?.cursor && rec.cursor.length > 0 ? rec.cursor : [0]
-}
-
-/**
- * 进入**一条记录**：先按 `deliveredNode` 判终态回放 / 结算 `give`，再更新 `cursor`，最后逐条展示台词。
+ * 进入**一条记录**：结算 `give`、执行本条 `pool`，再逐条展示台词。
+ *
+ * 引擎**不再**写 `cursor` / `talkDone` / `deliveredNode`（裁决 54 / 55 退役）：进度与"交付过"这件事由
+ * 作者用 `if` / 模板判引擎记录（`engine-roll.mod.*`）表达（§6.7）。因此**重复进入同一条记录会重复结算**
+ * ——要防刷就把带 `give` 的记录一并包进同一条 `if`（§6.7）。
  */
 function enterNode(
   s: Session,
@@ -227,13 +213,9 @@ function enterNode(
 ): Session {
   const nodes = dialogPlan(s, npc, plan) ?? []
   const node = nodeAtPath(nodes, path)
-  const rec = s.talks?.[key]
   let session = s
 
-  // 已交付的终态记录：只回放它的 message（不展开 items、不再赠予道具，防刷）
-  const replay = samePath(rec?.deliveredNode, path)
-
-  if (!replay && node?.give && node.give.length > 0) {
+  if (node?.give && node.give.length > 0) {
     // 赠予走**统一的主角接口**：背包在这里落袋，**提示也在这里排上**（`notices` 队列）。
     // 对话里没有别的"揭晓处"，所以落点必须是浮条 —— 以前只往 `log` 写一行，
     // 而那一行只在「流水」抽屉里看得到，玩家等于**完全不知道东西到手了**。
@@ -243,13 +225,11 @@ function enterNode(
       pieces: countPieces(node.give),
     })
     session = afterGain
-    const after: TalkRecord = { ...(session.talks?.[key] as TalkRecord), deliveredNode: path, talkDone: true }
-    session = { ...session, talks: { ...(session.talks ?? {}), [key]: after } }
     session = log(session, '对话中交付了物品', 'good')
   }
 
-  // 本条记录的 `pool`（§6.3）：先结算 `give`、再执行 `pool`；终态回放不再执行（防刷）
-  if (!replay && node?.pool && node.pool.length > 0) {
+  // 本条记录的 `pool`（§6.3）：先结算 `give`、再执行 `pool`
+  if (node?.pool && node.pool.length > 0) {
     const before = session.pool ?? {}
     const next = applyPoolEffects(before, node.pool)
     if (next !== before) {
@@ -259,19 +239,12 @@ function enterNode(
     }
   }
 
-  // 每进入一条记录 → 更新 cursor
-  session = {
-    ...session,
-    talks: { ...(session.talks ?? {}), [key]: { ...(session.talks?.[key] as TalkRecord), cursor: path } },
-  }
-
   // 对话执行记账（§3.6，裁决 61）：**走进这套方案的记录即视为执行过** → 无脑写
   // `engine-roll.mod.<实例 key>.<npcId>.<modId>` ＝ `true`（不判断是否已执行过；已是 `true` 则幂等）。
-  // 挂在这里而非 `completeNode`：重入【继续】/【重新】都要复现同样的记账，且"执行过"以**走进**为准。
+  // 作者据此判"这套方案是否执行过"以实现一次性对话（§6.7）。
   session = { ...session, pool: recordRollMod(session.pool ?? {}, key, npc, plan) }
 
-  const talk: TalkState = { key, ref, cell, npc, dialog: plan, stage: 'line', path, line: 0, replay }
-  // 已在 `menu` 的 `path` 上带出 cursor —— 展示前重置逐条下标
+  const talk: TalkState = { key, ref, cell, npc, dialog: plan, stage: 'line', path, line: 0 }
   return { ...session, phase: 'encounter', talk }
 }
 
@@ -293,9 +266,6 @@ export function talkAdvance(s: Session): Session {
     return { ...s, talk: { ...talk, line: talk.line + 1 } }
   }
 
-  // 终态回放：只播台词，不展开 items
-  if (talk.replay) return closeTalk(s)
-
   if (node.items && node.items.length > 0) {
     return { ...s, talk: { ...talk, stage: 'choose', rolled: undefined, hit: undefined, missed: undefined } }
   }
@@ -303,23 +273,19 @@ export function talkAdvance(s: Session): Session {
 }
 
 /**
- * 一条记录走到**正常结尾**（`items` 缺省 / 空）：置 `talkDone`；
+ * 一条记录走到**正常结尾**（`items` 缺省 / 空）：
  * 根层数组是「按顺序展示」的序列 —— 还有下一条根记录就继续，否则结束。
  */
 function completeNode(s: Session, talk: TalkState): Session {
-  const session: Session = {
-    ...s,
-    talks: { ...(s.talks ?? {}), [talk.key]: { ...(s.talks?.[talk.key] as TalkRecord), talkDone: true } },
-  }
   if (talk.path.length === 1) {
-    const nodes = dialogPlan(session, talk.npc, talk.dialog) ?? []
+    const nodes = dialogPlan(s, talk.npc, talk.dialog) ?? []
     // 根层含 `if` → if-else 链选中一条后**本层立即停止**（不再看后面）；不含 `if` 才逐条推进（§6.3）
     if (!layerHasIf(nodes)) {
       const next = talk.path[0] + 1
-      if (next < nodes.length) return enterNode(session, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [next])
+      if (next < nodes.length) return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [next])
     }
   }
-  return closeTalk(session)
+  return closeTalk(s)
 }
 
 /** 玩家点选一条后续项（本层没有 `dice` 时） */
@@ -387,32 +353,6 @@ export function talkHit(s: Session): Session {
   return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [...talk.path, talk.hit])
 }
 
-/* ------------------------------------------------------------------ */
-/* 重入选择对话框                                                      */
-/* ------------------------------------------------------------------ */
-
-export type TalkMenuAction = 'continue' | 'restart' | 'pass'
-
-/**
- * 重入的**选择对话框**（§4.9.2「重复进入」）：
- * - `continue`：回到 `cursor` 节点接着走（没有 `cursor` 就从根节点开始）；**已交付**时只回放 `deliveredNode`
- * - `restart`：从根节点完整重播（`cursor` 拉回根节点，**不动** `talkDone` / `deliveredNode` → 不会重复发道具）。
- *   实例关闭【重新对话】（`dialog.retalk: false`）时**一律按【继续】处理** —— 菜单中不给出该按钮，
- *   这一层是给"旧 UI / 手改存档"兜底（§4.9.3）
- * - `pass`：【路过】＝ 跳过对话，直接跑该建筑的建筑事件
- */
-export function talkMenu(s: Session, action: TalkMenuAction): Session {
-  const talk = s.talk
-  if (!talk || talk.stage !== 'menu') return s
-  if (action === 'pass') return closeTalk(s)
-
-  const rec = s.talks?.[talk.key]
-  if (action === 'restart' && retalkAllowed(nodeAtCell(s, talk.cell)?.dialog)) {
-    return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [0])
-  }
-  return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, continuePath(rec))
-}
-
 /** 关闭对话弹层、回到地图（是否接着跑建筑事件由 `encounter.afterTalk` 衔接） */
 export function closeTalk(s: Session): Session {
   return { ...s, talk: undefined, phase: 'explore' }
@@ -441,12 +381,6 @@ export interface TalkView {
    * `hitLabel` 是给玩家看的命中区间（`'1-2'` / `'—'`）—— 掷骰层**每条都标出来**，见 `hitLabel()`。
    */
   options: { index: number; label: string; hit?: string; hitLabel: string }[]
-  /** 能否从「选择对话框」里选【路过】（走完过才有） */
-  canPass: boolean
-  /** 能否从「选择对话框」里选【重新对话】（实例写了 `dialog.retalk: false` 即不给出，§4.9.3） */
-  canRestart: boolean
-  /** 已交付（用于菜单文案） */
-  delivered: boolean
 }
 
 /** 选项 / 玩家答复的展示文本（没写 `result` 就给个占位，与选项按钮上是同一句） */
@@ -467,8 +401,8 @@ function optionText(item: DialogNode, index: number): string {
  * - 根层是"按顺序展示"的序列，所以当前根记录之前的那几条同样整条保留
  * - 每往下一层，先补上**玩家自己挑的那一条**（`result` 原文，掷骰命中的同样是"自己挑的"）
  *
- * 记的是**走过的路径**（`talk.path`）而不是"已经渲染过什么" —— 于是**退出再【继续对话】回来，
- * 记录照样在**（祖先链一条条都在路径上），不用另存一分聊天日志。
+ * 记的是**走过的路径**（`talk.path`）而不是"已经渲染过什么" —— 于是**退出再进入，记录照样在**
+ * （祖先链一条条都在路径上），不用另存一分聊天日志。
  */
 function transcript(nodes: DialogNode[], path: number[], line: number): TalkLine[] {
   const out: TalkLine[] = []
@@ -505,15 +439,13 @@ function transcript(nodes: DialogNode[], path: number[], line: number): TalkLine
 export function talkView(s: Session): TalkView | undefined {
   const talk = s.talk
   if (!talk) return undefined
-  const rec = s.talks?.[talk.key]
   const nodes = dialogPlan(s, talk.npc, talk.dialog) ?? []
   const node = nodeAtPath(nodes, talk.path)
-  const cellNode = nodeAtCell(s, talk.cell)
   const log = node ? transcript(nodes, talk.path, talk.line) : []
   // 跳出 `if` 不成立的选项（§6.3）；`index` 仍是**真实下标**，UI 回调用它继续走
   const allItems = node?.items ?? []
   const shown =
-    talk.stage === 'choose' && !talk.replay
+    talk.stage === 'choose'
       ? layerHasIf(allItems)
         ? diceCandidates(allItems, s)
         : allItems.map((_, i) => i)
@@ -523,14 +455,5 @@ export function talkView(s: Session): TalkView | undefined {
     const item = allItems[index]
     return { index, label: optionText(item, index), hit: item.hit, hitLabel: hitLabel(item.hit) }
   })
-  return {
-    talk,
-    node,
-    log,
-    needsRoll,
-    options,
-    canPass: !!rec?.talkDone,
-    canRestart: retalkAllowed(cellNode?.dialog),
-    delivered: !!rec?.deliveredNode,
-  }
+  return { talk, node, log, needsRoll, options }
 }

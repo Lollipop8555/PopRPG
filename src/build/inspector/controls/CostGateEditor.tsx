@@ -4,11 +4,13 @@
  */
 
 import type { Gate, MapCost } from '../../../types'
+import { emptyCheck } from '../../../types'
 import { useLibraryStore } from '../../../store/library'
 import { useProjectStore } from '../../../store/project'
 import { collectKnownTags, componentsWithTag } from '../../../lib/refs'
 import { costText } from '../../../lib/human'
-import { Field, NumberBox, SelectBox } from '../../../ui/primitives'
+import { Field, NumberBox, SelectBox, Toggle } from '../../../ui/primitives'
+import { CheckRefEditor } from './CheckRefEditor'
 import TagsInput from './TagsInput'
 
 export function CostEditor({
@@ -67,8 +69,10 @@ export function GateEditor({
 }) {
   const library = useLibraryStore()
   const enabledIds = useProjectStore((s) => s.enabledIds)
+  const conds = useProjectStore((s) => s.conds)
   const gate = value
   const tags = gate?.tags ?? []
+  const tplNames = conds.map((c) => c.name).filter(Boolean)
 
   const carriers = tags.length
     ? tags.map((tag) => ({ tag, list: componentsWithTag(library, enabledIds, tag) }))
@@ -125,6 +129,23 @@ export function GateEditor({
               value={penalty}
               onChange={(p) => patch({ penalty: p })}
             />
+          )}
+
+          {/* 状态池判定（§6.4）：与既有 tags 同档并列，两者都要满足才放行 */}
+          <Field
+            label="状态判定（pool）"
+            hint="与上面的标签同档并列 —— 两者都满足才放行。可写条件体或判定模板名"
+            inlineHint
+          >
+            <Toggle
+              checked={gate?.pool !== undefined}
+              onChange={(on) => patch({ pool: on ? emptyCheck() : undefined })}
+            />
+          </Field>
+          {gate?.pool !== undefined && (
+            <div style={{ border: '1.2px dashed var(--line)', borderRadius: 10, padding: 6, marginTop: 4 }}>
+              <CheckRefEditor value={gate.pool} onChange={(pool) => patch({ pool })} tplNames={tplNames} />
+            </div>
           )}
 
           <div>

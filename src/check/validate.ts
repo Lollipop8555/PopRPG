@@ -46,6 +46,11 @@ export interface Issue {
   section?: string
   /** 对话树里的位置（`Mod1[2]`），供 NPC 模组面板直接跳过去（§5.6.1） */
   dialogPath?: string
+  /**
+   * `K20` 专用：没有声明的**作者空间**键全名（`usr-…`）。
+   * 供「清单」给出「补一条声明」快捷操作（§十 / S7-102）；引擎键不会带上它。
+   */
+  poolKey?: string
 }
 
 export function componentSection(kind: ComponentKind, def?: AnyComponent): string | undefined {

@@ -196,7 +196,7 @@ function serializeNodes(map: GameMap): unknown {
       // NPC 只挂在**建筑实例**上（§4.9.3）：同一栋建筑铺到多格可以遇到不同的人
       if (n.type === 'building') {
         if (n.npcs && n.npcs.length > 0) row.npcs = n.npcs
-        // `dialog` 是对象 `{ mod, retalk }`：两边都空就不写；`retalk` 只在**关闭**时写出（缺省 ＝ 允许）
+        // `dialog` 只剩 `{ mod }`（`retalk` 已退役，§十一 / 裁决 54）：为空就不写
         const dialog = normalizeNodeDialog(n.dialog)
         if (dialog) row.dialog = dialog
       }
@@ -469,7 +469,7 @@ export function parsePmod(raw: string): ParsedPmod {
                   return { x: n.x, y: n.y, type: n.type, ref: n.ref }
                 }
                 // NPC 只挂在建筑实例上（§4.9.3）：挂在别处的一律剔除并提示
-                // `dialog` 是对象 `{ mod, retalk }`；旧包写的是**裸方案名**，在这里升级成对象
+                // `dialog` 是对象 `{ mod }`；旧包写的是**裸方案名**，在这里升级成对象（`retalk` 一并不再产出）
                 let npcs = n.npcs
                 let dialog = normalizeNodeDialog(n.dialog)
                 if (n.type !== 'building' && ((n.npcs?.length ?? 0) > 0 || dialog)) {

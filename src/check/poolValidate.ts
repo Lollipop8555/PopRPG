@@ -12,6 +12,7 @@ import {
   POOL_WRITE_OP_LABEL,
   engineVarType,
   engineVarWritable,
+  forceUsrPrefix,
   isEngineName,
   readOpApplies,
   shortName,
@@ -26,8 +27,10 @@ import {
   type PoolCheckRef,
   type PoolCondItem,
   type PoolEffect,
+  type PoolReadOp,
   type PoolType,
   type PoolValue,
+  type PoolWriteOp,
   type Project,
 } from '../types'
 import { componentSection, type Issue } from './validate'
@@ -43,6 +46,16 @@ interface Site {
 interface PoolUsage {
   vars: Map<string, number>
   templates: Map<string, number>
+  /** 引用明细（读 / 写算子各留首例）：供「自动收录」按算子推断类型（§9.4） */
+  refs: Map<string, PoolRefInfo>
+}
+
+/** 某个键被引用时的算子明细（派生、不落盘） */
+export interface PoolRefInfo {
+  readCount: number
+  writeCount: number
+  readOp?: PoolReadOp
+  writeOp?: PoolWriteOp
 }
 
 function matchesType(value: PoolValue, type: PoolType): boolean {
@@ -52,9 +65,18 @@ function matchesType(value: PoolValue, type: PoolType): boolean {
 /** 收集全部引用处与专项问题（一趟遍历） */
 function collect(library: Library, project: Project): { issues: Issue[]; usage: PoolUsage } {
   const issues: Issue[] = []
-  const usage: PoolUsage = { vars: new Map(), templates: new Map() }
-  const bumpVar = (name: string): void => {
+  const usage: PoolUsage = { vars: new Map(), templates: new Map(), refs: new Map() }
+  const bumpVar = (name: string, op?: PoolReadOp | PoolWriteOp, kind: 'read' | 'write' = 'read'): void => {
     usage.vars.set(name, (usage.vars.get(name) ?? 0) + 1)
+    const info = usage.refs.get(name) ?? { readCount: 0, writeCount: 0 }
+    if (kind === 'write') {
+      info.writeCount += 1
+      if (info.writeOp === undefined) info.writeOp = op as PoolWriteOp
+    } else {
+      info.readCount += 1
+      if (info.readOp === undefined) info.readOp = op as PoolReadOp
+    }
+    usage.refs.set(name, info)
   }
   const bumpTpl = (name: string): void => {
     usage.templates.set(name, (usage.templates.get(name) ?? 0) + 1)
@@ -133,7 +155,7 @@ function collect(library: Library, project: Project): { issues: Issue[]; usage: 
 
   const checkItem = (item: PoolCondItem, site: Site): void => {
     const { type, known } = resolve(item.name)
-    bumpVar(item.name)
+    bumpVar(item.name, item.op, 'read')
     checkItemId(item.name, site)
     if (!known) {
       issues.push({
@@ -142,6 +164,7 @@ function collect(library: Library, project: Project): { issues: Issue[]; usage: 
         title: `「${item.name}」没有声明`,
         detail: `${site.label}引用了这个键，但「## Pool」的 pool 段里没有它（引擎键须落在 §三 总表内）。运行时该条判定不成立。`,
         ...site,
+        poolKey: isEngineName(item.name) ? undefined : forceUsrPrefix(item.name),
       })
     } else if (type && !readOpApplies(item.op, type)) {
       issues.push({
@@ -153,7 +176,7 @@ function collect(library: Library, project: Project): { issues: Issue[]; usage: 
       })
     }
     if (item.ref !== undefined) {
-      bumpVar(item.ref)
+      bumpVar(item.ref, item.op, 'read')
       const rt = resolve(item.ref)
       if (!rt.known) {
         issues.push({
@@ -162,6 +185,7 @@ function collect(library: Library, project: Project): { issues: Issue[]; usage: 
           title: `「${item.ref}」没有声明`,
           detail: `${site.label}用它作比较的另一侧，但池里没声明。`,
           ...site,
+          poolKey: isEngineName(item.ref) ? undefined : forceUsrPrefix(item.ref),
         })
       } else if (rt.type && type && rt.type !== type) {
         issues.push({
@@ -186,7 +210,7 @@ function collect(library: Library, project: Project): { issues: Issue[]; usage: 
 
   const checkEffect = (eff: PoolEffect, site: Site): void => {
     const { type, known, writable } = resolve(eff.name)
-    bumpVar(eff.name)
+    bumpVar(eff.name, eff.op, 'write')
     checkItemId(eff.name, site)
     if (!known) {
       issues.push({
@@ -195,6 +219,7 @@ function collect(library: Library, project: Project): { issues: Issue[]; usage: 
         title: `「${eff.name}」没有声明`,
         detail: `${site.label}要写这个键，但池里没有它。运行时该条修改不执行。`,
         ...site,
+        poolKey: isEngineName(eff.name) ? undefined : forceUsrPrefix(eff.name),
       })
     } else {
       if (isEngineName(eff.name) && !writable) {
@@ -362,6 +387,8 @@ function collect(library: Library, project: Project): { issues: Issue[]; usage: 
   for (const b of library.buildings) {
     const site: Site = { label: `建筑「${b.name}」的门锁`, componentId: b.id, componentKind: 'building', section: componentSection('building', b) }
     checkGate(b.gate, site)
+    // 建筑 `encounter` 前置判定（§6.4 / §8.3③）：与门锁同构，引用同样纳入 K20 / K26 / K35 等
+    checkRef(b.encounterPool, { ...site, label: `建筑「${b.name}」的触发判定` })
     checkGate(b.event?.gate, { ...site, label: `建筑「${b.name}」事件的门槛` })
   }
 
@@ -376,4 +403,9 @@ export function poolIssues(library: Library, project: Project): Issue[] {
 /** 引用数统计（变量表 / 判定模板表的派生列，§9.2 / §9.7） */
 export function poolUsageCounts(library: Library, project: Project): PoolUsage {
   return collect(library, project).usage
+}
+
+/** 引用明细（键 → 读写算子）：供「自动收录」按算子推断类型（§9.4） */
+export function poolReferenceInfo(library: Library, project: Project): Map<string, PoolRefInfo> {
+  return collect(library, project).usage.refs
 }

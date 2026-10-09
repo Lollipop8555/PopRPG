@@ -219,8 +219,9 @@ export function normalizeNpc(raw: NpcDef): { npc: NpcDef; notes: DialogNote[] } 
  * 归一建筑实例的 `dialog`（§4.9.3）—— 导出与导入**共用一份**，两边写出的一定是同一个形状：
  *
  * - 旧写法是**裸方案名**（`dialog: Mod1`）→ 升级成 `{ mod: 'Mod1' }`（老包照旧能读）
- * - 只留下有意义的内容：`retalk: true` 归一回缺省（**不写 ＝ 允许**，写出来等于噪声）
- * - 两边都空（`{}` / `{ retalk: true }`）→ `undefined`，与「这个实例没配对话」同义
+ * - `retalk` 已**退役**（V2.3 §十一，裁决 54 / 61）：旧包里出现的 `retalk` **一并不再产出**
+ *   （"是否只说一次"改由作者用判定模板 ＋ `if` 表达，§6.7）
+ * - 只剩 `mod` 一项；空（`{}`）→ `undefined`，与「这个实例没配对话」同义
  */
 export function normalizeNodeDialog(raw: unknown): NodeDialog | undefined {
   if (typeof raw === 'string') {
@@ -230,17 +231,8 @@ export function normalizeNodeDialog(raw: unknown): NodeDialog | undefined {
   if (!raw || typeof raw !== 'object') return undefined
   const loose = raw as Record<string, unknown>
   const mod = typeof loose.mod === 'string' && loose.mod.trim() !== '' ? loose.mod.trim() : undefined
-  const retalk = loose.retalk === false ? false : undefined
-  if (mod === undefined && retalk === undefined) return undefined
-  return { ...(mod ? { mod } : {}), ...(retalk === false ? { retalk: false } : {}) }
-}
-
-/**
- * 重入这个实例时是否给出【重新对话】（§4.9.2「重复进入」）：**只有显式写下 `retalk: false` 才不给出**，
- * 其余（不写 / 旧包）一律照旧给出 —— 老内容的行为不因加了这个开关而变。
- */
-export function retalkAllowed(dialog: NodeDialog | undefined): boolean {
-  return dialog?.retalk !== false
+  if (mod === undefined) return undefined
+  return { mod }
 }
 
 /* ------------------------------------------------------------------ */

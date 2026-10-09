@@ -107,25 +107,23 @@ export interface LogLine {
 }
 
 /**
- * 一次建筑实例对话的**抽定结果 ＋ 三个进度标记**（§4.9.2 / §4.9.3）。
+ * 一次建筑实例对话的**抽定结果**（§4.9.2 / §4.9.3）。
  *
  * 按**建筑实例 key**（`<地图名>#<ref>@<锚点>`，§7.3）记账、写进 `.psave`：
  * - `npc` / `dialog`：抽定（或唯一 / 写死）的结果 —— **掷定即锁死**，本局不重掷、不换人、不换方案
- * - `cursor`：当前停留的那条记录（从根层起算的下标路径）—— **没有它 ＝ 没有进度**
- * - `talkDone`：对话走完过一次（走到正常结尾、或交付完带 `give` 的记录）
- * - `deliveredNode`：已交付的那条带 `give` 的记录（存在 ＝ 这件东西已经发过了），与 `talkDone` 分开记
+ *
+ * **对话进度不再是引擎记账**（V2.3 §十一，裁决 54 / 55 / 61）：原有的 `cursor` / `talkDone` / `deliveredNode`
+ * 三个进度标记已**退役** —— "一次性 / 进度"改由**引擎记录 `engine-roll.mod.*` ＋ 作者 `if` / 判定模板**表达
+ * （§3.6 / §6.7）。重入**不再弹选择框**，一律**按对话树重新求值**。
  *
  * **弱引用**：`.pmod` 改动导致 key 不匹配 → 该实例**视为未触发**（不报错、不迁移）；旧档缺本字段同样视为未触发。
  */
 export interface TalkRecord {
   npc: string
   dialog: string
-  cursor?: number[]
-  talkDone?: boolean
-  deliveredNode?: number[]
 }
 
-/** 对话弹层的运行时状态（§4.9.2 / §4.8.12）；持久进度在 `talks[key]` */
+/** 对话弹层的运行时状态（§4.9.2 / §4.8.12）；抽定结果在 `talks[key]` */
 export interface TalkState {
   /** 建筑实例 key（`buildingKey`） */
   key: string
@@ -137,11 +135,12 @@ export interface TalkState {
   /** 已锁定的方案名 */
   dialog: string
   /**
-   * - `menu`：重入的**选择对话框**（继续 / 重新 / 走完过才有的路过）
    * - `line`：**逐条展示台词**，点「继续」推进
    * - `choose`：台词播完，等玩家**点选**或**掷骰**
+   *
+   * **没有 `menu`**（V2.3 §十一，裁决 54）：重入不弹选择框，一律按对话树重新求值。
    */
-  stage: 'menu' | 'line' | 'choose'
+  stage: 'line' | 'choose'
   /** 当前停留记录的下标路径 */
   path: number[]
   /** 当前记录 `message` 已展示到第几条（下标） */
@@ -152,8 +151,6 @@ export interface TalkState {
   hit?: number
   /** 本次点数落在所有 `hit` 之外（骰面配「未命中」徽标，允许再掷） */
   missed?: boolean
-  /** 只回放：本条是**已交付**的终态记录 → 不展开 `items`、不再赠予道具 */
-  replay?: boolean
   /**
    * 写入即通知（V2.3 §8.5）：本层对话登记观察的某个池键**刚被写入** → 标注"需重算当前层"。
    * 值 ＝ 该对话方案的使用处标识（`dialog:<npc>:<mod>`）；**纯运行时态、不进存档语义**，

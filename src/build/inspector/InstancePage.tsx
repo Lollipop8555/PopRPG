@@ -7,12 +7,21 @@
 import type { MapNode, NodeType, NpcDef } from '../../types'
 import { nodeAt } from '../../lib/map'
 import { findComponent } from '../../lib/refs'
-import { diceFaces, retalkAllowed } from '../../lib/dialog'
+import { diceFaces } from '../../lib/dialog'
 import { useLibraryStore } from '../../store/library'
 import { useProjectStore } from '../../store/project'
 import { commit } from '../../store/commit'
 import { useUiStore } from '../../store/ui'
 import { Badge, Field, NumberBox, SelectBox, Toggle } from '../../ui/primitives'
+import {
+  clearRootFirstIf,
+  findOnceCond,
+  freeOnceShort,
+  makeOnceCond,
+  onceRollModKey,
+  rootFirstIfName,
+  setRootFirstIf,
+} from '../oncePreset'
 
 const TYPE_LABEL: Record<NodeType, string> = {
   start: '起点',
@@ -101,7 +110,7 @@ export default function InstancePage() {
         </div>
       )}
 
-      {node.type === 'building' && <NpcBlock node={node} patch={patch} />}
+      {node.type === 'building' && <NpcBlock node={node} patch={patch} mapName={map.name} />}
 
       <div className="row" style={{ gap: 6, marginTop: 8 }}>
         <button
@@ -135,9 +144,18 @@ export default function InstancePage() {
  * 建筑实例专有 · NPC / 对话（§5.6 实例页 / §4.9.3）——
  * **任何建筑都能挂**（`npcs` 与 `encounter` 正交）；对话在「进入建筑后、建筑事件前」执行。
  */
-function NpcBlock({ node, patch }: { node: MapNode; patch: (part: Partial<MapNode>) => void }) {
+function NpcBlock({
+  node,
+  patch,
+  mapName,
+}: {
+  node: MapNode
+  patch: (part: Partial<MapNode>) => void
+  mapName: string
+}) {
   const library = useLibraryStore()
-  const talkDice = useProjectStore((s) => s.rules.talk.dice)
+  const project = useProjectStore()
+  const talkDice = project.rules.talk.dice
   const def = node.ref ? library.buildings.find((b) => b.id === node.ref) : undefined
   const ids = node.npcs ?? []
   const alive = ids
@@ -148,19 +166,52 @@ function NpcBlock({ node, patch }: { node: MapNode; patch: (part: Partial<MapNod
   const plans = [...new Set(alive.flatMap((n) => Object.keys(n.dialogs ?? {})))]
   const plan = node.dialog?.mod
   const dangling = !!plan && !plans.includes(plan)
-  const canRetalk = retalkAllowed(node.dialog)
   const faces = diceFaces(talkDice)
 
   const setIds = (next: string[]) => patch({ npcs: next.length > 0 ? next : undefined })
 
-  /**
-   * 写 `dialog`（§4.9.3）：**方案名与「允许重新对话」写在同一个对象里**，改变其中一项须整体写回，
-   * 因此这里接收整份而非 `Partial`。两项都为空 → 整个字段不写（与「这个实例没配对话」同义）。
-   */
-  const setDialog = (mod: string, retalk: boolean) =>
-    patch({
-      dialog: mod || !retalk ? { ...(mod ? { mod } : {}), ...(retalk ? {} : { retalk: false }) } : undefined,
-    })
+  /** 写 `dialog`（§4.9.3）：**只剩「这一套方案」**（`retalk` 已退役，§十一 / 裁决 54）。空 → 整个字段不写。 */
+  const setPlan = (mod: string) => patch({ dialog: mod ? { mod } : undefined })
+
+  /* —— 一次性对话预设（§6.7 / 裁决 61）——
+   * 只在「单一候选 ＋ 写死方案 ＋ 方案存在 ＋ 首层非空」时可套用：此时才能把
+   * `engine-roll.mod.*` 的三段（实例 key / npcId / modId）在勾选时填实。多候选 / 留空 → 走作者自定义。 */
+  const npc = alive[0]
+  const onceOk = alive.length === 1 && !!npc && !!plan && !dangling && (npc.dialogs[plan as string]?.length ?? 0) > 0
+  const onceKey = onceOk ? onceRollModKey(mapName, node, npc!.id, plan as string) : ''
+  const onceTpl = onceOk ? findOnceCond(project.conds, onceKey) : undefined
+  const onceOn = !!onceTpl && rootFirstIfName(npc, plan as string) === onceTpl.name
+
+  /** 勾选 → 挂模板 ＋ 写首层 `if`；取消 → 只撤首层 `if`（模板留给「状态池」面板处理）。同一 `commit` ＝ 一步撤销。 */
+  const toggleOnce = (on: boolean) => {
+    if (!onceOk) return
+    const nid = npc!.id
+    const mid = plan as string
+    if (on) {
+      commit(() => {
+        const st = useProjectStore.getState()
+        let tpl = findOnceCond(st.conds, onceKey)
+        if (!tpl) {
+          tpl = makeOnceCond(
+            freeOnceShort(st.conds, st.pool),
+            onceKey,
+            `「${npc!.name}」在「${mapName}」(${node.x},${node.y}) 的「${mid}」方案尚未执行过`,
+          )
+          useProjectStore.setState({ conds: [...st.conds, tpl] })
+        }
+        const li = useLibraryStore.getState()
+        const target = li.npcs.find((n) => n.id === nid)
+        if (target) li.upsert('npc', setRootFirstIf(target, mid, tpl.name))
+      })
+    } else if (onceTpl) {
+      const name = onceTpl.name
+      commit(() => {
+        const li = useLibraryStore.getState()
+        const target = li.npcs.find((n) => n.id === nid)
+        if (target) li.upsert('npc', clearRootFirstIf(target, mid, name))
+      })
+    }
+  }
 
   const note =
     ids.length === 0
@@ -233,7 +284,7 @@ function NpcBlock({ node, patch }: { node: MapNode; patch: (part: Partial<MapNod
             { value: '', label: '（留空：由骰子抽一套）' },
             ...plans.map((p) => ({ value: p, label: p })),
           ]}
-          onChange={(v) => setDialog(v, canRetalk)}
+          onChange={setPlan}
         />
       </Field>
 
@@ -248,25 +299,28 @@ function NpcBlock({ node, patch }: { node: MapNode; patch: (part: Partial<MapNod
       )}
 
       <Field
-        label="允许重新对话"
+        label="一次性对话"
         hint={
-          canRetalk
-            ? '重新进入该实例时给出【重新对话】—— 从第 1 条重新播放（已赠予的道具不重复赠予）。'
-            : '重新进入该实例时不给出【重新对话】—— 未走完的只有【继续对话】，已走完的另有【路过】。'
+          !onceOk
+            ? '只在「单一候选 ＋ 写死一套方案（且方案存在、首层非空）」时可套用；多候选 / 留空由骰子抽时请改用「判定模板 ＋ if」自定义（§6.7）。'
+            : onceOn
+              ? '首次进入走 `if` 分支（带 `give` 就会给一次）；再次进入走同层的无 `if` 记录 ＝ `else`。取消勾选只撤回首层 `if`，模板留给「状态池」面板处理。'
+              : '勾选 → 生成一条「mod 一次性」判定模板（条件 ＝ `engine-roll.mod.*` 尚未为 `true`）＋ 写到首层第一条的 `if`。'
         }
       >
         <Toggle
-          checked={canRetalk}
-          onChange={(on) => setDialog(plan ?? '', on)}
-          label={canRetalk ? '允许【重新对话】' : '不允许【重新对话】'}
+          checked={onceOn}
+          disabled={!onceOk}
+          onChange={toggleOnce}
+          label={onceOn ? '这套方案只说一次' : onceOk ? '套用「一次性对话」' : '（当前不可套用）'}
         />
       </Field>
 
       <div className="faint">
-        先抽人、再抽方案，两次各掷一次骰子；<b>进入建筑时</b>抽定，整场不变。
+        先抽人、再抽方案，两次各掷一次骰子；<b>进入建筑时</b>抽定，整场不变（§4.9.3）。
       </div>
       <div className="faint">
-        只在<b>从建筑外踏入</b>时触发一次，在建筑内部走动不再触发。首次进入直接开始对话（不弹选项框）；已触发过的实例再次进入时先弹选项框 —— 未走完的给【继续对话】【重新对话】，已走完的另有【路过】；<b>关闭「允许重新对话」</b>后不再给出【重新对话】。
+        只在<b>从建筑外踏入</b>时触发一次，在建筑内部走动不再触发。<b>重入不再弹任何选项框</b>（§6.7 / 裁决 54 / 61）——每次进入都从根节点按当前状态池重求值；要「只说一次」就用上面的「一次性对话」。
       </div>
     </div>
   )
