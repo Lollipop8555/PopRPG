@@ -44,12 +44,12 @@
 
 - [x] `engine-` 空间总表落地（§3.1 / §3.2）：`engine-hpValue` / `engine-hpMax` / `engine-mpValue` / `engine-mpMax` ＋ `engine-patk` / `engine-matk` / `engine-pdef` / `engine-mdef` ＋ 引擎核心状态（职业 / 属性点 / 回合 / **累计真实步数 `engine-steps`** / **本回合剩余步数 `engine-stepsLeft`** / **位置 `engine-pos`** / 地图下标 / 背包计数）；**抽定与对话执行记录键族 `engine-roll.*` 落地**（§3.6，**裁决 61**）：`engine-roll.npc.<建筑实例 key>.<slotN>` ＝ 落地的 **npc `id`**（抽定按**槽位** —— 一位可见就只有 `slot0`、两位即 `slot0` ＋ `slot1`；每槽在自己的候选里 N 选 1，**值不会是空串**；没抽过的槽**不建键**、读得空串）。**（V2.4 具体化，裁决 62–64）**：**槽号 ＝ 实例 `npcs` 数组的声明序**（`slot0` / `slot1`…，由下标决定），槽位数由作者配（**≤ `w × h`**）；**抽定时机** ＝ 玩家**从建筑外踏入任意一格**时**一次性抽定该实例全部槽位**（`ids` 为空的槽**不建键**）；**同实例两槽各自独立抽**，**值恒为某个 npc `id`**（正常路径下**不会是空串**）；`engine-roll.mod.<实例 key>.<npcId>.<modId>` 键里**不含槽位** → 两槽抽到同一人时**共用一条记录**（不推翻裁决 61）、`engine-roll.mod.<建筑实例 key>.<npcId>.<modId>` ＝ `true`（**引擎执行完该套方案就无脑写**，不判断是否已执行过；`<npcId>` 段不可省）；两族键**均由引擎写、作者只读**，**只写"发生了的事"、绝不预建键**；**引擎不做任何"一次性"拦截**；**对话进度标记 / 一次性标记（`engine-talk.*` / `engine-once.*`）退役**——改由作者空间池键承担（裁决 54 / 56）
 - [x] **道具件数入池**：`engine-item.<道具 id>`（number，**缺省读 `0`**）；`give` / 拾取 / 消耗 / 丢弃统一走写接口；`engine-inventoryUsed` 由件数汇总
-- [ ] **旧的两处存储退役**（已结算属性值 / 当前资源值），池成为**唯一储存处**
-- [ ] 力值合成链（属性 ＋ 装备 ＋ 职业百分比 ＋ 状态 `modifiers`）**算法不变，只改读写点**
+- [x] **旧的两处存储退役**（已结算属性值 / 当前资源值），池成为**唯一储存处**（**方案 B**：`player.stats` / `player.resources` 降为池的**派生投影**，存档剔除、读档按池重建；见 `SP-4` 清单）
+- [x] 力值合成链（属性 ＋ 装备 ＋ 职业百分比 ＋ 状态 `modifiers`）**算法不变，只改读写点**（`buildPower` 未动；四个能力键存①基础属性＝职业基础＋分配点，②③加成仍在读取时叠加）
 - [x] **写权限（四类）**：作者可写 `hpValue` / `mpValue` / `points` / `engine-item.*` / **`engine-stepsLeft`**（"额外一步 / 少走一步"），其余 `engine-` 键只读（写即出 `K23`，运行时不执行）；**`engine-roll.*` 同样只读**（由引擎写，裁决 61）；**写引擎键时编辑器固定给出空间提醒**（裁决 51）
 - [x] 败北判定仍由既有回合流程负责；`hpValue` / `mpValue` 归零**不触发任何池事件**
-- [ ] 迁移清单与回归范围（`SP-4`）：逐项列出所有读 / 写点，避免遗漏导致数值漂移
-- [ ] 单测：开局播种与旧口径等价（同职业同加点下六维与上限一致）、战斗回合的增减与旧口径一致
+- [x] 迁移清单与回归范围（`SP-4`）：逐项列出所有读 / 写点，避免遗漏导致数值漂移（清单见「进度同步」2026-10-09 第二条）
+- [x] 单测：开局播种与旧口径等价（同职业同加点下六维与上限一致）、战斗回合的增减与旧口径一致（[`src/play/__tests__/state-pool-sync.test.ts`](../src/play/__tests__/state-pool-sync.test.ts)，10 条）
 
 ## S4 运行时（§八）
 
@@ -117,6 +117,20 @@
 ---
 
 ## 进度同步
+
+**2026-10-09 · V2.3 S3「旧存储退役 ＋ 力值读写点迁移」完成（方案 B）**
+- **通过口径**：`npx tsc --noEmit` 无错；`npx vitest run` **59 个测试文件 / 712 条用例全绿**（较上轮 58 / 702 净增 1 文件、10 条）。
+- **口径裁决（本轮）**：四个能力键 `engine-patk` / `engine-matk` / `engine-pdef` / `engine-mdef` 存**①基础属性（职业 `base_stats` ＋ 分配点）**，与既有 `Unit.stats` / `buildPower` 一致；②装备 / ②状态加成仍在力值链**读取时**叠加、**不进本键**。[`../docs/design/state-pool.md`](../docs/design/state-pool.md) §3.1 那句「＋装备与状态加成」按此口径订正，[`../src/types/state-pool.ts`](../src/types/state-pool.ts) 四个 `ENGINE_VARS.desc` 同步；`buildPower` 未动。
+- **方案 B 落地**（池为唯一账本，玩家对象降为派生投影）：
+  - [`../src/play/pool.ts`](../src/play/pool.ts)：新增 `syncPool` / `freshPlayerStats` / `playerFromPool` / `stripPlayerDerived` / `stripSaveSession` / `buildSessionFromSave`；`seedPool` 开局把 hp / mp 定为**满值**入池；`applyEngineToSession` 改为对 hp / mp **以池为准**（夹在 `[0, 上限]`），`engine-stepsLeft` 仍**有改动才回写**。
+  - [`../src/io/psave.ts`](../src/io/psave.ts)：`exportSave` 经 `stripSaveSession` 剔除 `player.stats` / `player.resources`，`parseSave` 经 `buildSessionFromSave` 按池重建。
+  - [`../src/store/play.ts`](../src/store/play.ts)：`partialize` 剔除投影、`merge` 按池重建（应用内持久化同理）。
+- **`SP-4` 迁移清单（读 / 写点，逐项）**：
+  - **写点（局面 → 池，`syncEngineVars`）**：① [`allocatePoint()`](../src/play/flow.ts:100)（改上限 ↔ `engine-*Max` / `engine-patk`…/`engine-points`）；② [`playerAttack()`](../src/play/combat.ts:58) / [`resolveDefense()`](../src/play/combat.ts:117)（`applyEffects` 改 hp / mp ↔ `engine-hpValue` / `engine-mpValue`）；③ [`heroGain()`](../src/play/gain.ts:96)（背包件数 ↔ `engine-item.*` / `engine-inventoryUsed`，自由点 ↔ `engine-points`）；④ [`useItem()`](../src/play/inventory.ts:49)（消耗 ↔ hp / mp 与 `engine-item.*`）；⑤ 既有 `nextRound` / `stepTo` / `advanceMap`（回合 / 步数 / 位置，上轮已接线）。
+  - **读点（池 → 局面，`applyEngineToSession`）**：仅回合判定链（`runRoundChecks`）后回写 hp / mp / `stepsLeft`；**`engine-item.*` 由作者空间 `pool` 效果写入者不动**（道具账目归 S7，避免冲掉作者写的键）。
+  - **未纳入本轮**：UI 读点（`StatusPanel` / `GameScreen` / `BattleDialog` / `MapView`）仍直读 `session.player.*`（归 S4）；`watch` 观察通知（归 S4）。
+- **单测**：新建 [`../src/play/__tests__/state-pool-sync.test.ts`](../src/play/__tests__/state-pool-sync.test.ts) 共 10 条，覆盖「播种与加点等价 / 战斗与道具写点增减一致 / `psave ＝ 状态表` round-trip 逐键相等 / 投影原语（夹值、缺键退回满值、剔投影）」。
+- **遗留回归订正**：[`../src/play/__tests__/talk.test.ts`](../src/play/__tests__/talk.test.ts) 中「对话只动四处」的 V2.0 遗留断言按 §3.2 补上 `pool`（赠予落袋后 `engine-item.*` / `engine-points` 必然随之刷新），其余意图（不写结局 / 旗标、不动回合与位置）由下方断言独立保证。
 
 **2026-10-09 · V2.3 编码推进（S0–S7 主体落地、运行时已接线；S5 面板基础版 / S3 旧存储退役 / S7 `engine-roll.*` 记账 与 S8 验收 待续）**
 - **通过口径**：`npx tsc --noEmit` 无错；`npx vitest run` **58 个测试文件 / 702 条用例全绿**。已按本节勾选逐条回填——**勾选 48 项、未勾 32 项**。

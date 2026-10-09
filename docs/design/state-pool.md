@@ -140,12 +140,13 @@
 | `engine-hpMax` | `number` | 生命上限 | 职业 `base_stats` ＋ 玩家分配点 |
 | `engine-mpValue` | `number` | 当前法力值 | 开局满值，运行期由技能消耗与道具恢复 |
 | `engine-mpMax` | `number` | 法力上限 | 职业 `base_stats` ＋ 玩家分配点 |
-| `engine-patk` | `number` | 物理攻击 | 职业 `base_stats` ＋ 分配点 ＋ 装备与状态加成 |
+| `engine-patk` | `number` | 物理攻击 | 职业 `base_stats` ＋ 分配点（②装备 / ②状态加成在力值链②环**读取时**叠加，**不进本键**） |
 | `engine-matk` | `number` | 魔法攻击 | 同上 |
 | `engine-pdef` | `number` | 物理防御 | 同上 |
 | `engine-mdef` | `number` | 魔法防御 | 同上 |
 
 - **只有 `hp` / `mp` 分"当前值"与"上限"两个键**；四能力只有一个键（它们的上限即其数值本身）。
+- **四能力键存①基础属性**（职业 `base_stats` ＋ 分配点），与既有 `Unit.stats` / `buildPower` 一致；②装备 / ③职业百分比 / ②状态 `modifiers` 仍在力值链各环**读取时**叠加，不预先合进本键 —— 这样四能力既有池里的镜面（可供 `if` / 观察读取），又不与力值链重复计。
 - 力值合成链（属性 ＋ 装备 ＋ 职业百分比 ＋ 状态 `modifiers`，[`03-engine.md`](03-engine.md) §4.8.2）**不改算法**，只改**读法与写法**：读的是池的键，写回也是池的键。
 - `engine-hpValue` / `engine-mpValue` 降到 `0` 或以下 **不触发任何池事件**：败北判定仍由既有回合流程负责（§4.8.0 硬规则），池只提供数字。
 

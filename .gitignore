@@ -6,3 +6,7 @@ coverage
 .DS_Store
 .vite
 *.log
+
+# 测试相关文件夹
+__tests__/
+src/test/

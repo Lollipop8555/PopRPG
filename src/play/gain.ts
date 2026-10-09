@@ -26,6 +26,7 @@
 import { addToInventory, payAndTake } from '../engine/item'
 import type { GainItem, GainLoss, GainNote, Session } from '../types/session'
 import { log } from './kit'
+import { syncEngineVars } from './pool'
 
 /** 提示队列上限：只留最近几条 —— 连点 / 旧档都不会把队列压爆 */
 const NOTICE_MAX = 4
@@ -112,7 +113,9 @@ export function heroGain(s: Session, input: GainInput): GainResult {
       const reason = trade.reason ?? '买不了'
       note.losses.push({ id: first.id, count: first.count, reason, name, icon })
       session = log(session, `${icon}${name} 没拿下：${reason}（${currency} 需 ${input.pay.value}）`, 'bad')
-      return { session: enqueue(session, note, input.prompt), note }
+      // 背包件数（`engine-item.*`）与玩家剩余点（`engine-points`）都进了池：落袋后立刻刷池（§3.2）
+      const synced: Session = { ...session, pool: syncEngineVars(session) }
+      return { session: enqueue(synced, note, input.prompt), note }
     }
     session = { ...session, player: { ...session.player, inventory: trade.inventory } }
     note.items.push({ id: first.id, count: first.count, name, icon })
@@ -140,7 +143,10 @@ export function heroGain(s: Session, input: GainInput): GainResult {
     session = log(session, `自由属性点 +${points}`, 'good')
   }
 
-  return { session: enqueue(session, note, input.prompt), note }
+  // 落袋后**无条件刷池**（§3.2）：背包件数（`engine-item.*` / `engine-inventoryUsed`）
+  // 与剩余点（`engine-points`）都以池为账本。空手也刷一次，保证池不落后于局面。
+  const synced: Session = { ...session, pool: syncEngineVars(session) }
+  return { session: enqueue(synced, note, input.prompt), note }
 }
 
 /** 排提示：`modal` 由遭遇弹层那块「获得」展示，只有 `notice` 才进队列 */

@@ -14,8 +14,9 @@ import { playerAttack, resolveDefense } from '../play/combat'
 import { afterTalk, closeEncounter, enterBuilding } from '../play/encounter'
 import { buyGood } from '../play/reward'
 import { dropNotice } from '../play/gain'
-import { talkAdvance, talkChoose, talkHit, talkMenu, talkRoll, type TalkMenuAction } from '../play/talk'
+import { notificationOf, talkAdvance, talkChoose, talkHit, talkMenu, talkRoll, type TalkMenuAction } from '../play/talk'
 import { equipItem, unequip, useItem } from '../play/inventory'
+import { buildSessionFromSave, stripSaveSession } from '../play/pool'
 import { pickStorage } from './storage'
 
 /** 玩家已发起、等待「点击投掷」才真正结算的动作（§7.2 骰子交互） */
@@ -25,6 +26,16 @@ export type PendingAction =
   | { kind: 'nextRound' }
   /** 结算当前建筑遭遇（开锁判定 / 开箱 / 怪物 / 商店）—— 玩家点「掷骰」触发 */
   | { kind: 'encounter' }
+
+/**
+ * **写入即通知**（V2.3 §8.5，裁决 45 / 59）：结算后若池有变动、且**正在展示的这层对话**
+ * 登记观察了变动键 → 标注 `talk.notify`"需重算当前层"（UI 据此即时刷新）。
+ * 纯派生、玩家不可见；下一拍推进消费掉（`talkAdvance`）。
+ */
+function withNotify(before: Session, after: Session): Session {
+  const usage = notificationOf(before, after)
+  return usage && after.talk ? { ...after, talk: { ...after.talk, notify: usage } } : after
+}
 
 /**
  * 对话动作的收尾：弹层关掉（对话谈完 / 选了【路过】）→ 接着跑这栋建筑的建筑事件；
@@ -165,27 +176,27 @@ export const usePlayStore = create<PlayStore>()(
       talkNext: () => {
         const current = get().session
         if (!current) return
-        set({ session: settleTalk(current, talkAdvance(current)) })
+        set({ session: settleTalk(current, withNotify(current, talkAdvance(current))) })
       },
       talkChoose: (index) => {
         const current = get().session
         if (!current) return
-        set({ session: settleTalk(current, talkChoose(current, index)) })
+        set({ session: settleTalk(current, withNotify(current, talkChoose(current, index))) })
       },
       talkRoll: () => {
         const current = get().session
         if (!current) return
-        set({ session: settleTalk(current, talkRoll(current)) })
+        set({ session: settleTalk(current, withNotify(current, talkRoll(current))) })
       },
       talkHit: () => {
         const current = get().session
         if (!current) return
-        set({ session: settleTalk(current, talkHit(current)) })
+        set({ session: settleTalk(current, withNotify(current, talkHit(current))) })
       },
       talkMenu: (action) => {
         const current = get().session
         if (!current) return
-        set({ session: settleTalk(current, talkMenu(current, action)) })
+        set({ session: settleTalk(current, withNotify(current, talkMenu(current, action))) })
       },
 
       pendingAction: null,
@@ -215,7 +226,7 @@ export const usePlayStore = create<PlayStore>()(
             next = after.stepsLeft <= 0 || !canMoveAnywhere(after) ? { ...after, awaitingRound: true } : after
           }
         } else next = nextRound(current)
-        set({ session: next, pendingAction: null })
+        set({ session: withNotify(current, next), pendingAction: null })
         const last = next.rolls[next.rolls.length - 1]
         return last ? { label: last.label, pips: last.pips } : undefined
       },
@@ -224,7 +235,14 @@ export const usePlayStore = create<PlayStore>()(
       name: 'poprpg_save',
       version: 1,
       storage: createJSONStorage(() => pickStorage()),
-      partialize: (s) => ({ session: s.session }),
+      // §8.6：`psave ＝ 状态表` —— 落地不带玩家投影，只存池与流程态
+      partialize: (s) => ({ session: s.session ? stripSaveSession(s.session) : s.session }),
+      // 水合后按池重建玩家投影；以内存中的新 `scenario` 为底（避免回退到旧场景定义）
+      merge: (persisted, current) => {
+        const raw = (persisted as { session?: Session } | undefined)?.session
+        if (!raw) return current
+        return { ...current, session: buildSessionFromSave(raw, current.session ?? raw) }
+      },
     },
   ),
 )

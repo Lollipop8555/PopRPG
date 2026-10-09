@@ -19,7 +19,7 @@ import { nodeAtPath } from '../lib/dialogTree'
 import type { Session, TalkRecord, TalkState } from '../types/session'
 import { buildingKey, log, nodeAtCell, recordRoll } from './kit'
 import { heroGain } from './gain'
-import { applyEngineToSession, applyPoolEffects, testCheckRef } from './pool'
+import { applyEngineToSession, applyPoolEffects, buildPoolWatch, changedPoolKeys, recordRollMod, recordRollNpc, testCheckRef, watchersOf, watchUsage } from './pool'
 
 /* ------------------------------------------------------------------ */
 /* 基础查表                                                            */
@@ -42,6 +42,23 @@ export function talkCandidates(s: Session, cell: [number, number]): string[] {
 /** 该建筑实例是否**真的**触发过对话（`talks[key]` 存在）—— 空宝箱不报"空的"据此判定 */
 export function hasTalked(s: Session, key: string): boolean {
   return !!s.talks?.[key]
+}
+
+/**
+ * **写入即通知**（§8.5，裁决 45 / 59）：池这一批写入后，若**正在展示的这层对话**登记观察了其中某个键，
+ * 则该层**需按新值重算**（if-else 链重选）。计算本身纯函数（`entryIndex` / `diceCandidates` / `talkView`
+ * 每次都按当前池求值），这里只负责**判定是否需重算**并给出使用处标识，供 store / UI 即时刷新。
+ *
+ * 返回 `undefined` ＝ 池未变 / 不在展示中 / 未登记该键 —— 无需重算。
+ */
+export function notificationOf(before: Session, after: Session): string | undefined {
+  if (before.pool === after.pool) return undefined
+  const talk = after.talk
+  if (!talk) return undefined
+  const changed = changedPoolKeys(before.pool ?? {}, after.pool ?? {})
+  if (changed.length === 0) return undefined
+  const usage = watchUsage.dialog(talk.npc, talk.dialog)
+  return watchersOf(buildPoolWatch(after.scenario), changed).has(usage) ? usage : undefined
 }
 
 function samePath(a: number[] | undefined, b: number[] | undefined): boolean {
@@ -174,6 +191,9 @@ export function openTalk(s: Session, building: BuildingDef, cell: [number, numbe
 
   const record: TalkRecord = { npc: npcId, dialog: plan }
   session = { ...session, talks: { ...(session.talks ?? {}), [key]: record } }
+  // 抽定记账（§3.6，裁决 61）：把落地的 npc `id` 写进引擎键 `engine-roll.npc.<实例 key>.slot0`。
+  // **不预建、不覆盖**（重入不重掷由 `recordRollNpc` 自身的"键已有值即原样返回"保证）；本档实例为单槽，槽号恒 `slot0`。
+  session = { ...session, pool: recordRollNpc(session.pool ?? {}, key, 0, npcId) }
   session = log(session, `遇到 ${npc?.icon ?? ''}${npc?.name ?? npcId}（方案 ${plan}）`, 'info')
 
   // 从方案根节点开始：根层含 `if` 即走 if-else 链（§6.3），否则顺序展示第 1 条
@@ -245,6 +265,11 @@ function enterNode(
     talks: { ...(session.talks ?? {}), [key]: { ...(session.talks?.[key] as TalkRecord), cursor: path } },
   }
 
+  // 对话执行记账（§3.6，裁决 61）：**走进这套方案的记录即视为执行过** → 无脑写
+  // `engine-roll.mod.<实例 key>.<npcId>.<modId>` ＝ `true`（不判断是否已执行过；已是 `true` 则幂等）。
+  // 挂在这里而非 `completeNode`：重入【继续】/【重新】都要复现同样的记账，且"执行过"以**走进**为准。
+  session = { ...session, pool: recordRollMod(session.pool ?? {}, key, npc, plan) }
+
   const talk: TalkState = { key, ref, cell, npc, dialog: plan, stage: 'line', path, line: 0, replay }
   // 已在 `menu` 的 `path` 上带出 cursor —— 展示前重置逐条下标
   return { ...session, phase: 'encounter', talk }
@@ -258,6 +283,8 @@ function enterNode(
 export function talkAdvance(s: Session): Session {
   const talk = s.talk
   if (!talk || talk.stage !== 'line') return s
+  // 上一拍写入即通知留下的"需重算"标记，随本拍推进消费掉（§8.5）
+  if (talk.notify) return { ...s, talk: { ...talk, notify: undefined } }
   const nodes = dialogPlan(s, talk.npc, talk.dialog) ?? []
   const node = nodeAtPath(nodes, talk.path)
   if (!node) return closeTalk(s)

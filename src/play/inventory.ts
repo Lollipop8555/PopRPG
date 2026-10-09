@@ -12,6 +12,7 @@ import { applyEffects } from '../engine/state'
 import { removeFromInventory } from '../engine/item'
 import type { Session } from '../types/session'
 import { log, logs, skillIndex } from './kit'
+import { syncEngineVars } from './pool'
 
 export function itemDef(s: Session, id: string): ItemDef | undefined {
   return s.scenario.library.items.find((i) => i.id === id)
@@ -69,13 +70,16 @@ export function useItem(s: Session, itemId: string, opts: UseOptions = {}): Sess
   // 已经掌握的技能：书**不消耗**，避免浪费（§4.3）
   if (applied.alreadyLearned.length > 0) {
     session = { ...session, player: applied.target as Session['player'] }
+    // 道具结算改了资源 / 背包 → 立刻刷池（§3.2）
+    session = { ...session, pool: syncEngineVars(session) }
     return log(session, '已经会了 —— 这本书留着', 'info')
   }
 
   const player = applied.target as Session['player']
   const inventory = removeFromInventory(player.inventory, itemId, 1)
   session = { ...session, player: { ...player, inventory } }
-  return session
+  // 道具结算改了资源 / 背包 → 立刻刷池（§3.2）
+  return { ...session, pool: syncEngineVars(session) }
 }
 
 /** 背包容量提示（0 = 无限，§4.2.4） */

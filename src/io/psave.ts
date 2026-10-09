@@ -7,12 +7,14 @@
 
 import type { Library } from '../types'
 import type { Session } from '../types/session'
+import { buildSessionFromSave, stripSaveSession } from '../play/pool'
 import { downloadText, pickTextFile } from './download'
 
 export const PSAVE_VERSION = 1
 
 export function exportSave(session: Session): string {
-  const payload = { kind: 'poprpg.psave', version: PSAVE_VERSION, savedAt: Date.now(), session }
+  // §8.6：`psave ＝ 状态表` —— 玩家投影（stats / resources）不进存档，读档按池重建
+  const payload = { kind: 'poprpg.psave', version: PSAVE_VERSION, savedAt: Date.now(), session: stripSaveSession(session) }
   return JSON.stringify(payload, null, 2)
 }
 
@@ -25,7 +27,8 @@ export function parseSave(text: string): Session | null {
     // §7.3：进度版本钩子（目前仅 v1；更高版本尚无迁移脚本，视为不兼容拒绝加载）
     if (typeof parsed.version === 'number' && parsed.version > PSAVE_VERSION) return null
     if (typeof session.version === 'number' && session.version > PSAVE_VERSION) return null
-    return session
+    // 读完按池重建玩家投影（stats / resources），运行态与存档前逐键相等（§8.6）
+    return buildSessionFromSave(session)
   } catch {
     return null
   }

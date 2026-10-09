@@ -154,6 +154,12 @@ export interface TalkState {
   missed?: boolean
   /** 只回放：本条是**已交付**的终态记录 → 不展开 `items`、不再赠予道具 */
   replay?: boolean
+  /**
+   * 写入即通知（V2.3 §8.5）：本层对话登记观察的某个池键**刚被写入** → 标注"需重算当前层"。
+   * 值 ＝ 该对话方案的使用处标识（`dialog:<npc>:<mod>`）；**纯运行时态、不进存档语义**，
+   * 下一拍推进即清空。**玩家不可见**（裁决 59）—— 只用于 UI 即时刷新当前层。
+   */
+  notify?: string
 }
 
 export interface Session {

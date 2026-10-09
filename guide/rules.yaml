@@ -212,7 +212,7 @@ pmod:
       shape: "{ mode?: all|any, items: [ { name, op, value | ref } ] }"
       shorthand: 整体替换为一个模板名
       empty: 空判定集合视为成立（K25）
-      read_ops: [equals, notEquals, greater, less, greaterEqual, lessEqual, contain, notContain]
+      read_ops: [equals, notEquals, greater, less, greaterEqual, lessEqual, contain, notContain] 
       value_or_ref: value 为字面量，ref 为另一池键引用，二选一；同写只认 ref（K37）
     write_op:
       shape: "{ name, op, value }[]"

@@ -17,6 +17,7 @@ import type { MonsterUnit, PowerBreakdown } from '../engine/units'
 import type { Session } from '../types/session'
 import { log, logs, recordRoll, skillIndex } from './kit'
 import { nextRound } from './flow'
+import { syncEngineVars } from './pool'
 import { grantLoot } from './reward'
 
 /* ------------------------------------------------------------------ */
@@ -90,6 +91,8 @@ export function playerAttack(s: Session, skillId: string, rng?: Rng): Session {
 
   const dead = s.monster
   session = { ...session, player: result.user as Session['player'], monster: result.target as Session['monster'] }
+  // 技能结算改了资源 → 立刻刷池（§3.2：池是唯一账本，力值读写点一律以池为准）
+  session = { ...session, pool: syncEngineVars(session) }
 
   // 怪物 hp≤0 → **伤害作用时即时败北**：交锋直接结束，不进反击（决策 5）
   if (session.monster && session.monster.resources.hp <= 0) {
@@ -164,6 +167,8 @@ export function resolveDefense(s: Session, willDefend: boolean, rng?: Rng): Sess
   }
 
   session = { ...session, monster, player }
+  // 反击改了玩家资源 → 立刻刷池（§3.2）
+  session = { ...session, pool: syncEngineVars(session) }
 
   // 玩家 hp≤0 **不当场死**：回合开始才判（给一回合缓冲吃药，决策 5 / 验收 5）
   if (player.resources.hp <= 0) {

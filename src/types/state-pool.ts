@@ -272,7 +272,7 @@ export const ENGINE_VARS: readonly EngineVarDef[] = [
   { name: 'engine-hpMax', type: 'number', desc: '生命上限（职业基础 ＋ 分配点）', writable: false },
   { name: 'engine-mpValue', type: 'number', desc: '当前法力值；作者可写', writable: true },
   { name: 'engine-mpMax', type: 'number', desc: '法力上限（职业基础 ＋ 分配点）', writable: false },
-  { name: 'engine-patk', type: 'number', desc: '物理攻击（职业基础 ＋ 分配点 ＋ 装备与状态加成）', writable: false },
+  { name: 'engine-patk', type: 'number', desc: '物理攻击（职业基础 ＋ 分配点；装备与状态加成在力值链读取时叠加）', writable: false },
   { name: 'engine-matk', type: 'number', desc: '魔法攻击（同上）', writable: false },
   { name: 'engine-pdef', type: 'number', desc: '物理防御（同上）', writable: false },
   { name: 'engine-mdef', type: 'number', desc: '魔法防御（同上）', writable: false },

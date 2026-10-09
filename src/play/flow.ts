@@ -101,7 +101,9 @@ export function allocatePoint(s: Session, key: StatKey): Session {
   if (freePoints(s) <= 0) return log(s, '没有剩余自由属性点', 'bad')
   const alloc = { ...s.player.alloc, [key]: (s.player.alloc[key] ?? 0) + 1 }
   const player = syncPlayer({ ...s.player, alloc })
-  return log({ ...s, player }, `分配 1 点到${statLabel(key)}（剩 ${freePoints({ ...s, player })} 点）`, 'good')
+  // 加点改了上限 → 立刻刷池（§3.2：池是唯一账本，力值读写点一律以池为准）
+  const next: Session = { ...s, player }
+  return log({ ...next, pool: syncEngineVars(next) }, `分配 1 点到${statLabel(key)}（剩 ${freePoints(next)} 点）`, 'good')
 }
 
 /* ------------------------------------------------------------------ */
