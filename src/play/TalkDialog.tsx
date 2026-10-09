@@ -104,7 +104,8 @@ export default function TalkDialog({
       <div className="modal talk-modal" style={surface}>
         <div className="panel-head">
           <span className="hand" style={{ fontSize: 16 }}>
-            <RoleGlyph sprite={roleSprite(role, 'npc', talk.npc)} assets={assets} icon={npc?.icon} />{' '}
+            {/* 键是 NPC 的 `name`（V2.4 裁决 66，`role.npcs` 支持通配 `"*"`），取不到即回退该 NPC `icon` emoji */}
+            <RoleGlyph sprite={roleSprite(role, 'npc', npc?.name)} assets={assets} icon={npc?.icon} />{' '}
             {npc?.name ?? talk.npc}
           </span>
         </div>

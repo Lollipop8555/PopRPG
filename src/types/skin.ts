@@ -149,7 +149,10 @@ export interface SkinPortraits {
   classes?: Record<string, SkinPortrait>
   /** 怪物立绘缺位时不渲染，且**不跨怪物借用** */
   monsters?: Record<string, SkinPortrait>
-  /** NPC 立绘缺位时不渲染，且**不跨 NPC 借用**（当前 V1 无落点） */
+  /**
+   * NPC 立绘：键是 NPC 的 `name`（非组件 `id`）＋ 通配 `"*"`（V2.4 裁决 66）。
+   * 命中顺序 精确 `name` → `"*"` → 不渲染（不跨组借用、无 emoji 回退）
+   */
   npcs?: Record<string, SkinPortrait>
 }
 
@@ -159,7 +162,11 @@ export interface SkinRole {
   player?: SkinSprite
   classes?: Record<string, SkinSprite>
   monsters?: Record<string, SkinSprite>
-  /** NPC 形象；缺位回退该 NPC `icon` emoji。地图上不绘制 NPC，其唯一落点是对话弹层标题栏 */
+  /**
+   * NPC 形象：键是 NPC 的 `name`（非组件 `id`）＋ 通配 `"*"`（V2.4 裁决 66）。
+   * 命中顺序 精确 `name` → `"*"` → 该 NPC `icon` emoji；
+   * 落点两处：地图槽位格（层在棋子层之下）与对话弹层标题栏
+   */
   npcs?: Record<string, SkinSprite>
   portraits?: SkinPortraits
 }

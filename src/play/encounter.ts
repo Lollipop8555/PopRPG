@@ -12,7 +12,7 @@ import { buildingKey, log, logs, skillIndex } from './kit'
 import { startCombat } from './combat'
 import { testCheckRef } from './pool'
 import { openShop, openTreasure, runEvent } from './reward'
-import { closeTalk, hasTalked, openTalk } from './talk'
+import { closeTalk, drawSlots, hasNpcSlots, talkAtSlot } from './talk'
 
 /**
  * 这次的建筑遭遇要不要**玩家掷骰**才结算（§7.2）。
@@ -54,13 +54,14 @@ export interface EnterOptions {
 }
 
 /**
- * 踩到建筑的**总入口**：**① NPC 触发与对话 → ② 决定"等玩家掷骰"还是"直接跑建筑事件"**（§4.8.12）。
+ * 踩到建筑的**总入口**（**从建筑外踏入**那一步）：**① 一次性抽定全部槽位 → ② 落点格对话 → ③ 建筑事件**（§4.8.12 / 裁决 64）。
  *
- * - 对话触发（有 `npcs` 且方案不悬空）→ 返回带 `talk` 弹层的会话，**建筑事件延后**到 `afterTalk`
+ * - 触发 ①（`drawSlots`）：踏入任意一格 → 按声明序抽定该实例全部槽位、写 `engine-roll.npc.*`（**只一次**）
+ * - 触发 ②（`talkAtSlot`）：若踏入的这一格**恰是某槽落点格** → 返回带 `talk` 弹层的会话，**建筑事件延后**到 `afterTalk`
  * - 需要掷骰才结算的遭遇 → 停在 `awaitingEncounter`，等玩家点「掷骰」（§7.2）
  * - 其余 → 直接 `enterBuilding` 跑建筑事件
  *
- * `opts.talkHandled`：对话刚谈完 / 选了【路过】→ 不再触发对话（否则会死循环）。
+ * `opts.talkHandled`：对话刚谈完 → 不再触发对话（否则会死循环），直接跑建筑事件。
  */
 export function beginBuilding(
   s: Session,
@@ -69,24 +70,28 @@ export function beginBuilding(
   rng?: Rng,
   opts?: EnterOptions,
 ): Session {
-  // ① NPC 触发与对话：**进入建筑的第一步**、与 `encounter` 正交（任何建筑实例都能挂，§4.9.3）
+  // ① 触发 ①：踏入 → 一次性抽定全部槽位（与 `encounter` 正交，任何建筑实例都能挂，§4.9.3）
+  let session = opts?.talkHandled ? s : drawSlots(s, cell, rng)
+
+  // ② 触发 ②：踏入的这一格恰是某槽落点格 → 与该槽对话，建筑事件延后（`talkHandled` 时不再触发）
+  // `onEntry: true` → 这是**踏入那一步**开启的对话，收尾后由 `afterTalk` 接着跑建筑事件（§4.8.12）
   if (!opts?.talkHandled) {
-    const opened = openTalk(s, building, cell, rng)
+    const opened = talkAtSlot(session, building, cell, rng, { onEntry: true })
     if (opened) return opened
   }
 
-  // ② 建筑 `encounter` 前置判定（§6.4 / §8.3③，与门锁同构）：不成立 → 本次到访不触发建筑行为。
+  // ③ 建筑 `encounter` 前置判定（§6.4 / §8.3③，与门锁同构）：不成立 → 本次到访不触发建筑行为。
   // 反馈切换由作者文案 / 对话树 `if` 承担（§6.7），引擎不记录（裁决 56）。
-  if (!encounterPoolOk(s, building)) {
-    return log(s, `${building.name}：现在没什么可做的`)
+  if (!encounterPoolOk(session, building)) {
+    return log(session, `${building.name}：现在没什么可做的`)
   }
 
   // 要掷骰的遭遇（开箱 / 怪物 / 商店 / 带判定的门）→ 先停在这格，等玩家点「掷骰」再结算（§7.2）
-  if (encounterNeedsRoll(s, building, cell)) {
-    return { ...s, awaitingEncounter: { ref: building.id, cell } }
+  if (encounterNeedsRoll(session, building, cell)) {
+    return { ...session, awaitingEncounter: { ref: building.id, cell } }
   }
 
-  return enterBuilding(s, building, cell, rng)
+  return enterBuilding(session, building, cell, rng)
 }
 
 /**
@@ -100,8 +105,8 @@ export function enterBuilding(s: Session, building: BuildingDef, cell: [number, 
   const key = buildingKey(s, cell)
   const { library, enabledIds, rules } = s.scenario
   const done = s.onceDone.includes(key)
-  // 该实例真的触发过对话（**NPC 即内容物**）—— 空宝箱据此不再报"什么也没有 / 已经空了"（§4.8.5⑥）
-  const talked = hasTalked(s, key)
+  // 该实例**配了 NPC 槽位**（NPC 即内容物）—— 空宝箱据此不再报"什么也没有 / 已经空了"（§4.8.5⑥ / §4.9.3）
+  const talked = hasNpcSlots(s, cell)
 
   // `once` 成功过的事件 → 整座降级成普通空地（§4.8.9）
   if (building.encounter === 'event' && done) {
@@ -185,8 +190,12 @@ export function enterBuilding(s: Session, building: BuildingDef, cell: [number, 
  */
 export function afterTalk(s: Session, talk: TalkState | undefined = s.talk): Session {
   if (!talk) return s
-  const building = s.scenario.library.buildings.find((b) => b.id === talk.ref)
   const next = closeTalk(s)
+  // **建筑内部走位**踩到落点格触发的对话（触发 ②，无 `onEntry`）→ 只关弹层，
+  // **不重复跑建筑事件**（裁决 64 ①"只触发一次、建筑内部走位不重复"）。
+  if (!talk.onEntry) return next
+  // 踏入那一步开启的对话（触发 ①）→ 接着跑这栋建筑的 `encounter`（§4.8.12：①–⑤ 跑完才执行建筑事件）
+  const building = s.scenario.library.buildings.find((b) => b.id === talk.ref)
   if (!building) return next
   return beginBuilding(next, building, talk.cell, undefined, { talkHandled: true })
 }

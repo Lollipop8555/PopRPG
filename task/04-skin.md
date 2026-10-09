@@ -248,7 +248,7 @@
 - 验收：`npx tsc --noEmit` 无错；`npx vitest run` **55 个文件 / 669 项**全绿；真浏览器（Playwright）实测：预置一份「构建页已有内容」的工程后进 `#/creative`，靶子自动变为「构建页工程：探针工程」（1 张地图 · 1 个道路朝向），左栏出现「未绑定素材」，中栏三类名正确，无 console 报错。
 - 设计侧同步：[`../docs/design/skin/09-creative.md`](../docs/design/skin/09-creative.md) §五·待确认 1 标注**两侧均已落地**、§六 改写并新增「靶子来源」实现落点一行。
 
-**2026-10-09 · V2.4 NPC 槽位 SlotN：皮肤侧口径（裁决 66；设计侧定稿，代码未开工）**
+**2026-10-09 · V2.4 NPC 槽位 SlotN：皮肤侧口径（裁决 66；设计侧定稿）**
 - **命中键由 `id` 改 `name` ＋ 通配**：`role.npcs` 与 `portraits.npcs` 的子键由**组件 `id`** 改为 **NPC 的 `name`**，并支持**通配键 `"*"`**；命中顺序 **精确 `name` → `"*"` → 该 NPC `icon` emoji**（立绘命中不到 → **不渲染**，不跨 NPC 借用）。`KR-2` / `KR-3` / `KR-6` 的键范围检查与查询实现（`lookup.ts`）随之按 `name` ＋ 通配走。
 - **NPC 新增地图落点（原「NPC 不占地图格」作废）**：V2.4 起 NPC 有**地图槽位落点**（[`../docs/design/skin/02-role.md`](../docs/design/skin/02-role.md) §4.1 **落点 6**）——`role.npcs` 命中 → 画**皮肤**（单格、无朝向）；**未命中 → 画槽位色圆环**（颜色 ＝ 构建页该槽位行颜色，调色板**构建页与游玩态共用**，槽号 ≥ 色数即**循环取色**）；绘制层在**棋子层之下**；**玩家与 NPC 可重叠**（重叠即触发）。
 - **新增校验**：**`KR-11`**（`npcs` 键与任一 NPC `name` 都不重名却配了图）/ **`KM-4`**（槽号 ≥ 调色板色数 → 循环取色）。D6 明细校验由 `KR-1`~`KR-10` 扩为 **`KR-1`~`KR-11`**。
@@ -256,3 +256,11 @@
 - **本档改写条目**：D0「立绘 `portraits`」「NPC 棋子形象 `role.npcs`」两条；D3 `role` 条目；D6 明细校验登记；D7「NPC 形象与立绘」改写、「NPC 不占地图格」→「**NPC 地图落点**」；D8 裁决 25/26 遗留项中「NPC 立绘是否需要对话之外的落点」标注**已裁决**。
 - **版本线**：本档仍属 **V2.1 / V2.2** 皮肤档，但本组改动**排在 V2.4**（结构改造类）之后或**随其落地**——须早于皮肤收尾完成，以避免 `role.npcs` 按 `id` 实现的返工（[`../docs/design/07-decisions.md`](../docs/design/07-decisions.md) §8.6 版本线）。
 - 设计侧同步：[`../docs/design/skin/02-role.md`](../docs/design/skin/02-role.md) §三 / §4.1 落点 6 / §4.3 / §五 / §六 `KR-11`、[`../docs/design/skin/04-misc.md`](../docs/design/skin/04-misc.md) §二 / §八 `KM-4`、[`../docs/design/skin.md`](../docs/design/skin.md) §六 `S-33` / §七 `Q32`、[`../docs/DESIGN.md`](../docs/DESIGN.md) 与 [`../TASK.md`](../TASK.md) 进度同步。
+
+**2026-10-09 · V2.4 NPC 槽位 SlotN：皮肤侧代码落地（E6，`task/05-npc.md` 验收 20–23）**
+- **取图键改 `name` ＋ 通配（已落地）**：[`../src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 的 `roleSprite()` / `portraitOf()` 在 `kind === 'npc'` 时改为 **精确 `name` → 通配 `"*"`**（新增导出常量 `NPC_WILDCARD = '*'`）；形象命中不到 → `undefined`（调用方回退该 NPC `icon` emoji），立绘命中不到 → `undefined`（不渲染、不跨组借用）。键由组件 `id` 改 `name` 是 **V2.4 裁决 66** 的口径。
+- **对话弹层标题栏（已落地）**：[`../src/play/TalkDialog.tsx`](../src/play/TalkDialog.tsx) 的标题栏形象改为 `roleSprite(role, 'npc', npc?.name)`（原先按 `npc?.id`），`S-29` 不变——NPC 在对话里仍只占标题栏 `icon` 一格。
+- **NPC 地图落点（已落地）**：[`../src/play/MapView.tsx`](../src/play/MapView.tsx) 新增 `NpcLayer`（挂在**棋子层之下**，随背景一样 `pointerEvents: none`）——逐建筑逐槽解析：**皮肤命中 → `SvgTexture` 单格出图（无朝向、锚点格中心）**；**未命中 → 槽位色圆环**（`stroke = slotColor(slotN)`、`r = CELL/2 - 6`，`onlyAssets` 时不画）；**槽号 ≥ 色数循环取色**由 [`../src/lib/npcSlots.ts`](../src/lib/npcSlots.ts) 的 `slotColor()` 天然满足（`KM-4`）。占位解析：池值 `engine-roll.npc.<buildingKey>.slotN` 有抽定即取之；未抽定的**单候选槽**按唯一候选画；多候选未抽定**不画**（避免误导）。
+- **单测**：[`../src/engine/skin/__tests__/pick.test.ts`](../src/engine/skin/__tests__/pick.test.ts) 新增「NPC 按 name ＋ 通配 `"*"`」7 项（精确优先、通配回退、不跨组借用、无 id → `undefined`、立绘缺失不渲染）；[`../src/play/__tests__/mapView.test.tsx`](../src/play/__tests__/mapView.test.tsx) 新增「NPC 槽位层」6 项（无皮肤画两环 ＋ 颜色/半径、精确名画图 ＋ 余环、通配画满、`onlyAssets` 只画图、`g[data-role-npc]` 在 `g[data-role-pawn]` 之前、多候选未抽定不画 / 单候选画环）。`npx tsc --noEmit` 无错。
+- **注释同步**：[`../src/types/skin.ts`](../src/types/skin.ts) 的 `SkinRole.npcs` / `SkinPortraits.npcs` 注释由「唯一落点是对话弹层 / 当前 V1 无落点」更新为 **V2.4 的 `name` ＋ 通配 ＋ 双落点（地图槽位格 / 对话标题栏）**。
+- **遗留（属 D6，本档未动工）**：`KR-11`（`npcs` 键与任一 NPC `name` 都不重名却配了图）尚未实现——当前**整个 `KR-*` / `KP-*` 皮肤校验尚未落地**（`SkinIssueCode` 仅 `KP-1`~`KP-10` ＋ `KA-2`，`src/check/validate.ts` 无皮肤清单上下文），随 D6「校验接入清单」一并做；`KM-4` 属调色板循环，已由 `slotColor()` 满足，无需单独校验。

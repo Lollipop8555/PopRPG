@@ -4,13 +4,15 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
-import type { GameMap, MapNode, SkinBuilding, SkinManifest, SkinMisc, SkinRoad } from '../types'
+import type { PointerEvent as ReactPointerEvent, ReactElement } from 'react'
+import type { GameMap, MapNode, SkinBuilding, SkinManifest, SkinMisc, SkinRoad, SkinRole } from '../types'
 import type { Session } from '../types/session'
 import type { SkinAssets } from '../io/skin-assets'
-import { currentMap, neighbors } from './kit'
+import { buildingKey, currentMap, neighbors } from './kit'
 import { canStep } from './flow'
 import { roadPickAt } from './road'
+import { resolveSlots, slotColor, slotWorldAt, type ResolvedSlot } from '../lib/npcSlots'
+import { ENGINE_ROLL_NPC_PREFIX } from '../types/state-pool'
 import {
   backgroundOf,
   backgroundPlacement,
@@ -234,6 +236,11 @@ export default function MapView({
           />
         ))}
 
+        {/* NPC 槽位（`skin/02-role.md` §4.1 落点 6，V2.4 裁决 66）：
+            按各槽 `at` 落格 —— `role.npcs` 命中画皮肤、未命中画**槽位色圆环**。
+            **层在棋子层之下**（先画 NPC 再画主角），故与主角同格时 NPC 被棋子压住可视作"叠站"。 */}
+        <NpcLayer session={session} role={role} assets={assets} onlyAssets={onlyAssets} />
+
         {/* 主角：绿色虚线环只是「你在这儿」的定位标记，与棋子形象无关，故一直画（只看素材时收起） */}
         <g data-role-pawn>
           {!onlyAssets && (
@@ -296,6 +303,73 @@ export default function MapView({
       })}
     </svg>
   )
+}
+
+/**
+ * 该槽**落格上那位 NPC** 的 id（`undefined` ＝ 这一格不画任何东西）：
+ * - 已抽定（`engine-roll.npc.<建筑实例 key>.slotN` 有值）→ 用它；
+ * - 未抽定但**只此一位候选**（`ids.length === 1`）→ 预画这一位（进楼前也看得到去向）；
+ * - 其余（多位候选、还没抽 / 空 `ids`）→ `undefined`，不画 —— 抽定前没有确定的人。
+ */
+function slotOccupant(session: Session, key: string, slot: ResolvedSlot): string | undefined {
+  const drawn = (session.pool ?? {})[`${ENGINE_ROLL_NPC_PREFIX}${key}.slot${slot.slotN}`]
+  if (typeof drawn === 'string' && drawn !== '') return drawn
+  return slot.ids.length === 1 ? slot.ids[0] : undefined
+}
+
+/**
+ * NPC 槽位层（`skin/02-role.md` §4.1 落点 6 / §4.3，V2.4 裁决 66）：
+ * 每座建筑的每个槽，按 `name` 查 `role.npcs` —— **命中画皮肤**（单格、格中心、无朝向），
+ * **未命中画槽位色圆环**（颜色 ＝ 构建页该槽行颜色，构建页与游玩态共用调色板，越界循环取色 `KM-4`）。
+ * 只看素材（`onlyAssets`）时圆环收起，只剩皮肤。
+ */
+function NpcLayer({
+  session,
+  role,
+  assets,
+  onlyAssets,
+}: {
+  session: Session
+  role?: SkinRole
+  assets: SkinAssets
+  onlyAssets: boolean
+}) {
+  const map = currentMap(session)
+  if (!map) return null
+  const tiles: ReactElement[] = []
+  for (const node of map.nodes) {
+    if (node.type !== 'building') continue
+    const key = buildingKey(session, [node.x, node.y])
+    for (const slot of resolveSlots(node)) {
+      const id = slotOccupant(session, key, slot)
+      if (id === undefined) continue
+      const def = session.scenario.library.npcs.find((n) => n.id === id)
+      const [wx, wy] = slotWorldAt(node, slot.at)
+      const tileKey = `${key}-${slot.slotN}`
+      const sprite = textureProps(spriteRef(roleSprite(role, 'npc', def?.name)), assets, {
+        x: wx * CELL,
+        y: wy * CELL,
+        w: CELL,
+        h: CELL,
+      })
+      if (sprite) {
+        tiles.push(<SvgTexture key={tileKey} {...sprite} />)
+      } else if (!onlyAssets) {
+        tiles.push(
+          <circle
+            key={tileKey}
+            cx={wx * CELL + CELL / 2}
+            cy={wy * CELL + CELL / 2}
+            r={CELL / 2 - 6}
+            fill="none"
+            stroke={slotColor(slot.slotN)}
+            strokeWidth={2.4}
+          />,
+        )
+      }
+    }
+  }
+  return <g data-role-npc>{tiles}</g>
 }
 
 function NodeShape({

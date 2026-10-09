@@ -1,12 +1,18 @@
 /**
  * NPC 对话运行时（§4.9.2 / §4.9.3 / §4.8.12 / state-pool §6.3 / §6.7）。
  *
- * - **位置**：进入建筑之后、该建筑的建筑事件之前（由 `encounter.enterBuilding` 调用）。
- * - **抽取**：抽人 / 抽方案**两级各自独立掷一次 `talk.dice`**，落定写入 `.psave`（`talks[key]`）**并由引擎记账**
- *   （`engine-roll.npc.*`，§3.6 裁决 61），**整场不重掷、不换人、不换方案**。
- * - **重入**：**引擎不再内建「选择对话框 / 重新对话 / 交付终态」**（裁决 54 修订、裁决 61）——重入**不弹框**，
- *   直接**从方案根节点按当前池重新求值**（if-else 链每次都按现值重算，§6.5「写入即通知」因此天然成立）。
- *   "只说一次"由作者用**判定模板 ＋ `if`**（模板判 `engine-roll.mod.* === false`）表达，见 §6.7。
+ * **两条独立触发**（V2.4 裁决 62–64）：
+ * - **① 建筑交互**（`drawSlots`，由 `encounter.beginBuilding` 在**从建筑外踏入**时调用一次）：
+ *   **一次性抽定该实例的全部槽位** —— 每槽在自己的 `ids` 里 N 选 1（1 位固定 / 多位掷 `talk.dice` 等权抽一位 /
+ *   空 `ids` 留空、不建键），按声明序写 `engine-roll.npc.<建筑实例 key>.<slotN>`；随后跑该建筑的 `encounter`。
+ *   **只触发一次**，建筑内部走位不重复。
+ * - **② NPC 交互**（`talkAtSlot`，由 `flow.stepTo` 在**每次踩到某槽落点格**时调用）：与该槽**已抽定的** NPC
+ *   按对话树求值；**每次踩到都触发**（"是否只说一次"由作者用池标记 ＋ `if` 表达，裁决 54 / 61）。
+ *
+ * - **抽定即锁死**（§3.6 裁决 61）：`engine-roll.npc.*` 有了值就不再重掷、不换人。
+ * - **方案不落池**：每次触发时按槽求值 —— `dialog.mod` 写死 → 该方案；否则该 NPC 方案数 ＝ 1 直接取、
+ *   > 1 掷 `talk.dice` 等权抽一套（§4.9.3 抽取规则）。
+ * - **`dialog.mod` 悬空**：该槽跳过对话、**同实例其它槽照常**（§4.9.3，裁决 62）。
  * - **结构**：全树同构 `{ result?, message, dice?, hit?, items?, give? }`；**根层数组是「按顺序展示」的序列**，
  *   `items` 才是玩家的选项（§4.9.2「只有一个结构」）。
  *
@@ -18,7 +24,9 @@ import type { Rng } from '../engine/dice'
 import { rollRangeAt, rollSum } from '../engine/dice'
 import { hitLabel, parseHit } from '../lib/dialog'
 import { nodeAtPath } from '../lib/dialogTree'
-import type { Session, TalkRecord, TalkState } from '../types/session'
+import { resolveSlots, slotWorldAt } from '../lib/npcSlots'
+import { ENGINE_ROLL_NPC_PREFIX } from '../types/state-pool'
+import type { Session, TalkState } from '../types/session'
 import { buildingKey, log, nodeAtCell, recordRoll } from './kit'
 import { heroGain } from './gain'
 import { applyEngineToSession, applyPoolEffects, buildPoolWatch, changedPoolKeys, recordRollMod, recordRollNpc, testCheckRef, watchersOf, watchUsage } from './pool'
@@ -34,16 +42,28 @@ export function dialogPlan(s: Session, npcId: string, plan: string): DialogNode[
   return Array.isArray(nodes) ? nodes : undefined
 }
 
-/** 建筑实例上配的、且**库里确实存在**的 NPC 候选（不写 / 空 ＝ 不触发对话） */
-export function talkCandidates(s: Session, cell: [number, number]): string[] {
+/** 该建筑实例是否**配了 NPC 槽位**（任一槽 `ids` 非空）—— 空宝箱不报"空的"据此判定（§4.9.3） */
+export function hasNpcSlots(s: Session, cell: [number, number]): boolean {
   const node = nodeAtCell(s, cell)
-  if (!node || node.type !== 'building') return []
-  return (node.npcs ?? []).filter((id) => s.scenario.library.npcs.some((n) => n.id === id))
+  if (!node || node.type !== 'building') return false
+  return resolveSlots(node).some((slot) => slot.ids.length > 0)
 }
 
-/** 该建筑实例是否**真的**触发过对话（`talks[key]` 存在）—— 空宝箱不报"空的"据此判定 */
-export function hasTalked(s: Session, key: string): boolean {
-  return !!s.talks?.[key]
+/** 某格是否落在该建筑实例的**某个槽位落点格**上（世界坐标比对） */
+export function slotAtWorld(s: Session, cell: [number, number]): { slotN: number; at: [number, number] } | undefined {
+  const node = nodeAtCell(s, cell)
+  if (!node || node.type !== 'building') return undefined
+  const hit = resolveSlots(node).find((slot) => {
+    const [wx, wy] = slotWorldAt(node, slot.at)
+    return wx === cell[0] && wy === cell[1]
+  })
+  return hit ? { slotN: hit.slotN, at: hit.at } : undefined
+}
+
+/** 读某槽已抽定的 NPC id（池键 `engine-roll.npc.<key>.slotN` 缺席 → undefined） */
+function drawnNpcOf(s: Session, key: string, slotN: number): string | undefined {
+  const value = (s.pool ?? {})[`${ENGINE_ROLL_NPC_PREFIX}${key}.slot${slotN}`]
+  return typeof value === 'string' && value !== '' ? value : undefined
 }
 
 /**
@@ -131,45 +151,66 @@ function diceCandidates(nodes: DialogNode[], session: Session): number[] {
 /* ------------------------------------------------------------------ */
 
 /**
- * 进入建筑时的对话入口（**第一步**，先于建筑事件）。
- * - **首次进入**：两级各掷一次 → 落定写入 `talks[key]` ＋ `engine-roll.npc.*`，从方案**根节点**求值
- * - **重入**：沿用已落定的 `npc` / `dialog`（不换人、不重掷）→ **不弹框**，**从根节点按当前池重新求值**
- *   （"只说一次"由作者 `if` / 模板判 `engine-roll.mod.*` 表达，§6.7）
+ * **触发 ①：踏入建筑（任意一格）→ 一次性抽定全部槽位**（V2.4 裁决 64，先于建筑事件）。
  *
- * 返回 `undefined` 表示**不触发对话**（该实例没有 NPC / `dialog` 方案名悬空 / 抽到的 NPC 没方案），
- * 调用方照常跑该建筑的 `encounter`。
+ * 逐槽按声明序求值（§4.9.3 抽取规则）：`ids` 空 → 留空、不建键；否则各掷 `talk.dice` 等权抽一位，
+ * 写 `engine-roll.npc.<建筑实例 key>.<slotN>`（`recordRollNpc` 自带"已有值即原样返回" → 重入不重掷）。
+ * **只抽人、不开对话** —— 对话由 `talkAtSlot` 在踩到落点格时触发。
+ *
+ * 纯记账 + 日志，返回新会话（池 / 日志有变才换引用）。
  */
-export function openTalk(s: Session, building: BuildingDef, cell: [number, number], rng?: Rng): Session | undefined {
+export function drawSlots(s: Session, cell: [number, number], rng?: Rng): Session {
   const node = nodeAtCell(s, cell)
-  const npcIds = talkCandidates(s, cell)
-  if (npcIds.length === 0) return undefined
+  if (!node || node.type !== 'building') return s
+  const key = buildingKey(s, cell)
+  const slots = resolveSlots(node)
+  let session = s
+  for (const slot of slots) {
+    if (slot.ids.length === 0) continue // 空槽留空、不建键
+    if (drawnNpcOf(session, key, slot.slotN)) continue // 该槽已抽定 → 整场不重掷
+    const drawn = drawOne(session, `抽对话对象（槽 ${slot.slotN}）`, session.scenario.rules.talk.dice, slot.ids.length, rng)
+    session = drawn.session
+    const npcId = slot.ids[drawn.index]
+    session = { ...session, pool: recordRollNpc(session.pool ?? {}, key, slot.slotN, npcId) }
+    const npc = session.scenario.library.npcs.find((n) => n.id === npcId)
+    session = log(session, `槽 ${slot.slotN} 站定 ${npc?.icon ?? ''}${npc?.name ?? npcId}`, 'info')
+  }
+  return session
+}
+
+/**
+ * **触发 ②：踩到某槽落点格 → 与该槽已抽定的 NPC 对话**（V2.4 裁决 64，每次踩到都触发）。
+ *
+ * - 未抽定（该格 `ids` 空 / 尚未抽）→ 返回 `undefined`，不触发。
+ * - 抽定 → **不换人、不重掷**，按槽求值方案：`dialog.mod` 写死 → 取该方案（不在该 NPC 方案里 → **该槽跳过**）、
+ *   否则该 NPC 方案数 ＝ 1 直接取、> 1 掷 `talk.dice` 等权抽一套；再从方案**根节点**按当前池求值。
+ * - 返回 `undefined` 也可能落在"根层所有 `if` 都不成立且无 `else`"（本层空）—— 调用方当作无事发生。
+ */
+export function talkAtSlot(
+  s: Session,
+  building: BuildingDef,
+  cell: [number, number],
+  rng?: Rng,
+  opts?: { onEntry?: boolean },
+): Session | undefined {
+  const node = nodeAtCell(s, cell)
+  if (!node || node.type !== 'building') return undefined
+  const hit = slotAtWorld(s, cell)
+  if (!hit) return undefined
 
   const key = buildingKey(s, cell)
-  const existing = s.talks?.[key]
+  const npcId = drawnNpcOf(s, key, hit.slotN)
+  if (!npcId) return undefined // 该槽留空 / 未抽 → 不触发
 
-  // 重入：不换人、不重掷、不弹框 —— 直接从根节点按当前池求值（§6.7）
-  if (existing) {
-    const root = dialogPlan(s, existing.npc, existing.dialog) ?? []
-    const first = entryIndex(root, s)
-    if (first < 0) return closeTalk(s) // 所有 `if` 都不成立且没有 `else` → 本层结束
-    return enterNode(s, key, building.id, cell, existing.npc, existing.dialog, [first])
-  }
-
-  // 首次：① 抽人（1 位直接取；多位掷 talk.dice 等权抽一位）
-  let session = s
-  const npcId = npcIds.length === 1 ? npcIds[0] : (() => {
-    const drawn = drawOne(session, '抽对话对象', session.scenario.rules.talk.dice, npcIds.length, rng)
-    session = drawn.session
-    return npcIds[drawn.index]
-  })()
-  const npc = session.scenario.library.npcs.find((n) => n.id === npcId)
+  const npc = s.scenario.library.npcs.find((n) => n.id === npcId)
   const plans = npc?.dialogs && typeof npc.dialogs === 'object' ? Object.keys(npc.dialogs) : []
+  const slot = resolveSlots(node).find((it) => it.slotN === hit.slotN)
+  const fixed = slot?.mod
 
-  // ② 抽方案：写死则跳过该步；留空且多套 → 掷 talk.dice 等权抽一套
-  const fixed = node?.dialog?.mod
+  let session = s
   let plan: string | undefined
   if (fixed) {
-    // `dialog` 悬空（方案名不在所抽到 NPC 的方案里）→ **跳过对话、当该实例没有 NPC**（§4.9.3 设定 5）
+    // `dialog.mod` 悬空（方案名不在该 NPC 的方案里）→ **该槽跳过对话、同实例其它槽照常**（§4.9.3 裁决 62）
     if (!plans.includes(fixed)) return undefined
     plan = fixed
   } else if (plans.length === 1) {
@@ -181,18 +222,11 @@ export function openTalk(s: Session, building: BuildingDef, cell: [number, numbe
   }
   if (!plan || !dialogPlan(session, npcId, plan)) return undefined
 
-  const record: TalkRecord = { npc: npcId, dialog: plan }
-  session = { ...session, talks: { ...(session.talks ?? {}), [key]: record } }
-  // 抽定记账（§3.6，裁决 61）：把落地的 npc `id` 写进引擎键 `engine-roll.npc.<实例 key>.slot0`。
-  // **不预建、不覆盖**（重入不重掷由 `recordRollNpc` 自身的"键已有值即原样返回"保证）；本档实例为单槽，槽号恒 `slot0`。
-  session = { ...session, pool: recordRollNpc(session.pool ?? {}, key, 0, npcId) }
-  session = log(session, `遇到 ${npc?.icon ?? ''}${npc?.name ?? npcId}（方案 ${plan}）`, 'info')
-
   // 从方案根节点开始：根层含 `if` 即走 if-else 链（§6.3），否则顺序展示第 1 条
   const root = dialogPlan(session, npcId, plan) ?? []
   const first = entryIndex(root, session)
-  if (first < 0) return closeTalk(session) // 所有 `if` 都不成立且没有 `else` → 本层结束
-  return enterNode(session, key, building.id, cell, npcId, plan, [first])
+  if (first < 0) return undefined // 所有 `if` 都不成立且没有 `else` → 本层结束
+  return enterNode(session, key, building.id, cell, hit.slotN, npcId, plan, [first], opts)
 }
 
 /**
@@ -201,15 +235,20 @@ export function openTalk(s: Session, building: BuildingDef, cell: [number, numbe
  * 引擎**不再**写 `cursor` / `talkDone` / `deliveredNode`（裁决 54 / 55 退役）：进度与"交付过"这件事由
  * 作者用 `if` / 模板判引擎记录（`engine-roll.mod.*`）表达（§6.7）。因此**重复进入同一条记录会重复结算**
  * ——要防刷就把带 `give` 的记录一并包进同一条 `if`（§6.7）。
+ *
+ * `opts.onEntry`：本次对话是否由**踏入建筑**开启（触发 ①，V2.4 裁决 64）—— 透传到每条记录构建的
+ * `talk`，供 `afterTalk` 决定收尾后是否接着跑建筑事件。子记录（`items`）沿用父层标记。
  */
 function enterNode(
   s: Session,
   key: string,
   ref: string,
   cell: [number, number],
+  slotN: number,
   npc: string,
   plan: string,
   path: number[],
+  opts?: { onEntry?: boolean },
 ): Session {
   const nodes = dialogPlan(s, npc, plan) ?? []
   const node = nodeAtPath(nodes, path)
@@ -244,7 +283,18 @@ function enterNode(
   // 作者据此判"这套方案是否执行过"以实现一次性对话（§6.7）。
   session = { ...session, pool: recordRollMod(session.pool ?? {}, key, npc, plan) }
 
-  const talk: TalkState = { key, ref, cell, npc, dialog: plan, stage: 'line', path, line: 0 }
+  const talk: TalkState = {
+    key,
+    ref,
+    cell,
+    slotN,
+    ...(opts?.onEntry ? { onEntry: true } : {}),
+    npc,
+    dialog: plan,
+    stage: 'line',
+    path,
+    line: 0,
+  }
   return { ...session, phase: 'encounter', talk }
 }
 
@@ -282,7 +332,10 @@ function completeNode(s: Session, talk: TalkState): Session {
     // 根层含 `if` → if-else 链选中一条后**本层立即停止**（不再看后面）；不含 `if` 才逐条推进（§6.3）
     if (!layerHasIf(nodes)) {
       const next = talk.path[0] + 1
-      if (next < nodes.length) return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [next])
+      if (next < nodes.length)
+        return enterNode(s, talk.key, talk.ref, talk.cell, talk.slotN, talk.npc, talk.dialog, [next], {
+          onEntry: talk.onEntry,
+        })
     }
   }
   return closeTalk(s)
@@ -298,7 +351,9 @@ export function talkChoose(s: Session, index: number): Session {
   if (!item) return s
   // 条件可选项（§6.3）：`if` 不成立的选项不允许进入（UI 只列成立的，这里是兜底）
   if (item.if !== undefined && !testCheckRef(s, s.pool ?? {}, item.if)) return s
-  return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [...talk.path, index])
+  return enterNode(s, talk.key, talk.ref, talk.cell, talk.slotN, talk.npc, talk.dialog, [...talk.path, index], {
+    onEntry: talk.onEntry,
+  })
 }
 
 /**
@@ -350,7 +405,9 @@ export function talkHit(s: Session): Session {
   const nodes = dialogPlan(s, talk.npc, talk.dialog) ?? []
   const node = nodeAtPath(nodes, talk.path)
   if (!node?.items?.[talk.hit]) return s
-  return enterNode(s, talk.key, talk.ref, talk.cell, talk.npc, talk.dialog, [...talk.path, talk.hit])
+  return enterNode(s, talk.key, talk.ref, talk.cell, talk.slotN, talk.npc, talk.dialog, [...talk.path, talk.hit], {
+    onEntry: talk.onEntry,
+  })
 }
 
 /** 关闭对话弹层、回到地图（是否接着跑建筑事件由 `encounter.afterTalk` 衔接） */

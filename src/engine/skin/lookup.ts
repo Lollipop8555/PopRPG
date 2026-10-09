@@ -7,7 +7,9 @@
  *
  * 回退链（与文档逐条对应）：
  * - 棋子形象：玩家 → `role.player`；职业 / 怪物 / NPC 各自分组，**不跨组借用**。
+ *   **NPC 例外**：键是 NPC 的 `name`（不是组件 `id`），命中顺序**精确 `name` → 通配 `"*"`**（V2.4 裁决 66）。
  * - 立绘：职业缺位**先回退 `role.portraits.player`**；怪物与 NPC 缺位即不渲染，**不跨条借用**。
+ *   NPC 同样按 `name` ＋ 通配 `"*"`，命中不到即 `undefined`（**不**回退 emoji，§4.3）。
  * - 衬底：字符串写法等价于只写 `fill`；`stroke` 独立设置，未给即不绘制描边。
  * - 容器：对话框 / 抽屉 / 气泡三种容器各查 `window.surfaces` 一个键，**互不借用**。
  * - 按钮：七个键各查 `window.buttons` 自己的键，**互不借用**；四态各查自己的态，
@@ -47,6 +49,12 @@ import type {
 /** 形象分组 */
 export type RoleKind = 'player' | 'class' | 'monster' | 'npc'
 
+/**
+ * NPC 通配键（V2.4 裁决 66）：`role.npcs` / `portraits.npcs` 里没配精确 `name` 时，退而取这个键。
+ * 是**分组内**的兜底，不跨组借用（不会去借 `monsters` / `classes` 的图）。
+ */
+export const NPC_WILDCARD = '*'
+
 /** 取棋子形象；`player` 忽略 `id`，其余分组按 `id` 查表且不跨组借用 */
 export function roleSprite(
   role: SkinRole | undefined,
@@ -55,7 +63,9 @@ export function roleSprite(
 ): SkinSprite | undefined {
   if (!role) return undefined
   if (kind === 'player') return role.player
-  const group = kind === 'class' ? role.classes : kind === 'monster' ? role.monsters : role.npcs
+  // NPC：键是 `name`（不是组件 `id`）＋ 通配 `"*"`；命中不到即 `undefined`（对话弹层据此回退 emoji）
+  if (kind === 'npc') return id === undefined ? undefined : role.npcs?.[id] ?? role.npcs?.[NPC_WILDCARD]
+  const group = kind === 'class' ? role.classes : role.monsters
   return id === undefined ? undefined : group?.[id]
 }
 
@@ -74,8 +84,9 @@ export function portraitOf(
   if (!ps) return undefined
   if (kind === 'player') return ps.player
   if (kind === 'class') return (id === undefined ? undefined : ps.classes?.[id]) ?? ps.player
-  const group = kind === 'monster' ? ps.monsters : ps.npcs
-  return id === undefined ? undefined : group?.[id]
+  // NPC：键是 `name` ＋ 通配 `"*"`；命中不到即 `undefined`（**不**回退 emoji，§4.3）
+  if (kind === 'npc') return id === undefined ? undefined : ps.npcs?.[id] ?? ps.npcs?.[NPC_WILDCARD]
+  return id === undefined ? undefined : ps.monsters?.[id]
 }
 
 /** 取道具皮肤（键为组件 `id`） */

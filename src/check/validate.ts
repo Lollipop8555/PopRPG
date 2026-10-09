@@ -25,6 +25,7 @@ import { checkAnalysis } from '../engine/event'
 import { resolveItemPool, resolveMonsterPool } from '../engine/pool'
 import { makePlayerUnit } from '../engine/units'
 import { skillSources, referenceIdsOf, componentsWithTag, npcIdsOf } from '../lib/refs'
+import { hasAnyNpc, resolveSlots, slotCap } from '../lib/npcSlots'
 import { hitCoverage, listPoints } from '../lib/dialog'
 import { poolIssues } from './poolValidate'
 import { SECTIONS } from '../lib/sections'
@@ -555,43 +556,91 @@ export function validateProject(library: Library, project: Project): Issue[] {
         })
       }
 
-      /* —— NPC（§4.9.3 / §5.7）：挂在建筑实例上，与 `encounter` 正交 —— */
+      /* —— NPC 槽位（§4.9.3 / §5.7）：挂在建筑实例上，与 `encounter` 正交 —— */
       if (node.type !== 'building') continue
-      const instanceNpcs = (node.npcs ?? []).filter((id) => npcsById.has(id))
       const def = node.ref ? (exists.get(node.ref)?.def as BuildingDef | undefined) : undefined
+      const slots = resolveSlots(node)
+      const instanceNpcs = slots.flatMap((slot) => slot.ids).filter((id) => npcsById.has(id))
 
-      /** K3：实例 `npcs` 指向的 NPC 必须在库里存在（**无「启用」要求**） */
-      for (const npcId of node.npcs ?? []) {
-        if (npcsById.has(npcId)) continue
-        issues.push({
-          key: 'K3',
-          severity: 'error',
-          title: `(${node.x}, ${node.y}) 引用了不存在的 NPC ${npcId}`,
-          detail: '这位 NPC 被删掉了 —— 换一位，或者把它从实例上摘掉。',
-          mapId: map.id,
-          mapName: map.name,
-          cell: [node.x, node.y],
-          componentId: npcId,
-        })
-      }
-
-      /** K16：实例 `dialog.mod` 的方案名必须在候选 NPC 的 `dialogs` 里（导出**不剔除**，运行时跳过对话） */
-      const plan = node.dialog?.mod
-      if (plan) {
-        const hit = instanceNpcs.some((id) => Boolean(npcsById.get(id)?.dialogs?.[plan]))
-        if (!hit) {
+      /** K3：各槽 `ids` 指向的 NPC 必须在库里存在（**无「启用」要求**） */
+      for (const slot of slots) {
+        for (const npcId of slot.ids) {
+          if (npcsById.has(npcId)) continue
           issues.push({
-            key: 'K16',
+            key: 'K3',
             severity: 'error',
-            title: `(${node.x}, ${node.y}) 的对话方案「${plan}」不存在`,
-            detail: instanceNpcs.length > 0
-              ? '这些 NPC 都没有这个名字的方案 —— 换一个方案（留空则由骰子抽一套）。导出时不剔除该字段，运行时直接跳过对话、当这个实例没有 NPC。'
-              : '这个实例没配 NPC，写下的 `dialog` 没人能接 —— 先挂上 NPC（留空则由骰子抽一套）。',
+            title: `(${node.x}, ${node.y}) 槽 ${slot.slotN} 引用了不存在的 NPC ${npcId}`,
+            detail: '这位 NPC 被删掉了 —— 换一位，或者把它从该槽里摘掉。',
             mapId: map.id,
             mapName: map.name,
             cell: [node.x, node.y],
+            componentId: npcId,
           })
         }
+      }
+
+      /** K16：该槽 `dialog.mod` 的方案名必须在**该槽候选 NPC**的 `dialogs` 里（导出**不剔除**，运行时该槽跳过对话） */
+      for (const slot of slots) {
+        const plan = slot.mod
+        if (!plan) continue
+        const hit = slot.ids.some((id) => Boolean(npcsById.get(id)?.dialogs?.[plan]))
+        if (hit) continue
+        issues.push({
+          key: 'K16',
+          severity: 'error',
+          title: `(${node.x}, ${node.y}) 槽 ${slot.slotN} 的对话方案「${plan}」不存在`,
+          detail: slot.ids.length > 0
+            ? '这槽的候选 NPC 都没有这个名字的方案 —— 换一个方案（留空则由骰子抽一套）。导出时不剔除该字段，运行时该槽直接跳过对话、同实例其它槽照常。'
+            : '这个槽没配 NPC，写下的 `dialog` 没人能接 —— 先给它挂上 NPC（留空则由骰子抽一套）。',
+          mapId: map.id,
+          mapName: map.name,
+          cell: [node.x, node.y],
+        })
+      }
+
+      /** K38：槽位数 > `w × h` —— 多出的槽无格可落（只提示、不阻塞；运行时只取前 `w × h` 个） */
+      const cap = slotCap(node)
+      if ((node.npcs ?? []).length > cap) {
+        issues.push({
+          key: 'K38',
+          severity: 'error',
+          title: `(${node.x}, ${node.y}) 槽位数超过建筑格数`,
+          detail: `这个实例有 ${(node.npcs ?? []).length} 个槽，但建筑只有 ${node.w ?? 1}×${node.h ?? 1}＝${cap} 格 —— 超出的槽没有落点格可用。运行时只取前 ${cap} 个槽。`,
+          mapId: map.id,
+          mapName: map.name,
+          cell: [node.x, node.y],
+          componentId: def?.id,
+          componentKind: def ? 'building' : undefined,
+          section: def ? componentSection('building', def) : undefined,
+        })
+      }
+
+      /** K39：某槽 `at` 越界（只提示、不阻塞；运行时落回缺省格） */
+      for (const slot of slots) {
+        if (!slot.outOfRange) continue
+        issues.push({
+          key: 'K39',
+          severity: 'error',
+          title: `(${node.x}, ${node.y}) 槽 ${slot.slotN} 的落点格越界`,
+          detail: `落点格超出建筑自身格坐标系（应落在 0 ≤ x < ${node.w ?? 1}、0 ≤ y < ${node.h ?? 1}）—— 运行时落回缺省格。`,
+          mapId: map.id,
+          mapName: map.name,
+          cell: [node.x, node.y],
+        })
+      }
+
+      /** K40：同实例两槽 `at` 相同（NPC 之间不重叠；只提示、不阻塞，运行时保留先声明者） */
+      for (const slot of slots) {
+        if (!slot.duplicateAt) continue
+        issues.push({
+          key: 'K40',
+          severity: 'error',
+          title: `(${node.x}, ${node.y}) 槽 ${slot.slotN} 的落点格与其它槽重复`,
+          detail: 'NPC 之间不能重叠（玩家与 NPC 可以重叠）—— 运行时保留先声明的槽、这个槽落回缺省格。给这个槽换一格，或直接拖动画布上的槽位标记。',
+          mapId: map.id,
+          mapName: map.name,
+          cell: [node.x, node.y],
+        })
       }
 
       /** K14：说了要对话，却没配人 */
@@ -622,7 +671,7 @@ export function validateProject(library: Library, project: Project): Issue[] {
     const size = def.reward_pool ? resolveItemPool(library, enabledIds, def.reward_pool).length : 0
     if (size > 0) continue
     const hasNpc = project.maps.some((m) =>
-      m.nodes.some((n) => n.type === 'building' && n.ref === def.id && (n.npcs?.length ?? 0) > 0),
+      m.nodes.some((n) => n.type === 'building' && n.ref === def.id && hasAnyNpc(n)),
     )
     if (hasNpc) continue
     issues.push({

@@ -13,6 +13,7 @@ import type { MapNode } from '../types'
 import { isMapPiece } from '../types'
 import { boxCells, nodeAt, nodeCells, nodeKey, orthPath, centerCamera } from '../lib/map'
 import { findComponent } from '../lib/refs'
+import { resolveSlots, slotColor, slotWorldAt } from '../lib/npcSlots'
 import { useLibraryStore } from '../store/library'
 import { useProjectStore } from '../store/project'
 import { beginBatch, commit } from '../store/commit'
@@ -24,7 +25,7 @@ import { fallbackColor, withAlpha } from '../lib/color'
 const MIN_ZOOM = 16
 const MAX_ZOOM = 96
 
-type DragKind = 'none' | 'pan' | 'paint' | 'paintRect' | 'erase' | 'move' | 'resize' | 'box' | 'link'
+type DragKind = 'none' | 'pan' | 'paint' | 'paintRect' | 'erase' | 'move' | 'resize' | 'box' | 'link' | 'slot'
 
 export default function Canvas() {
   const project = useProjectStore()
@@ -39,6 +40,8 @@ export default function Canvas() {
     lastScreen: [number, number]
     node?: MapNode
     dir?: ResizeDir
+    /** slot：正在拖动的槽位号（§5.6 裁决 65，改该槽 `at`） */
+    slotN?: number
     painted?: Set<string>
     /** paintRect：拖拽起点格（建筑被定义成一个节点，用矩形拖出 w/h） */
     rectAnchor?: { x: number; y: number }
@@ -140,6 +143,14 @@ export default function Canvas() {
     switch (mode) {
       case 'select': {
         if (hit) {
+          // 先看有没有抓到某个**槽位标记**（§5.6 裁决 65）：抓到 → 拖动改该槽的 `at`（一步撤销）
+          const grabbed = hit.type === 'building' ? grabbedSlot(hit, cell) : undefined
+          if (grabbed !== undefined) {
+            ui.selectNode(nodeKey(hit.x, hit.y))
+            dragRef.current = { kind: 'slot', lastScreen: [e.clientX, e.clientY], node: hit, slotN: grabbed }
+            beginBatch()
+            break
+          }
           ui.selectNode(nodeKey(hit.x, hit.y))
           const [fx, fy] = fractionInCell(e, cell)
           const dir = hit.type === 'building' ? getResizeDir(hit, cell, fx, fy) : null
@@ -237,6 +248,11 @@ export default function Canvas() {
     }
     if (drag.kind === 'erase') {
       eraseAt(cell)
+      return
+    }
+    if (drag.kind === 'slot' && drag.node && drag.slotN !== undefined) {
+      const [dx, dy] = [cell[0] - drag.node.x, cell[1] - drag.node.y]
+      moveSlotTo(drag.node, drag.slotN, dx, dy)
       return
     }
     if ((drag.kind === 'move' || drag.kind === 'resize') && drag.node) {
@@ -469,6 +485,20 @@ export default function Canvas() {
                   {def.name}
                 </text>
               )}
+              {node.type === 'building' &&
+                resolveSlots(node).map((slot) => {
+                  const [cx, cy] = slotCenter(node, slot.at, toScreen, camera.zoom)
+                  const r = Math.max(4, camera.zoom * 0.16)
+                  const color = slotColor(slot.slotN)
+                  return (
+                    <g key={`slot${slot.slotN}`} style={{ cursor: 'grab' }}>
+                      <circle cx={cx} cy={cy} r={r} fill="var(--paper-card)" stroke={color} strokeWidth={2} />
+                      <text x={cx} y={cy + r * 0.42} fontSize={Math.max(8, r * 1.1)} textAnchor="middle" fill={color} fontWeight="bold">
+                        {slot.slotN}
+                      </text>
+                    </g>
+                  )
+                })}
               {node.ref && !findComponent(library, node.ref) && (
                 <rect x={sx + 1} y={sy + 1} width={w - 2} height={h - 2} fill="none" stroke="var(--red)" strokeWidth={2} strokeDasharray="3 2" />
               )}
@@ -530,6 +560,41 @@ export default function Canvas() {
       </div>
     </div>
   )
+}
+
+/* ------------------------------------------------------------------ */
+/* 槽位标记（§5.6 裁决 65）：画在**生效落点**格，可直接拖动改 `at`         */
+/* ------------------------------------------------------------------ */
+
+/** 生效落点格中心（屏幕坐标）：建筑自身格坐标 `(at[0], at[1])` × 格宽 */
+function slotCenter(node: MapNode, at: [number, number], toScreen: (wx: number, wy: number) => [number, number], zoom: number): [number, number] {
+  const [sx, sy] = toScreen(node.x + at[0], node.y + at[1])
+  return [sx + zoom / 2, sy + zoom / 2]
+}
+
+/** 光标下的世界格是否落在某槽的**生效落点**上 → 该槽号（没有 → `undefined`） */
+function grabbedSlot(node: MapNode, cell: [number, number]): number | undefined {
+  const hit = resolveSlots(node).find((s) => {
+    const [wx, wy] = slotWorldAt(node, s.at)
+    return wx === cell[0] && wy === cell[1]
+  })
+  return hit?.slotN
+}
+
+/**
+ * 把某槽的落点改成 `(dx, dy)`（**建筑自身格坐标**，越界 → 回弹不写）。
+ * 拖到被占格也允许写入 —— `K40` 由运行时按"先声明者优先"落回缺省格并标红（§5.7）。
+ */
+function moveSlotTo(node: MapNode, slotN: number, dx: number, dy: number) {
+  const w = Math.max(1, node.w ?? 1)
+  const h = Math.max(1, node.h ?? 1)
+  if (dx < 0 || dx >= w || dy < 0 || dy >= h) return // 越界回弹
+  const slots = node.npcs ?? []
+  if (!slots[slotN]) return
+  const cur = slots[slotN].at
+  if (cur && cur[0] === dx && cur[1] === dy) return
+  const next = slots.map((slot, i) => (i === slotN ? { ...slot, at: [dx, dy] as [number, number] } : slot))
+  useProjectStore.getState().updateNodeSlots(node.x, node.y, next)
 }
 
 type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'

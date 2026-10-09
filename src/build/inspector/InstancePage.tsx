@@ -4,10 +4,11 @@
  * 引用悬空（组件被删了）→ 标红并给快捷修复。
  */
 
-import type { MapNode, NodeType, NpcDef } from '../../types'
+import type { MapNode, NodeType, NpcDef, NpcSlot } from '../../types'
 import { nodeAt } from '../../lib/map'
 import { findComponent } from '../../lib/refs'
 import { diceFaces } from '../../lib/dialog'
+import { resolveSlots, slotCap, slotColor, slotIds, type ResolvedSlot } from '../../lib/npcSlots'
 import { useLibraryStore } from '../../store/library'
 import { useProjectStore } from '../../store/project'
 import { commit } from '../../store/commit'
@@ -141,8 +142,11 @@ export default function InstancePage() {
 }
 
 /**
- * 建筑实例专有 · NPC / 对话（§5.6 实例页 / §4.9.3）——
- * **任何建筑都能挂**（`npcs` 与 `encounter` 正交）；对话在「进入建筑后、建筑事件前」执行。
+ * 建筑实例专有 · NPC **槽位列表**（§5.6 实例页 / §4.9.3 / V2.4 裁决 65）——
+ * **任何建筑都能挂**（`npcs` 与 `encounter` 正交）；槽号 ＝ 声明序（`slot0` / `slot1`…）。
+ *
+ * 每槽独立配置：候选池（`ids`，1 位固定 / 多位掷 `talk.dice` 等权抽一位 / 空留空）＋ 方案（`dialog.mod`）
+ * ＋ 落点 `at`（画布上可直接拖动，此处只读显示生效落点）。槽位数到 `w × h` 上限后 `[＋ 槽位]` 禁用。
  */
 function NpcBlock({
   node,
@@ -153,36 +157,109 @@ function NpcBlock({
   patch: (part: Partial<MapNode>) => void
   mapName: string
 }) {
-  const library = useLibraryStore()
   const project = useProjectStore()
   const talkDice = project.rules.talk.dice
-  const def = node.ref ? library.buildings.find((b) => b.id === node.ref) : undefined
-  const ids = node.npcs ?? []
-  const alive = ids
-    .map((id) => library.npcs.find((n) => n.id === id))
-    .filter((n): n is NpcDef => Boolean(n))
+  const slots: NpcSlot[] = node.npcs ?? []
+  const resolved = resolveSlots(node)
+  const cap = slotCap(node)
 
-  /** `dialog` 下拉的候选 ＝ 所选 NPC 的**全部方案**（去重，保持书写顺序） */
+  const writeSlots = (next: NpcSlot[]) => patch({ npcs: next.length > 0 ? next : undefined })
+  const setSlot = (i: number, part: Partial<NpcSlot>) => writeSlots(slots.map((s, j) => (j === i ? { ...s, ...part } : s)))
+  const removeSlot = (i: number) => writeSlots(slots.filter((_, j) => j !== i))
+  const addSlot = () => {
+    if (slots.length >= cap) return
+    writeSlots([...slots, { ids: [] }])
+  }
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div className="panel-title hand" style={{ fontSize: 13 }}>
+        NPC / 对话（{slots.length} / {cap} 槽）
+      </div>
+
+      {slots.length === 0 && <div className="faint">没有槽位 —— 这个建筑不触发 NPC 对话，只运行自身的建筑事件。</div>}
+
+      {slots.map((slot, i) => (
+        <SlotRow
+          key={i}
+          slotN={i}
+          slot={slot}
+          resolved={resolved[i]}
+          node={node}
+          mapName={mapName}
+          talkDice={talkDice}
+          onChange={(part) => setSlot(i, part)}
+          onRemove={() => removeSlot(i)}
+        />
+      ))}
+
+      <button className="btn small" disabled={slots.length >= cap} onClick={addSlot} style={{ marginTop: 4 }}>
+        ＋ 槽位
+      </button>
+      {slots.length >= cap && (
+        <div className="faint">已达上限（`w × h` = {cap}）—— 想加槽就先放大建筑，或删掉一个槽。</div>
+      )}
+
+      {slots.length === 0 && node.ref && project.maps.length > 0 && <TalkEncounterHint node={node} />}
+    </div>
+  )
+}
+
+/** `talk` 行为却没配任何槽位 → 与校验 K14 同源的提示 */
+function TalkEncounterHint({ node }: { node: MapNode }) {
+  const library = useLibraryStore()
+  const def = node.ref ? library.buildings.find((b) => b.id === node.ref) : undefined
+  if (def?.encounter !== 'talk') return null
+  return (
+    <div className="hintbox warn">
+      这个建筑<b>没有对话</b> —— 要么加一个槽位、挂上 NPC，要么把行为改回 `empty`（§4.9.3）。
+    </div>
+  )
+}
+
+/** 一个槽位行：槽号色点 ＋ 候选池 ＋ 方案 ＋ 落点 ＋ 一次性对话预设 */
+function SlotRow({
+  slotN,
+  slot,
+  resolved,
+  node,
+  mapName,
+  talkDice,
+  onChange,
+  onRemove,
+}: {
+  slotN: number
+  slot: NpcSlot
+  resolved: ResolvedSlot | undefined
+  node: MapNode
+  mapName: string
+  talkDice: string
+  onChange: (part: Partial<NpcSlot>) => void
+  onRemove: () => void
+}) {
+  const library = useLibraryStore()
+  const project = useProjectStore()
+  const color = slotColor(slotN)
+  const ids = slotIds(slot)
+  const alive = ids.map((id) => library.npcs.find((n) => n.id === id)).filter((n): n is NpcDef => Boolean(n))
+
+  /** 该槽方案的候选 ＝ 该槽各候选 NPC 的方案并集（去重，保持书写顺序） */
   const plans = [...new Set(alive.flatMap((n) => Object.keys(n.dialogs ?? {})))]
-  const plan = node.dialog?.mod
+  const plan = slot.dialog?.mod
   const dangling = !!plan && !plans.includes(plan)
   const faces = diceFaces(talkDice)
 
-  const setIds = (next: string[]) => patch({ npcs: next.length > 0 ? next : undefined })
+  const setIds = (next: string[]) => onChange({ ids: next })
+  /** 写该槽 `dialog`（§4.9.3）：只剩「这一套方案」（`retalk` 已退役）。空 → 该字段不写。 */
+  const setPlan = (mod: string) => onChange({ dialog: mod ? { mod } : undefined })
 
-  /** 写 `dialog`（§4.9.3）：**只剩「这一套方案」**（`retalk` 已退役，§十一 / 裁决 54）。空 → 整个字段不写。 */
-  const setPlan = (mod: string) => patch({ dialog: mod ? { mod } : undefined })
-
-  /* —— 一次性对话预设（§6.7 / 裁决 61）——
-   * 只在「单一候选 ＋ 写死方案 ＋ 方案存在 ＋ 首层非空」时可套用：此时才能把
-   * `engine-roll.mod.*` 的三段（实例 key / npcId / modId）在勾选时填实。多候选 / 留空 → 走作者自定义。 */
+  /* —— 一次性对话预设（§6.7 / 裁决 61）—— 只在该槽「单一候选 ＋ 写死方案 ＋ 方案存在 ＋ 首层非空」时可套用 */
   const npc = alive[0]
   const onceOk = alive.length === 1 && !!npc && !!plan && !dangling && (npc.dialogs[plan as string]?.length ?? 0) > 0
   const onceKey = onceOk ? onceRollModKey(mapName, node, npc!.id, plan as string) : ''
   const onceTpl = onceOk ? findOnceCond(project.conds, onceKey) : undefined
   const onceOn = !!onceTpl && rootFirstIfName(npc, plan as string) === onceTpl.name
 
-  /** 勾选 → 挂模板 ＋ 写首层 `if`；取消 → 只撤首层 `if`（模板留给「状态池」面板处理）。同一 `commit` ＝ 一步撤销。 */
   const toggleOnce = (on: boolean) => {
     if (!onceOk) return
     const nid = npc!.id
@@ -215,9 +292,9 @@ function NpcBlock({
 
   const note =
     ids.length === 0
-      ? '这个建筑不触发对话，只运行自身的建筑事件。'
+      ? '这一槽留空（不抽、不触发对话）。'
       : ids.length === 1
-        ? '只有一位候选，不掷骰，必定遇到该 NPC。'
+        ? '只有一位候选，不掷骰，必定站定该 NPC。'
         : faces === null
           ? `掷 ${talkDice} 等权抽一位（对话骰写法有误，请在规则面板改为如 1D6）。`
           : faces < ids.length
@@ -227,13 +304,20 @@ function NpcBlock({
               }。`
 
   return (
-    <div style={{ marginTop: 8 }}>
-      <div className="panel-title hand" style={{ fontSize: 13 }}>
-        NPC / 对话
+    <div style={{ marginTop: 8, paddingLeft: 8, borderLeft: `3px solid ${color}` }}>
+      <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+        <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, display: 'inline-block' }} />
+        <span className="hand">槽 {slotN}</span>
+        <span className="faint" style={{ marginLeft: 'auto' }}>
+          落点 {resolved ? `(${resolved.at[0]}, ${resolved.at[1]})` : '—'}
+        </span>
+        <button className="btn small danger" onClick={onRemove}>
+          删除该槽
+        </button>
       </div>
 
       {ids.map((id, i) => (
-        <Field key={`${id}-${i}`} label={`第 ${i + 1} 位`}>
+        <Field key={`${id}-${i}`} label={`候选 ${i + 1}`}>
           <div className="row" style={{ gap: 4 }}>
             <SelectBox
               value={id}
@@ -243,7 +327,7 @@ function NpcBlock({
               ]}
               onChange={(v) => setIds(ids.map((old, j) => (j === i ? v : old)).filter(Boolean))}
             />
-            <button className="btn small danger" onClick={() => setIds(ids.filter((_, j) => j !== i))}>
+            <button className="btn small" onClick={() => setIds(ids.filter((_, j) => j !== i))}>
               删
             </button>
           </div>
@@ -257,25 +341,30 @@ function NpcBlock({
           if (free) setIds([...ids, free.id])
         }}
       >
-        ＋ 加一位 NPC
+        ＋ 候选
       </button>
 
       <div className="faint" style={{ marginTop: 4 }}>
         {note}
       </div>
 
-      {ids.length === 0 && def?.encounter === 'talk' && (
+      {resolved?.outOfRange && (
         <div className="hintbox warn">
-          这个建筑<b>没有对话</b> —— 要么加 NPC，要么把行为改回 `empty`（§4.9.3）。
+          K39：这一槽的落点越界了 —— 运行时已落回缺省格 ({resolved.at[0]}, {resolved.at[1]})。在画布上把标记拖回建筑内即可。
+        </div>
+      )}
+      {resolved?.duplicateAt && (
+        <div className="hintbox warn">
+          K40：这一槽的落点与前面的槽重复 —— 运行时保留先声明的槽、这一槽落回缺省格 ({resolved.at[0]}, {resolved.at[1]})。
         </div>
       )}
 
       <Field
-        label="这一套对话方案"
+        label="这一槽的对话方案"
         hint={
           plans.length === 1 && !dangling
             ? '只有一套方案，必定用它。'
-            : '留空 ＝ 由骰子选一套；写死某个方案名 ＝ 不掷骰。'
+            : '留空 ＝ 由骰子抽一套；写死某个方案名 ＝ 不掷骰。'
         }
       >
         <SelectBox
@@ -290,7 +379,8 @@ function NpcBlock({
 
       {dangling && (
         <div className="hintbox error">
-          「{plan}」这个方案不存在 —— 换一个，或者留空由骰子抽。导出时**不会**剔除这个字段，运行时直接跳过对话、当这个实例没有 NPC。
+          「{plan}」这个方案不在该槽所抽到的 NPC 的方案里 —— **这一槽**运行时直接跳过对话（同实例其它槽照常）。
+          导出时**不会**剔除这个字段。换一个，或者留空由骰子抽。
         </div>
       )}
 
@@ -302,7 +392,7 @@ function NpcBlock({
         label="一次性对话"
         hint={
           !onceOk
-            ? '只在「单一候选 ＋ 写死一套方案（且方案存在、首层非空）」时可套用；多候选 / 留空由骰子抽时请改用「判定模板 ＋ if」自定义（§6.7）。'
+            ? '只在「该槽单一候选 ＋ 写死一套方案（且方案存在、首层非空）」时可套用；多候选 / 留空由骰子抽时请改用「判定模板 ＋ if」自定义（§6.7）。'
             : onceOn
               ? '首次进入走 `if` 分支（带 `give` 就会给一次）；再次进入走同层的无 `if` 记录 ＝ `else`。取消勾选只撤回首层 `if`，模板留给「状态池」面板处理。'
               : '勾选 → 生成一条「mod 一次性」判定模板（条件 ＝ `engine-roll.mod.*` 尚未为 `true`）＋ 写到首层第一条的 `if`。'
@@ -312,16 +402,9 @@ function NpcBlock({
           checked={onceOn}
           disabled={!onceOk}
           onChange={toggleOnce}
-          label={onceOn ? '这套方案只说一次' : onceOk ? '套用「一次性对话」' : '（当前不可套用）'}
+          label={onceOn ? '这一槽方案只说一次' : onceOk ? '套用「一次性对话」' : '（当前不可套用）'}
         />
       </Field>
-
-      <div className="faint">
-        先抽人、再抽方案，两次各掷一次骰子；<b>进入建筑时</b>抽定，整场不变（§4.9.3）。
-      </div>
-      <div className="faint">
-        只在<b>从建筑外踏入</b>时触发一次，在建筑内部走动不再触发。<b>重入不再弹任何选项框</b>（§6.7 / 裁决 54 / 61）——每次进入都从根节点按当前状态池重求值；要「只说一次」就用上面的「一次性对话」。
-      </div>
     </div>
   )
 }

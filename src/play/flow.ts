@@ -14,6 +14,7 @@ import { tickStates } from '../engine/state'
 import type { EncounterState, Session } from '../types/session'
 import { cellKey, currentMap, log, logs, neighbors, nodeAtCell, recordRoll, roll, statLabel, syncPlayer } from './kit'
 import { beginBuilding } from './encounter'
+import { talkAtSlot } from './talk'
 import { applyEngineToSession, bumpSteps, runRoundChecks, seedPool, syncEngineVars, testCheckRef } from './pool'
 
 /* ------------------------------------------------------------------ */
@@ -285,11 +286,16 @@ export function stepTo(s: Session, cell: [number, number], rng?: Rng): StepResul
     next = log(next, '抵达终点，本张地图完成', 'good')
     return { session: advanceMap(next), moved: true }
   }
-  // 建筑：只在**从外部踏入**这一座时结算遭遇；已在同一座内部换格 → 只是普通移动（可以随便走）
-  if (node.type === 'building' && found?.kind === 'building' && !insideSameBuilding) {
+  // 建筑（§4.8.12 / 裁决 64）：
+  // - **从外部踏入**这一座 → 触发 ① 一次性抽定全部槽位 ＋ 可能的落点格对话 ＋ 该建筑的 `encounter`（只一次）
+  // - 已在同一座内部换格 → 不重复抽定 / encounter，但**踩到某槽落点格仍触发该槽对话**（每次踩到都触发）
+  if (node.type === 'building' && found?.kind === 'building') {
     const building = found.def as BuildingDef
-    // 进入建筑：① NPC 触发与对话 → ② 该建筑的 `encounter`（要掷骰的会停在等待态，§4.8.12 / §7.2）
-    return { session: endMoveIfStuck(beginBuilding(next, building, cell, rng)), moved: true }
+    if (!insideSameBuilding) {
+      return { session: endMoveIfStuck(beginBuilding(next, building, cell, rng)), moved: true }
+    }
+    const talking = talkAtSlot(next, building, cell, rng)
+    return { session: endMoveIfStuck(talking ?? next), moved: true }
   }
   return { session: endMoveIfStuck(next), moved: true }
 }

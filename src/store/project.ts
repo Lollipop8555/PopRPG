@@ -15,6 +15,7 @@ import {
   type PoolRoundCheck,
   type PoolVar,
   type Project,
+  type NpcSlot,
   type Rules,
 } from '../types'
 import { newMapId } from '../lib/ids'
@@ -45,6 +46,8 @@ export interface ProjectStore extends Project {
   setNodeSize: (mapId: string, x: number, y: number, w: number, h: number) => void
   setNodeRect: (mapId: string, fromX: number, fromY: number, x: number, y: number, w: number, h: number) => void
   placeMarker: (mapId: string, type: 'start' | 'end', x: number, y: number) => void
+  /** 就地改写某建筑节点的**槽位表**（§5.6 裁决 65，画布拖动槽位落点用；一步撤销由调用方 `beginBatch` 负责） */
+  updateNodeSlots: (x: number, y: number, npcs: NpcSlot[]) => void
 }
 
 /**
@@ -211,6 +214,14 @@ export const useProjectStore = create<ProjectStore>()(
 
       placeMarker: (mapId, type, x, y) =>
         set((s) => ({ maps: updateMap(s.maps, mapId, (m) => setMarker(m, type, x, y)) })),
+
+      updateNodeSlots: (x, y, npcs) =>
+        set((s) => ({
+          maps: s.maps.map((m) => ({
+            ...m,
+            nodes: m.nodes.map((n) => (n.x === x && n.y === y ? { ...n, npcs: npcs.length > 0 ? npcs : undefined } : n)),
+          })),
+        })),
     }),
     {
       name: 'poprpg_project',

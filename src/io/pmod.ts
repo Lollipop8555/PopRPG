@@ -22,7 +22,8 @@ import {
 } from '../types'
 import { emptyLibrary } from '../types'
 import { npcIdsOf, referenceIdsOf } from '../lib/refs'
-import { normalizeNpc, normalizeNodeDialog } from '../lib/dialog'
+import { normalizeNpc, normalizeNodeDialog, normalizeNpcSlots } from '../lib/dialog'
+import { defaultSlotCell } from '../lib/npcSlots'
 import { normalizeGatePool, normalizePoolSection, poolSectionToYaml } from '../lib/poolRefs'
 import { newMapId } from '../lib/ids'
 
@@ -179,6 +180,23 @@ function ensureBackground(library: Library, used: Library): void {
 /* ② 序列化                                                            */
 /* ------------------------------------------------------------------ */
 
+/**
+ * 读入 `.pmod` 地图节点时的**宽松原始形状**（导入容错用）：
+ * `npcs` 既可能是**新形态**槽位数组、也可能是**旧包**裸 id 数组；
+ * `dialog` 是**已退役**的节点级字段（仍在旧包里出现）。
+ * 全部交给 [`normalizeNpcSlots()`](../lib/dialog.ts) 归一（§4.9.3 V2.4 裁决 62）。
+ */
+interface RawMapNode {
+  x: number
+  y: number
+  type: GameMap['nodes'][number]['type']
+  ref?: string
+  w?: number
+  h?: number
+  npcs?: unknown
+  dialog?: unknown
+}
+
 function yamlBlock(value: unknown): string {
   const text = typeof value === 'string' ? value : dump(value, { lineWidth: 9999, noRefs: true })
   return '```yaml\n' + (text.endsWith('\n') ? text : `${text}\n`) + '```\n'
@@ -194,11 +212,22 @@ function serializeNodes(map: GameMap): unknown {
       if ((n.w ?? 1) > 1) row.w = n.w
       if ((n.h ?? 1) > 1) row.h = n.h
       // NPC 只挂在**建筑实例**上（§4.9.3）：同一栋建筑铺到多格可以遇到不同的人
-      if (n.type === 'building') {
-        if (n.npcs && n.npcs.length > 0) row.npcs = n.npcs
-        // `dialog` 只剩 `{ mod }`（`retalk` 已退役，§十一 / 裁决 54）：为空就不写
-        const dialog = normalizeNodeDialog(n.dialog)
-        if (dialog) row.dialog = dialog
+      if (n.type === 'building' && n.npcs && n.npcs.length > 0) {
+        // **V2.4（裁决 62）**：写**槽位数组** —— 每槽 `ids` ＋ 可选 `dialog` / `at`；
+        // `at` 仅在**不等于该槽缺省格**时写出（缺省格按声明序「先 y 后 x 字典序」推）。
+        // `nodes` 上不再写**节点级 `dialog`**（已退役，方案落在各槽位的 `dialog`）。
+        row.npcs = n.npcs.map((slot, i) => {
+          const out: Record<string, unknown> = { ids: (slot.ids ?? []).map((id) => String(id)) }
+          const dialog = normalizeNodeDialog(slot.dialog)
+          if (dialog) out.dialog = dialog
+          if (slot.at) {
+            const dx = Math.floor(slot.at[0])
+            const dy = Math.floor(slot.at[1])
+            const def = defaultSlotCell(i, n.w ?? 1, n.h ?? 1)
+            if (dx !== def[0] || dy !== def[1]) out.at = [dx, dy]
+          }
+          return out
+        })
       }
       return row
     }),
@@ -449,7 +478,9 @@ export function parsePmod(raw: string): ParsedPmod {
         }
       } else if (section === 'maps') {
         const { value } = pullYaml(lines, i + 1, end)
-        const loaded = safeLoad<{ start?: [number, number]; end?: [number, number]; nodes?: GameMap['nodes'] } | null>(
+        // 读入的原文**未经归一**：`npcs` 可能是旧包裸数组、`dialog` 为已退役的节点级字段，
+        // 因此这里用宽松的原始形状，交给下面的归一逻辑处理（§4.9.3 V2.4 裁决 62）。
+        const loaded = safeLoad<{ start?: [number, number]; end?: [number, number]; nodes?: RawMapNode[] } | null>(
           value,
           null,
           warn,
@@ -468,14 +499,15 @@ export function parsePmod(raw: string): ParsedPmod {
                   warn(`(${n.x}, ${n.y}) 的 ${n.type} 不该有大小，已按 1×1 处理`)
                   return { x: n.x, y: n.y, type: n.type, ref: n.ref }
                 }
-                // NPC 只挂在建筑实例上（§4.9.3）：挂在别处的一律剔除并提示
-                // `dialog` 是对象 `{ mod }`；旧包写的是**裸方案名**，在这里升级成对象（`retalk` 一并不再产出）
-                let npcs = n.npcs
-                let dialog = normalizeNodeDialog(n.dialog)
-                if (n.type !== 'building' && ((n.npcs?.length ?? 0) > 0 || dialog)) {
+                // NPC 只挂在建筑实例上（§4.9.3）：挂在别处的一律剔除并提示。
+                // **V2.4（裁决 62）**：`npcs` 归一为**槽位数组** —— 旧包 `npcs: [a, b]`（裸 id 数组）
+                // 升级为**一个槽位** `[ { ids: [a, b] } ]`；节点级 `dialog` 单槽并入 / 多槽丢弃并提示。
+                const { slots: normalized, notes } = normalizeNpcSlots(n.npcs, n.dialog)
+                for (const note of notes) warn(`(${n.x}, ${n.y}) ${note}`)
+                let npcs = normalized
+                if (n.type !== 'building' && (normalized.length > 0 || n.dialog)) {
                   warn(`(${n.x}, ${n.y}) 的 ${n.type} 不该带 NPC —— NPC 只挂在建筑实例上，已忽略`)
-                  npcs = undefined
-                  dialog = undefined
+                  npcs = []
                 }
                 const size = (v: number | undefined) => Math.max(1, Math.trunc(v ?? 1))
                 return {
@@ -485,8 +517,7 @@ export function parsePmod(raw: string): ParsedPmod {
                   ref: n.ref,
                   w: n.type === 'building' ? size(n.w) : undefined,
                   h: n.type === 'building' ? size(n.h) : undefined,
-                  npcs: npcs && npcs.length > 0 ? npcs.map((id) => String(id)) : undefined,
-                  dialog,
+                  npcs: n.type === 'building' && npcs.length > 0 ? npcs : undefined,
                 }
               }),
           })

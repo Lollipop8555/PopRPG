@@ -7,7 +7,7 @@
 
 import { diceMax, parseDice } from '../engine/dice'
 import { normalizeCheckRef, normalizeEffects } from './poolRefs'
-import type { DialogNode, NodeDialog, NpcDef } from '../types'
+import type { DialogNode, NodeDialog, NpcDef, NpcSlot } from '../types'
 
 /* ------------------------------------------------------------------ */
 /* 命中区间与覆盖率                                                     */
@@ -233,6 +233,68 @@ export function normalizeNodeDialog(raw: unknown): NodeDialog | undefined {
   const mod = typeof loose.mod === 'string' && loose.mod.trim() !== '' ? loose.mod.trim() : undefined
   if (mod === undefined) return undefined
   return { mod }
+}
+
+function normalizeSlotAt(raw: unknown): [number, number] | undefined {
+  if (!Array.isArray(raw) || raw.length < 2) return undefined
+  const dx = Number(raw[0])
+  const dy = Number(raw[1])
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return undefined
+  return [Math.floor(dx), Math.floor(dy)]
+}
+
+/** 归一**一个槽位对象**（§4.9.3，V2.4 裁决 62）；裸字符串元素按旧写法读作 `{ ids: [id] }` */
+function normalizeSlot(raw: unknown): NpcSlot | undefined {
+  if (typeof raw === 'string') {
+    const id = raw.trim()
+    return { ids: id === '' ? [] : [id] }
+  }
+  if (!raw || typeof raw !== 'object') return undefined
+  const loose = raw as Record<string, unknown>
+  const ids = Array.isArray(loose.ids)
+    ? loose.ids.map((id) => String(id)).filter((id) => id.trim() !== '')
+    : []
+  const dialog = normalizeNodeDialog(loose.dialog)
+  const at = normalizeSlotAt(loose.at)
+  return {
+    ids,
+    ...(dialog ? { dialog } : {}),
+    ...(at ? { at } : {}),
+  }
+}
+
+export interface NormalizeSlotsResult {
+  /** 归一整型后的槽位数组；空数组 → 由调用方决定写成 `undefined` */
+  slots: NpcSlot[]
+  /** 「哪里被忽略了」的提示（导入时进清单） */
+  notes: string[]
+}
+
+/**
+ * 归一建筑实例的 `npcs`（§4.9.3，**V2.4 裁决 62**）—— 导出与导入**共用一份**：
+ *
+ * - **新形态**：元素是槽位对象 `{ ids, dialog?, at? }`，逐槽归一；
+ * - **旧形态** `npcs: [a, b]`（裸 id 字符串数组）→ 升级为**一个槽位** `[ { ids: [a, b] } ]`
+ *   （仍是"两位候选抽一位"，语义完全不变）；
+ * - **节点级 `dialog` 退役**：`nodeDialog` 传给本函数 —— **恰好一个槽**时**并入该槽**、
+ *   **多槽**时无从归属 → **丢弃并提示**、**零槽**时无意义 → 忽略。
+ */
+export function normalizeNpcSlots(raw: unknown, nodeDialog?: unknown): NormalizeSlotsResult {
+  const notes: string[] = []
+  const slots: NpcSlot[] = []
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      const slot = normalizeSlot(item)
+      if (slot) slots.push(slot)
+    }
+  }
+
+  const dialog = normalizeNodeDialog(nodeDialog)
+  if (dialog) {
+    if (slots.length === 1 && !slots[0].dialog) slots[0] = { ...slots[0], dialog }
+    else if (slots.length > 1) notes.push('节点级 `dialog` 已退役，多槽位无从归属，已丢弃（请改用各槽位的方案）')
+  }
+  return { slots, notes }
 }
 
 /* ------------------------------------------------------------------ */

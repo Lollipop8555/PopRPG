@@ -91,26 +91,32 @@ export function dialogGiveIds(npc: NpcDef): string[] {
 
 /**
  * 项目里被**建筑实例**引用的 NPC id（去重）—— NPC 的入包条件（§4.9.3 / §3.3）：
- * 只有被某张地图的某个节点的 `npcs` 点到，才算这一局的内容。
+ * 只有被某张地图的某个节点的 `npcs` 的**任一槽位**点到，才算这一局的内容。
+ *
+ * **V2.4（裁决 62）**：`npcs` 现为**槽位数组**，逐槽遍历其 `ids`。
  */
 export function npcIdsOf(project: Project): string[] {
   const out = new Set<string>()
   for (const map of project.maps) {
     for (const node of map.nodes) {
       if (node.type !== 'building') continue
-      for (const id of node.npcs ?? []) out.add(id)
+      for (const slot of node.npcs ?? []) {
+        for (const id of slot.ids ?? []) out.add(id)
+      }
     }
   }
   return [...out]
 }
 
-/** NPC id → 被建筑实例引用的次数 */
+/** NPC id → 被建筑实例**槽位**引用的次数（V2.4：按槽计入） */
 export function npcReferenceCounts(project: Project): Map<string, number> {
   const out = new Map<string, number>()
   for (const map of project.maps) {
     for (const node of map.nodes) {
       if (node.type !== 'building') continue
-      for (const id of node.npcs ?? []) out.set(id, (out.get(id) ?? 0) + 1)
+      for (const slot of node.npcs ?? []) {
+        for (const id of slot.ids ?? []) out.set(id, (out.get(id) ?? 0) + 1)
+      }
     }
   }
   return out
