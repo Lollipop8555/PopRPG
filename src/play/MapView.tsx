@@ -20,6 +20,7 @@ import {
   buildingImgOf,
   buildingSkinOf,
   groundPaint,
+  guidesOf,
   markOf,
   roleSprite,
   spriteRef,
@@ -123,6 +124,15 @@ export default function MapView({
   // 故信号只能取自「主角 hp 掉下来的那一帧」——地图上看得到的场合是回合开始的持续效果扣血
   const pawnHit = useHitPulse(session.player.resources.hp)
 
+  // 引导线（定位线）贴图（`skin/04-misc.md` §五）：`misc.guides.grid` 沿视口**原尺寸平铺**（`tile`）；
+  // 未配或量不出源尺寸即为 `undefined`（`tileSvg()` 与这里都回落程序虚线）。它是叠在地图之上的辅助层（裁决 27）。
+  const guidesTile = textureProps(
+    textureRef(guidesOf(misc)),
+    assets,
+    { x: vx, y: vy, w: size.w, h: size.h },
+    { mode: 'tile' },
+  )
+
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
     movedRef.current = false
     let lastX = e.clientX
@@ -188,39 +198,44 @@ export default function MapView({
           </g>
         )}
 
-        {/* 每 10 格一条细参照线，铺满当前视口；开关在游玩菜单里（`guides`） */}
-        {guides && (
-          <g opacity={0.28}>
-            {range(Math.floor(vx / CELL), Math.ceil((vx + size.w) / CELL) + 1)
-              .filter((x) => x % 10 === 0)
-              .map((x) => (
-                <line
-                  key={`vx${x}`}
-                  x1={x * CELL}
-                  y1={vy}
-                  x2={x * CELL}
-                  y2={vy + size.h}
-                  stroke="var(--ink-faint)"
-                  strokeWidth={1}
-                  strokeDasharray="3 4"
-                />
-              ))}
-            {range(Math.floor(vy / CELL), Math.ceil((vy + size.h) / CELL) + 1)
-              .filter((y) => y % 10 === 0)
-              .map((y) => (
-                <line
-                  key={`hy${y}`}
-                  x1={vx}
-                  y1={y * CELL}
-                  x2={vx + size.w}
-                  y2={y * CELL}
-                  stroke="var(--ink-faint)"
-                  strokeWidth={1}
-                  strokeDasharray="3 4"
-                />
-              ))}
-          </g>
-        )}
+        {/* 每 10 格一条细参照线，铺满当前视口；开关在游玩菜单里（`guides`）。
+            素材（`misc.guides.grid`）接管时按**原尺寸平铺**（`tile`）；未配 / 量不出源尺寸则照旧画程序虚线。
+            与程序层同一档透明度 0.28，换素材不改观感强度。 */}
+        {guides &&
+          (guidesTile ? (
+            <SvgTexture {...guidesTile} opacity={0.28} />
+          ) : (
+            <g opacity={0.28}>
+              {range(Math.floor(vx / CELL), Math.ceil((vx + size.w) / CELL) + 1)
+                .filter((x) => x % 10 === 0)
+                .map((x) => (
+                  <line
+                    key={`vx${x}`}
+                    x1={x * CELL}
+                    y1={vy}
+                    x2={x * CELL}
+                    y2={vy + size.h}
+                    stroke="var(--ink-faint)"
+                    strokeWidth={1}
+                    strokeDasharray="3 4"
+                  />
+                ))}
+              {range(Math.floor(vy / CELL), Math.ceil((vy + size.h) / CELL) + 1)
+                .filter((y) => y % 10 === 0)
+                .map((y) => (
+                  <line
+                    key={`hy${y}`}
+                    x1={vx}
+                    y1={y * CELL}
+                    x2={vx + size.w}
+                    y2={y * CELL}
+                    stroke="var(--ink-faint)"
+                    strokeWidth={1}
+                    strokeDasharray="3 4"
+                  />
+                ))}
+            </g>
+          ))}
 
         {map.nodes.map((node) => (
           <NodeShape

@@ -147,6 +147,12 @@
 - **验证**：`npx tsc --noEmit` 无错；`npx vitest run` **73 个文件 / 895 项**全绿（本轮新增 11 项：`nineSliceTiles` 4 项、`textureProps` 九宫格 2 项、`SvgTexture` 切块 2 项、`sizeOf` 3 项）。
 - **设计侧同步**：[`design/skin/03-window.md`](design/skin/03-window.md) §八「九宫格」、[`design/skin/04-misc.md`](design/skin/04-misc.md) §十、[`design/skin.md`](design/skin.md) §3.3；任务侧 [`task/04-skin.md`](../task/04-skin.md)（`node.building` 条与 D7 新增验收项）。
 
+**2026-10-10 · V2.2 引导线（定位线）`tile` 平铺落地**
+- **范围**：`tile` 策略的 **SVG 层**落地——此前 `tile` 只在 **DOM 层**（`pageBgStyle()` 的 `background-size: auto` ＋ `repeat`）；SVG 层无 `background-repeat`，一律整图拉伸。本批把 `tile` 接上，**唯一候选＝引导线（定位线）**（裁决 29：分隔线**不走平铺**）。
+- **落点**：[`src/ui/Texture.tsx`](../src/ui/Texture.tsx) 新增 `tileSvg()` ＋ `SvgTexture` 的 `mode === 'tile'` 分支（建 `<pattern patternUnits="userSpaceOnUse">`、一块瓦片＝源图像素，再把盒填成 `url(#id)`；id 由 `useId()` 生成并**抹掉冒号**）；`textureProps()` 为 `tile` 也补 `source`（经 `SkinAssets.sizeOf()` 取，同九宫格）；[`src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `guidesOf(misc)`；[`src/play/MapView.tsx`](../src/play/MapView.tsx) 的引导线层**配了素材即铺满视口、未配 / 量不出源尺寸则照旧画程序虚线**（同一退路），开 / 关仍在游玩菜单（裁决 27）。
+- **验证**：`npx tsc --noEmit` 无错；`npx vitest run` **73 个文件 / 902 项**全绿（本轮新增 7 项）。
+- **设计侧同步**：[`design/skin/04-misc.md`](design/skin/04-misc.md) §五 / §十、[`design/skin.md`](design/skin.md) §3.4 / §四策略表；任务侧 [`task/04-skin.md`](../task/04-skin.md)（`misc` 引导线条）。
+
 **2026-10-09 · V2.4 NPC 槽位 SlotN（裁决 62–66，设计侧，未开工）**
 - **`npcs` 升级为槽位数组**（裁决 62）：元素一律是槽位对象 `{ ids, dialog?, at? }` —— `ids` ＝ 该槽候选（**1 位固定 / 多位掷 `talk.dice` 等权抽一位 / 空 ＝ 该槽留空**）、`dialog` ＝ `{ mod? }`（写死**该槽**方案）、`at` ＝ 落点格。**槽位按声明顺序**编号 `slot0` / `slot1`…，**槽位数 ≤ `w × h`**；**旧包 `npcs: [a, b]`（裸字符串）导入即升级为 `[ { ids: [a, b] } ]`** —— 整个数组升为**一个槽位**、语义不变（与旧 `dialog: Mod1` → `{ mod: Mod1 }` 同一套**读时兼容、写时新形态**）。**节点级 `dialog` 退役**。
 - **槽位坐标与不重叠**（裁决 63）：`at: [dx, dy]` 是**建筑自身格坐标系**（左上 `(0,0)`），缺省按声明顺序取**先 y 后 x 字典序**第 N 格；**同实例两槽 `at` 不得相同**（`K40`）、越界出 `K39`。**NPC 不走动**；**玩家与 NPC 可以重叠**（踩到它那一格就是找它说话）。

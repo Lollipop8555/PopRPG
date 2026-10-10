@@ -135,7 +135,7 @@ drawTexture(target, src, box, opts)
 |------|------|------|
 | V1 | `stretch` | `<image preserveAspectRatio="none">` 直接拉伸；DOM 层 `<img>` 走 `background-size: 100% 100%` |
 | **已落地（DOM ＋ SVG）** | `nine` | DOM 层 CSS `border-image`（`Slice` 语序即 `[上, 右, 下, 左]`、末带 `fill`、**不写 `borderWidth`**）；SVG 层切块拼装（`nineSliceTiles()` ＋ `SvgTexture`）。素材带 `slice` 才成立 |
-| 待接线 | `tile` | 参数位与判定已就绪（`effectiveMode` 认得，平铺独立成立不需切片）；**唯一候选是坐标参照线（定位线）**，随引导线素材一起接（V2.2）。**分隔线已裁决不走 `tile`**（裁决 29，见 §3.4） |
+| **已落地（DOM ＋ SVG）** | `tile` | 平铺独立成立、不需切片；DOM 层 `background-size: auto` ＋ `repeat`（`pageBgStyle()`），SVG 层建 `<pattern patternUnits="userSpaceOnUse">`（一块瓦片＝源图像素）再填 `url(#id)`（[`Texture.tsx`](../src/ui/Texture.tsx) 的 `tileSvg()`）。**唯一候选是坐标参照线（定位线）**，V2.2 随引导线素材一起接（[`skin/04-misc.md`](skin/04-misc.md) §五）。**分隔线已裁决不走 `tile`**（裁决 29，见 §3.4） |
 
 - **SVG 内无原生 `border-image`**，九宫格必须在 SVG 内切块拼装；DOM 层（面板 / 弹窗）可直接用 CSS `border-image` 实现同一策略。**两侧实现可以不同，调用方接口必须相同。**（两层**均已落地**：DOM 层见 D3 第十三屏，SVG 层见 **V2.2**——切块要源图像素尺寸，经 `SkinAssets.sizeOf()` 取，量不出即回落 `stretch`。）
 - 适用范围：道路 / 建筑素材、面板与弹窗底图、按钮底图、色块——**凡是需要拉伸的一律走此接口**。
@@ -148,7 +148,7 @@ drawTexture(target, src, box, opts)
   `rotate` / `flip` 由落位结果给出（都绕盒心），**业务代码不参与变换计算**，素材节点也不带手绘滤镜、不吃点击（`S-6`）。
 - 几何与取图归纯函数 `src/engine/skin/texture.ts`（三写法归一 / 绕心旋转镜像 / `mode` 回落）；
   素材地址归 `src/io/skin-assets.ts`（按需建、`release()` 一次撤，裁决 15）。
-- `effectiveMode(mode?, slice?)` 把关「策略与素材是否齐备」：**`nine` 要策略 ＋ 切片同时成立**（只写 `mode: 'nine'` 而没给 `slice` 回落 `stretch`，不画半张九宫格），`tile` 独立成立。`surfaceMode(ref)`（素材带 `slice` → `nine`，否则 `stretch`）＋ `Texture.tsx` 的 `nineStyle()` 出 `border-image`——**DOM 层已在 D3 第十三屏落地**（容器 / 按钮 / 格子 / 条 / 提示条 / 分隔线六处一次升级，调用方一行不动）；**SVG 层于 V2.2 落地**（`nineSliceTiles()` ＋ `SvgTexture` 切块拼装，首个落点＝`node.building`，同批补 `SkinAssets.sizeOf()` 供源图像素尺寸）；`tile` 待接线（唯一候选＝定位线，V2.2）。
+- `effectiveMode(mode?, slice?)` 把关「策略与素材是否齐备」：**`nine` 要策略 ＋ 切片同时成立**（只写 `mode: 'nine'` 而没给 `slice` 回落 `stretch`，不画半张九宫格），`tile` 独立成立。`surfaceMode(ref)`（素材带 `slice` → `nine`，否则 `stretch`）＋ `Texture.tsx` 的 `nineStyle()` 出 `border-image`——**DOM 层已在 D3 第十三屏落地**（容器 / 按钮 / 格子 / 条 / 提示条 / 分隔线六处一次升级，调用方一行不动）；**SVG 层于 V2.2 落地**（`nineSliceTiles()` ＋ `SvgTexture` 切块拼装，首个落点＝`node.building`，同批补 `SkinAssets.sizeOf()` 供源图像素尺寸）；**`tile` 亦于 V2.2 落地**（唯一候选＝定位线，SVG 层 `tileSvg()` 建 `<pattern>`，源图像素尺寸同样经 `sizeOf()` 取，量不出即回落 `stretch`）。
 
 ## 五、素材字段的三种写法
 

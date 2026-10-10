@@ -13,6 +13,7 @@
  *   （§3.3「两侧实现可以不同，调用方接口必须相同」）
  */
 
+import { useId } from 'react'
 import type { CSSProperties } from 'react'
 import type { GroundPaint } from '../engine/skin'
 import type { ButtonState } from '../engine/skin/lookup'
@@ -49,7 +50,7 @@ export interface TextureProps extends TexturePlacement {
   mode?: TextureMode
   /** 九宫格切片；`mode === 'nine'` 时由 `SvgTexture` 切块拼装用 */
   slice?: SkinSlice
-  /** 源图内在像素尺寸；`mode === 'nine'` 时切块拼装用（DOM 层 `border-image` 不需要） */
+  /** 源图内在像素尺寸：`nine` 切块拼装用、`tile` 量一块的瓦片尺寸（DOM 层 `border-image` 不需要） */
   source?: TextureSource
   /** 0–1，缺省 1 */
   opacity?: number
@@ -77,18 +78,28 @@ export function textureProps(
   const src = assets.urlOf(ref.src)
   if (src === undefined) return undefined
 
-  // 铺法在这里定死：调用方给了就照给（如画布背景的 `stretch`），没给按背景铺法默认——
-  // **素材带了 `slice` 即九宫格**（`surfaceMode()`，承 `node.building` `KM-1` 的「必须九宫格」）。
+  // 铺法在这里定死：调用方给了就照给（如画布背景的 `stretch` / 定位线的 `tile`），
+  // 没给按背景铺法默认——**素材带了 `slice` 即九宫格**（`surfaceMode()`，承 `node.building` `KM-1`）。
   const mode = extra.mode ?? surfaceMode(ref)
+  const effective = effectiveMode(mode, ref.slice)
 
-  // 九宫格只在**SVG 层**再补两块料：切片与源图像素尺寸（DOM 层走 `border-image`，不吃这两个字段）。
-  // 量不出源图尺寸（素材源不支持量尺寸 / 格式不识别 / 条目缺失）就不带 `slice`，`SvgTexture` 回落整图拉伸。
-  if (effectiveMode(mode, ref.slice) === 'nine' && ref.slice !== undefined) {
+  const prop = { ...placement, src, ...extra, mode }
+  if (effective === 'nine' && ref.slice !== undefined) {
+    // 九宫格在 SVG 层再补两块料：切片与源图像素尺寸（DOM 层走 `border-image`，不吃这两个字段）；
+    // 量不出源图尺寸（不支持量尺寸 / 格式不识别 / 条目缺失）就不带 `slice`，`SvgTexture` 回落整图拉伸。
     const source = assets.sizeOf?.(ref.src)
-    if (source !== undefined) return { ...placement, src, ...extra, mode, slice: ref.slice, source }
+    if (source === undefined) return prop
+    return { ...prop, slice: ref.slice, source }
   }
 
-  return { ...placement, src, ...extra, mode }
+  // 平铺（`tile`）：补源图像素尺寸作**一块瓦片**的尺寸——SVG 层据此建 `<pattern>` 铺满视口；
+  // 量不出尺寸则不带 `source`，`SvgTexture` 回落整图拉伸（与九宫格同一条退路）。
+  if (effective === 'tile') {
+    const source = assets.sizeOf?.(ref.src)
+    if (source !== undefined) return { ...prop, source }
+  }
+
+  return prop
 }
 
 /**
@@ -352,18 +363,58 @@ function nineSvg(
 }
 
 /**
+ * **平铺**（`skin.md` §3.4、`skin/04-misc.md` §五）：把素材按**原尺寸**铺满目标盒。
+ *
+ * SVG 没有 `background-repeat`，故建一片 `<pattern>`（`userSpaceOnUse` ＋ 一块瓦片＝源图像素）
+ * 再把盒填成 `url(#id)`；`patternUnits` 用用户坐标系，故瓦片尺寸直接取源图像素、与盒无关。
+ * `<defs>` 内联在图层里（id 由 `useId()` 保证唯一），与九宫格切块拼装同一条「SVG 内自绘」的路子。
+ * 位图不吃点击（S-6），故带 `pointerEvents: none`；`rotate` / `flip` 对平铺无意义，不在本例的输入里。
+ */
+function tileSvg(
+  src: string,
+  box: TextureBox,
+  source: TextureSource,
+  id: string,
+  opacity: number | undefined,
+  className: string | undefined,
+  alt: string | undefined,
+): JSX.Element {
+  return (
+    <g opacity={opacity} className={className} style={{ pointerEvents: 'none' }} aria-hidden={alt ? undefined : true} aria-label={alt}>
+      <defs>
+        <pattern id={id} patternUnits="userSpaceOnUse" width={source.width} height={source.height}>
+          <image href={src} x={0} y={0} width={source.width} height={source.height} />
+        </pattern>
+      </defs>
+      <rect x={box.x} y={box.y} width={box.w} height={box.h} fill={`url(#${id})`} />
+    </g>
+  )
+}
+
+/**
  * SVG 层：画在既有 `<svg>` 里（地图 / 画布 / 棋子）。
  *
  * **九宫格**（`mode === 'nine'` 且切片与源图尺寸齐备）走**切块拼装**——CSS `border-image`
  * 在 SVG 里没有对应写法，故手动切九块（见 `nineSvg()`）；量不出源图尺寸或盒是 `auto` 时回落整图拉伸。
+ *
+ * **平铺**（`mode === 'tile'` 且源图尺寸齐备）走 `<pattern>`（见 `tileSvg()`，唯一候选＝定位线）。
+ *
+ * `useId()` 是 hook，故在分支前无条件调用（即便本次走九宫格 / 拉伸，也只是多算一个不用的 id）。
  */
 export function SvgTexture({ src, x, y, w, h, rotate, flip, mode, slice, source, opacity, className, alt }: TextureProps) {
   const placement: TexturePlacement = { x, y, w, h, rotate: rotate ?? 0, flip: flip === true }
   const transform = svgTransform(placement)
+  // `useId()` 出的是 `:r0:` 这类带冒号的串，直接用会把 `url(#…)` 的片段解析带偏，故先抹掉冒号。
+  const patternId = `sk-tile-${useId().replace(/:/g, '')}`
 
   if (mode === 'nine' && slice !== undefined && source !== undefined) {
     const tiles = nineSliceTiles({ x, y, w, h }, slice, source)
     return tiles === undefined ? null : nineSvg(src, tiles, source, transform, opacity, className, alt)
+  }
+
+  // 平铺：盒量得出（非 `auto`）且源图尺寸齐备才铺；否则回落整图拉伸
+  if (mode === 'tile' && source !== undefined && !isAuto(w) && !isAuto(h)) {
+    return tileSvg(src, { x, y, w, h }, source, patternId, opacity, className, alt)
   }
 
   return (

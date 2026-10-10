@@ -278,6 +278,17 @@ export function iconOf(misc: SkinMisc | undefined, name: IconName | string): Ski
   return misc?.icons?.[name]
 }
 
+/**
+ * **引导线（定位线）素材**（`skin/04-misc.md` §五）：`misc.guides.grid` 一张，
+ * 沿视口按**原尺寸平铺**（`tile` 策略）。
+ *
+ * 它是叠在地图之上的辅助层、**不属于任何贴图**（裁决 27）；素材须**四边可无缝拼接**（`KM-2`）。
+ * 未配即 `undefined`，照旧由程序绘制每 10 格的虚线——**平铺的唯一候选就是本条**（裁决 29）。
+ */
+export function guidesOf(misc: SkinMisc | undefined): SkinTexture | undefined {
+  return misc?.guides?.grid
+}
+
 /** 规整衬底字段：字符串写法等价于只写 `fill` */
 export function groundOf(field: SkinGroundField | undefined): SkinGround | undefined {
   if (field === undefined) return undefined
