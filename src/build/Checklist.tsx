@@ -10,6 +10,8 @@ import { shortName } from '../types'
 import { commit } from '../store/commit'
 import { useLibraryStore } from '../store/library'
 import { useProjectStore } from '../store/project'
+import { useSkinStore } from '../store/skin'
+import { useSkinPreviewStore } from '../store/skinPreview'
 import { useUiStore } from '../store/ui'
 import Overlay from '../ui/Overlay'
 
@@ -18,8 +20,28 @@ export default function Checklist() {
   const setOpen = useUiStore((s) => s.setChecklistOpen)
   const library = useLibraryStore()
   const project = useProjectStore()
+  /**
+   * 皮肤校验的来源（§D5 / §D6）：构建页**加载过 `.pp`（皮肤预览）时以它为准**——预览所见即所校；
+   * 未加载过预览皮肤时回退「用户启用的全局皮肤」（与 D6 原状一致）。
+   * 两处都没有时传 `undefined`，清单内容与未接入皮肤时完全一致。
+   */
+  const globalSkin = useSkinStore((s) => s.skin)
+  const globalIssues = useSkinStore((s) => s.issues)
+  const previewLoaded = useSkinPreviewStore((s) => s.loaded)
+  const previewSkin = useSkinPreviewStore((s) => s.skin)
+  const previewIssues = useSkinPreviewStore((s) => s.issues)
+  const skin = previewLoaded ? previewSkin : globalSkin
+  const skinIssues = previewLoaded ? previewIssues : globalIssues
 
-  const issues = useMemo(() => (open ? validateProject(library, project) : []), [open, library, project])
+  const skinContext = useMemo(
+    () => (skin !== undefined || skinIssues.length > 0 ? { skin, issues: skinIssues } : undefined),
+    [skin, skinIssues],
+  )
+
+  const issues = useMemo(
+    () => (open ? validateProject(library, project, skinContext) : []),
+    [open, library, project, skinContext],
+  )
   const groups = useMemo(() => groupIssues(issues), [issues])
   const errors = issues.filter((i) => i.severity === 'error').length
   const warns = issues.filter((i) => i.severity === 'warn').length

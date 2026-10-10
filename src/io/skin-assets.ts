@@ -42,6 +42,16 @@ const MIME_BY_EXT: Record<string, string> = {
   gif: 'image/gif',
   svg: 'image/svg+xml',
   avif: 'image/avif',
+  // 音频（`skin/07-audio.md` §四）：`decodeAudioData` 不吃扩展名，mime 只作提示；
+  // 这里给对是为了 blob 地址与调试时可读，解码真正按内容识别
+  mp3: 'audio/mpeg',
+  ogg: 'audio/ogg',
+  wav: 'audio/wav',
+  m4a: 'audio/mp4',
+  aac: 'audio/aac',
+  flac: 'audio/flac',
+  opus: 'audio/ogg',
+  webm: 'audio/webm',
   // 字体（`skin/06-item-building.md` §2.3 的建筑名称 `font`）：`@font-face` 的地址
   // 由本模块的 blob 地址给出，mime 给对才不会被浏览器的字体嗅探挡下
   ttf: 'font/ttf',

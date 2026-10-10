@@ -4,12 +4,13 @@
  */
 
 import { useRef, useState } from 'react'
-import { BookOpen, ClipboardList, Database, Download, MessageSquareText, MoreHorizontal, Palette, Redo2, SlidersHorizontal, Undo2, Upload } from 'lucide-react'
+import { BookOpen, ClipboardList, Database, Download, MessageSquareText, MoreHorizontal, Package, Palette, Redo2, SlidersHorizontal, Undo2, Upload } from 'lucide-react'
 import { useProjectStore } from '../store/project'
 import { useHistoryStore } from '../store/history'
 import { redo, undo } from '../store/commit'
 import { exportCurrentPmod, importPmodFile, resetProject } from './ioActions'
 import { useUiStore } from '../store/ui'
+import { useSkinPreviewStore } from '../store/skinPreview'
 import { navigate } from '../app/router'
 import Popover from '../ui/Popover'
 
@@ -109,6 +110,16 @@ export default function TopBar() {
             title="设计文件指南：.pmod / .pp / .pgame 的读写规范、字段与校验"
           >
             <BookOpen size={13} /> 设计文件指南
+          </button>
+          <button
+            className="btn small"
+            onClick={() => {
+              useSkinPreviewStore.getState().setOpen(true)
+              setMenuOpen(false)
+            }}
+            title="皮肤预览：把一份 .pp 顶进本局地图，核对「素材与地图是否对得上」（仅预览，不改导出结果）"
+          >
+            <Package size={13} /> 皮肤预览
           </button>
           <button
             className="btn small"

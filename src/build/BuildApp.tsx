@@ -15,6 +15,7 @@ import Checklist from './Checklist'
 import RulesScreen from './RulesScreen'
 import NpcModScreen from './NpcModScreen'
 import PoolScreen from './PoolScreen'
+import SkinPreview from './SkinPreview'
 import Overlay from '../ui/Overlay'
 import { useShortcuts } from './useShortcuts'
 import { useUiStore } from '../store/ui'
@@ -57,6 +58,7 @@ export default function BuildApp() {
       <RulesScreen />
       <NpcModScreen />
       <PoolScreen />
+      <SkinPreview />
       <ToastView />
     </div>
   )

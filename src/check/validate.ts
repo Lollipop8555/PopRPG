@@ -21,6 +21,7 @@ import type {
   Project,
   SkillDef,
 } from '../types'
+import { SKIN_ISSUE_TITLES } from '../types'
 import { checkAnalysis } from '../engine/event'
 import { resolveItemPool, resolveMonsterPool } from '../engine/pool'
 import { makePlayerUnit } from '../engine/units'
@@ -28,6 +29,7 @@ import { skillSources, referenceIdsOf, componentsWithTag, npcIdsOf } from '../li
 import { hasAnyNpc, resolveSlots, slotCap } from '../lib/npcSlots'
 import { hitCoverage, listPoints } from '../lib/dialog'
 import { poolIssues } from './poolValidate'
+import { skinValidate, type SkinContext } from './skinValidate'
 import { SECTIONS } from '../lib/sections'
 
 export type Severity = 'error' | 'warn'
@@ -403,7 +405,7 @@ function dialogIssues(npc: NpcDef): Issue[] {
 /* 总入口                                                              */
 /* ------------------------------------------------------------------ */
 
-export function validateProject(library: Library, project: Project): Issue[] {
+export function validateProject(library: Library, project: Project, skin?: SkinContext): Issue[] {
   const issues: Issue[] = []
   const enabledIds = project.enabledIds
   const enabled = new Set(enabledIds)
@@ -765,6 +767,22 @@ export function validateProject(library: Library, project: Project): Issue[] {
   /** K20~K37：状态池专项（V2.3 §十） */
   issues.push(...poolIssues(library, project))
 
+  /**
+   * 皮肤包专项（`docs/design/skin/` 各分节 §校验项）：仅在加载了 `.pp` 时才产出，
+   * 未加载皮肤时 `skin` 为 `undefined`，清单内容与现状完全一致。
+   * 全部为**提示**（裁决 15），只进黄点、不阻塞导出。
+   */
+  if (skin) {
+    for (const issue of skinValidate(library, project, skin)) {
+      issues.push({
+        key: issue.code,
+        severity: 'warn',
+        title: SKIN_ISSUE_TITLES[issue.code],
+        detail: issue.detail,
+      })
+    }
+  }
+
   return issues
 }
 
@@ -823,5 +841,9 @@ export function groupIssues(issues: Issue[]): IssueGroup[] {
   }
   return [...groups.entries()]
     .sort((a, b) => a[0].localeCompare(b[0], 'en', { numeric: true }))
-    .map(([key, list]) => ({ key, label: KEY_LABEL[key] ?? key, issues: list }))
+    .map(([key, list]) => ({
+      key,
+      label: KEY_LABEL[key] ?? (SKIN_ISSUE_TITLES as Record<string, string>)[key] ?? key,
+      issues: list,
+    }))
 }

@@ -91,14 +91,19 @@
 
 ## D5 build 模式加载 pp（仅预览）
 
-- [ ] build 加载 `.pp`：**仅地图视图与预览用组件**按素材渲染，用于验证「素材与地图是否对得上」
-- [ ] **不改导出结果**：加载 pp 前后导出的 `.pmod` 完全一致（回归项）
+> **已接**（2026-10-10）：顶栏「⋯」菜单进入整页面板 [`src/build/SkinPreview.tsx`](../src/build/SkinPreview.tsx)，把一份 `.pp` **顶进游玩态地图的覆盖入参**（与创意模式预览同一套代码）——**不写全局皮肤**，故编辑器自身（顶栏 / 面板 / 弹层）与游玩页都不受影响。工程内容只读，导出仍走原路径。
+
+- [x] build 加载 `.pp`：**仅地图视图与预览用组件**按素材渲染，用于验证「素材与地图是否对得上」——**落点**：运行期 store [`src/store/skinPreview.ts`](../src/store/skinPreview.ts)（`open` / `loaded` / `skin` / `assets` / `issues` / `source`；`load()` 先释放旧素材源再交新的，`clear()` 卸下并释放，**不入 `localStorage`**）；面板把 `scenarioFromProject()` → `startSession()` 起一局，再以 `manifest` / `assets` / `onlyAssets` **覆盖入参**顶进 [`src/play/MapView.tsx`](../src/play/MapView.tsx)，「只看素材」开关脱掉程序绘制兜底；入口见 [`src/build/TopBar.tsx`](../src/build/TopBar.tsx) 的「皮肤预览」、装配见 [`src/build/BuildApp.tsx`](../src/build/BuildApp.tsx)
+- [x] **不改导出结果**：加载 pp 前后导出的 `.pmod` 完全一致（回归项）——**落点**：面板只读工程快照（`librarySnapshot()` / `projectSnapshot()`），导出仍走 `exportCurrentPmod()`；回归用例 [`src/build/__tests__/skinPreview.test.ts`](../src/build/__tests__/skinPreview.test.ts) 断言加载前后 `exportPmod()` 文本 / `missing` / `renamed` 一致且 `projectSnapshot()` 一字未动，并断言预览皮肤**只落预览 store**（全局运行期皮肤不受影响）；面板渲染用例见 [`src/build/__tests__/skinPreview.test.tsx`](../src/build/__tests__/skinPreview.test.tsx)
 
 ## D6 校验接入「清单」
 
-- [ ] `KP-1`~`KP-10` 接入 `src/check/validate.ts`，在 `src/build/Checklist.tsx` 汇总显示；**全部为提示，不阻断导出**（**不设皮肤体积硬上限**，裁决 15）
-- [ ] 各节明细校验项登记：**角色 `KR`**（`KR-1`~`KR-11`；`KR-5`~`KR-8` 为**立绘**新增：非竖构图 / 无效键 / 数组写法 / 无透明通道（裁决 24）；**`KR-9` 受击图与主图宽高比不一致 / `KR-10` 拿主人公图冒充 NPC**（裁决 25 / 26）；**`KR-11`（V2.4 裁决 66）`npcs` 键与任一 NPC `name` 都不重名却配了图**（键口径已由 `id` 改 `name` ＋ 通配 `"*"`）；`KR-2` / `KR-3` / `KR-6` / **`KR-11`** 的键范围含 **`npcs`**） / **道路 `KS`** / 窗体 `KW` / 标记与骰子 `KM`（**新增 `KM-4`（V2.4）：槽号 ≥ 调色板色数 → 循环取色**） / 道具与建筑 `KIB` / 页 `KPG`（含 `KPG-6`：旧 `pages` 键提示迁移到 `startup` / `lobby`）
-- [ ] 皮肤校验只在加载了 `.pp` 时出现；未加载皮肤时清单内容与现状一致
+> **已接**（2026-10-10）：皮肤校验器 [`src/check/skinValidate.ts`](../src/check/skinValidate.ts)（**纯函数**：读入参的**皮肤条目 ＋ 组件库 ＋ 工程**，不碰 store）汇总加载期 `KP-*` / `KA-*` 与「须对照组件库 / 本局工程」的各节码；[`src/check/validate.ts`](../src/check/validate.ts) 的 `validateProject()` 新增可选 `SkinContext` 并并入结果，[`src/build/Checklist.tsx`](../src/build/Checklist.tsx) 取「预览皮肤优先、回退全局启用皮肤」两处来源。
+> **注册即真会产出**：只登记能判的码；需解码像素的 `KR-4` / `KR-8` / `KM-2` / `KIB-3` / `KB-4` / `KB-5` 一支与规范未定的 `KW-2` / `KW-3` 暂不产出（口径见 [`src/types/skin.ts`](../src/types/skin.ts) 的 `SKIN_ISSUE_CODES` 注释）。
+
+- [x] `KP-1`~`KP-10` 接入 `src/check/validate.ts`，在 `src/build/Checklist.tsx` 汇总显示；**全部为提示，不阻断导出**（**不设皮肤体积硬上限**，裁决 15）——**落点**：加载期码由 [`src/io/pp.ts`](../src/io/pp.ts) 收下、原样并入 `SkinIssue[]`；`KP-5`（无效键汇总）与各节明细共用一份判据（`badKeys`，取 `project.enabledIds` 启用集）
+- [x] 各节明细校验项登记——**落点**：`skinValidate.ts` 逐节产出 **`KB-1` / `KB-3` / `KB-6`~`KB-9`**（画布背景，`05-canvas.md` §五）、**`KR-1`~`KR-3` / `KR-5`~`KR-7` / `KR-9`~`KR-11`**（角色与立绘，含 `KR-11` 的 `name` ＋ 通配口径，`02-role.md` §八）、**`KS-1` / `KS-3`~`KS-7`**（道路）、**`KW-1` / `KW-4` / `KW-7`**（容器与控件）、**`KM-1` / `KM-3`**（标记与骰子）、**`KIB-1` / `KIB-2` / `KIB-5`~`KIB-7`**（道具与建筑，`enabledIds` 启用集判定）、**`KPG-1`~`KPG-6`**（欢迎页与首页，含 `KPG-6` 旧 `pages` 键迁移提示）；码表与标题见 [`src/types/skin.ts`](../src/types/skin.ts)（`KM-4` 已由 `slotColor()` 循环取色天然满足，**不产出**）
+- [x] 皮肤校验只在加载了 `.pp` 时出现；未加载皮肤时清单内容与现状一致——**落点**：`Checklist.tsx` 仅当「预览已加载」或「存在全局启用皮肤及其提示」时才传 `SkinContext`，否则传 `undefined`；整包被忽略（`KP-1`，`skin` 为 `undefined`）时**只回加载期提示**（无 manifest 可判）
 
 ## D7 验收（原子项）
 
@@ -124,7 +129,8 @@
 - [ ] `theme` 生效且越权被忽略：改 `--paper` 生效，改 `--gap` 被忽略并提示 `KP-9`
 - [ ] 按钮配置写有四态：`normal` 落**行内**属性，`hover` / `active` / `disabled` 各落**一对 CSS 变量**（没配的那态**不写**），真浏览器里悬停 / 按下 / 禁用各换各的图；**没配该态的观感与完全不写四态时逐像素一致**（缺省链回落 `normal` ＋ CSS 表现）
 - [ ] 建筑信息视图：`building.background` 生效，文字仍为窗体字体字色（裁决 12 回归项）
-- [ ] `audio` 字段被解析并校验：清单能看到路径/音量提示，但**全程无声音**（裁决 16 回归项）
+- [ ] `audio` 字段被解析并校验：清单能看到路径/音量提示（`KA-2` / `KA-3` / `KA-4`，裁决 16）
+- [ ] **音频播放（V2.2）**：首次用户交互后 BGM 起播并按场景切换（首页／地图／战斗，各 600ms 淡出淡入）；8 个 SFX 触发点各自发声；音量与静音写入 `localStorage`（`poprpg_audio`）并跨刷新恢复；未启用皮肤或该场景无曲时静默、不报错
 - [ ] Creative 九宫格切分工具：拖四根参考线后写回的 `slice` 落在 manifest 中，V1 渲染仍为拉伸（裁决 21）
 - [ ] Creative 全链路：从 `.pmod` 生成骨架 → 绑定素材 → 导出 `.pp` → 在 play 加载，观感与预览一致
 - [ ] `npm run build`（tsc 无错）＋ `npx vitest run` 全绿
@@ -264,3 +270,21 @@
 - **单测**：[`../src/engine/skin/__tests__/pick.test.ts`](../src/engine/skin/__tests__/pick.test.ts) 新增「NPC 按 name ＋ 通配 `"*"`」7 项（精确优先、通配回退、不跨组借用、无 id → `undefined`、立绘缺失不渲染）；[`../src/play/__tests__/mapView.test.tsx`](../src/play/__tests__/mapView.test.tsx) 新增「NPC 槽位层」6 项（无皮肤画两环 ＋ 颜色/半径、精确名画图 ＋ 余环、通配画满、`onlyAssets` 只画图、`g[data-role-npc]` 在 `g[data-role-pawn]` 之前、多候选未抽定不画 / 单候选画环）。`npx tsc --noEmit` 无错。
 - **注释同步**：[`../src/types/skin.ts`](../src/types/skin.ts) 的 `SkinRole.npcs` / `SkinPortraits.npcs` 注释由「唯一落点是对话弹层 / 当前 V1 无落点」更新为 **V2.4 的 `name` ＋ 通配 ＋ 双落点（地图槽位格 / 对话标题栏）**。
 - **遗留（属 D6，本档未动工）**：`KR-11`（`npcs` 键与任一 NPC `name` 都不重名却配了图）尚未实现——当前**整个 `KR-*` / `KP-*` 皮肤校验尚未落地**（`SkinIssueCode` 仅 `KP-1`~`KP-10` ＋ `KA-2`，`src/check/validate.ts` 无皮肤清单上下文），随 D6「校验接入清单」一并做；`KM-4` 属调色板循环，已由 `slotColor()` 满足，无需单独校验。
+
+**2026-10-10 · V2.2 D5 / D6 落地（build 加载 `.pp` 预览 ＋ 皮肤校验接入「清单」）**
+- **D5 build 加载 `.pp`（仅预览）**：新增运行期 store [`../src/store/skinPreview.ts`](../src/store/skinPreview.ts)（`open` / `loaded` / `skin` / `assets` / `issues` / `source`；`load()` 先释放旧素材源再交新的，`clear()` 卸下并释放，**不入 `localStorage`**——预览是一次性观察态）与整页面板 [`../src/build/SkinPreview.tsx`](../src/build/SkinPreview.tsx)。面板把 `scenarioFromProject()` → `startSession()` 起一局，再以 `manifest` / `assets` / `onlyAssets` **覆盖入参**顶进 [`../src/play/MapView.tsx`](../src/play/MapView.tsx)（与创意模式预览同一套代码），「只看素材」开关脱掉程序绘制兜底。**不写全局皮肤**（编辑器自身与游玩页都不受影响）、**工程只读**（导出仍走 `exportCurrentPmod()`）。入口见 [`../src/build/TopBar.tsx`](../src/build/TopBar.tsx) 的「皮肤预览」、装配见 [`../src/build/BuildApp.tsx`](../src/build/BuildApp.tsx)。回归用例 [`../src/build/__tests__/skinPreview.test.ts`](../src/build/__tests__/skinPreview.test.ts) 断言加载前后 `exportPmod()` 文本 / `missing` / `renamed` 一致且 `projectSnapshot()` 一字未动、预览皮肤只落预览 store；面板渲染用例见 [`../src/build/__tests__/skinPreview.test.tsx`](../src/build/__tests__/skinPreview.test.tsx)。
+- **D6 皮肤校验接入「清单」**：新增纯函数校验器 [`../src/check/skinValidate.ts`](../src/check/skinValidate.ts)（读入参的**皮肤条目 ＋ 组件库 ＋ 工程**，不碰 store）——汇总加载期 `KP-*` / `KA-*` 与须对照组件库 / 本局工程的各节码：**`KP-5`**（无效键汇总，取 `project.enabledIds` 启用集）、**`KB-1` / `KB-3` / `KB-6`~`KB-9`**、**`KR-1`~`KR-3` / `KR-5`~`KR-7` / `KR-9`~`KR-11`**（含 `KR-11`：`npcs` 键与任何 `name` 都不重名）、**`KS-1` / `KS-3`~`KS-7`**、**`KW-1` / `KW-4` / `KW-7`**、**`KM-1` / `KM-3`**、**`KIB-1` / `KIB-2` / `KIB-5`~`KIB-7`**、**`KPG-1`~`KPG-6`**（含 `KPG-6` 旧 `pages` 键迁移提示）。[`../src/check/validate.ts`](../src/check/validate.ts) 的 `validateProject()` 新增可选 `SkinContext` 并并入结果；[`../src/build/Checklist.tsx`](../src/build/Checklist.tsx) 取「**预览皮肤优先、回退全局启用皮肤**」两处来源，未加载皮肤时传 `undefined`、清单内容与现状一致；整包被忽略（`KP-1`）时只回加载期提示。
+- **码表登记（只登记「现在真会产生」的编号）**：`SkinIssueCode` 新增 `KB-*` / `KR-*` / `KS-*` / `KW-*` / `KM-*` / `KIB-*` / `KPG-*` 共 38 码，`SKIN_ISSUE_TITLES` 逐条对应（[`../src/types/skin.ts`](../src/types/skin.ts)）。**不产出**：需解码像素的 `KR-4` / `KR-8` / `KM-2` / `KIB-3` / `KB-4` / `KB-5` 一支、规范未定的 `KW-2` / `KW-3`；`KM-4` 由 `slotColor()` 循环取色天然满足、`KW-6` 与 `KIB-8` 已作废。
+- **验收**：`npx tsc --noEmit` 无错；`npx vitest run` **69 个文件 / 843 项**全绿（较 D4 收口 55 / 669 净增 **14 文件 / 174 项**；本轮新增 [`../src/build/__tests__/skinPreview.test.ts`](../src/build/__tests__/skinPreview.test.ts) ＋ [`.test.tsx`](../src/build/__tests__/skinPreview.test.tsx)、[`../src/check/__tests__/skinValidate.test.ts`](../src/check/__tests__/skinValidate.test.ts)）。
+
+**2026-10-10 · V2.2 音频播放落地（D7 音频项由「只解析不发声」升级为「真发声」）**
+- **运行期**：新增 [`../src/io/audio-runtime.ts`](../src/io/audio-runtime.ts)——`createAudioRuntime(deps?)` 以**可注入依赖**（`createContext` / `decode` / `setTimer`）包住 `AudioContext`（与 `createSkinAssets({ createUrl })` 同法，便于 jsdom 注入假上下文单测）：惰性建上下文 ＋ 主 `Gain`；`decodeAudioData` 结果按文件缓存（`inflight` 去重）；BGM 同场景只改音量、跨场景 **600ms 淡出淡入**（`token` 递增挡异步竞态）；SFX 经 `setTimer(fn, 0)` **合帧**（同一帧同事件只发一次）；`reload()` 换肤重放、`release()` 停源 / 清缓存 / 关上下文。单测 [`../src/io/__tests__/audio-runtime.test.ts`](../src/io/__tests__/audio-runtime.test.ts)。
+- **偏好与巴士**：新增 [`../src/store/audio.ts`](../src/store/audio.ts)——`persist` 只落 `{ master, muted }` 到 `localStorage`（键由 `AUDIO_STORAGE_KEY = 'poprpg_audio'` 导出供单测引用），`onRehydrateStorage` 回灌运行期；`setMaster()` 夹回 0–1（`NaN` → 1）；`resolveBgm()` / `resolveSfx()` 从 `useSkinStore` 取当前皮肤，经 `bgmTrackOf` / `sfxTrackOf` 解析并**带上包内解出的字节**（`skinBytesOf`）交给运行期。单测 [`../src/store/__tests__/audio.test.ts`](../src/store/__tests__/audio.test.ts)。
+- **驱动**：新增 [`../src/audio/driver.ts`](../src/audio/driver.ts)——纯函数 `sceneOfSession()`（无对局 `home`、有 `monster` / `encounter` / `talk` / 掷骰在途 `battle`、其余 `map`）＋ `useAudioDriver()`（按路由与局势定场景并 `setScene`、窗口一次性 `pointerdown` / `keydown` / `touchstart` **首次手势解锁**、皮肤变更 `reload()`、卸载 `release()`）。单测 [`../src/audio/__tests__/driver.test.ts`](../src/audio/__tests__/driver.test.ts)。
+- **触发点**：新增 [`../src/audio/hooks.ts`](../src/audio/hooks.ts)——`useDiceSfx` / `useBattleSfx` / `useModalSfx` / `useNoticeSfx` / `useCoinSfx` / `useErrorSfx` 覆盖 **8 个事件键**（`dice_roll` / `dice_land` / `hit` / `pickup` / `coin` / `open` / `close` / `error`）；各 hook 只调 `useAudioStore.getState().sfx(...)`，接线点分布在 `flow.ts` / `BattleDialog.tsx` / `Overlay.tsx` 等处。单测 [`../src/audio/__tests__/hooks.test.ts`](../src/audio/__tests__/hooks.test.ts)。
+- **设置 UI 与素材**：菜单内静音开关（🔊 / 🔇）＋ 总音量滑杆（`0`–`1`，步进 `0.05`，静音时禁用）落在 [`../src/play/GameScreen.tsx`](../src/play/GameScreen.tsx)；[`../src/io/skin-assets.ts`](../src/io/skin-assets.ts) 的 `mimeOf()` 补音频扩展名（`mp3` → `audio/mpeg`、`ogg` → `audio/ogg` 等）。
+- **既有用例修正**：菜单按钮计数由 7 改 8（[`../src/play/__tests__/windowButtons.test.tsx`](../src/play/__tests__/windowButtons.test.tsx)）；`skin-assets` 音频 mime 期望随之更新（[`../src/io/__tests__/skin-assets.test.ts`](../src/io/__tests__/skin-assets.test.ts)）。
+- **版本登记修正**：`audio` 的 SFX 事件键为 **8 个**（[`../src/types/skin.ts`](../src/types/skin.ts) 的 `SFX_EVENTS`）；[`../TASK.md`](../TASK.md) V2.2 行原写「9 个」已更正为 **8**。
+- **未接（诚实边界）**：`KA-5`（`loop: false` 且 < 3s）**仍未接**——须解码量时长，成本高于收益；`bgm.<场景>.fade` 覆盖**未落**，淡入淡出时长写死 600ms。
+- **验收**：`npx tsc --noEmit` 无错；`npx vitest run` **73 个文件 / 884 项**全绿（较 D5/D6 的 69 / 843 净增 **4 文件 / 41 项**，本轮新增 `audio-runtime` / `driver` / `hooks` / `store/audio` 四个用例文件，并修正上述两处既有用例）。
+- 设计侧同步：[`../docs/design/skin/07-audio.md`](../docs/design/skin/07-audio.md) 状态行 / §一 / §四 / §五 / §六 版本措辞改写并新增 §8.2 播放落点；[`../TASK.md`](../TASK.md) V2.2 行「9 → 8」。

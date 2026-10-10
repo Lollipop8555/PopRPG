@@ -5,6 +5,7 @@
 
 import { useEffect } from 'react'
 import { useRoute } from './router'
+import { useAudioDriver } from '../audio/driver'
 import BuildApp from '../build/BuildApp'
 import CreativeApp from '../creative/CreativeApp'
 import GuideApp from '../guide/GuideApp'
@@ -16,6 +17,9 @@ import '../styles/play.css'
 
 export default function App() {
   const route = useRoute()
+
+  // 音频驱动（`skin/07-audio.md` §2.1 / §四）：路由 + 局势 → BGM 场景，首次交互解锁
+  useAudioDriver()
 
   // 首次启动把内置预设播种进组件库（§6.1.1）；幂等，已播种过则跳过
   useEffect(() => {

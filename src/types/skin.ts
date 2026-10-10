@@ -468,21 +468,34 @@ export interface PGamePack {
 export const PGAME_DEFAULT_PMOD = 'game.pmod'
 export const PGAME_DEFAULT_SKIN_DIR = 'skin/'
 
-// ── 校验项 `KP-1`~`KP-10`（`skin/00-package.md` §六） ＋ 分节项 `KA-*` ──
+// ── 校验项：包级 `KP-*` ＋ 各分节 `KB / KR / KS / KW / KM / KIB / KPG / KA` ──
 
 /**
- * 加载期校验项编号；全部为**提示**，不阻断加载与导出。
+ * 加载期与「清单」校验项编号；全部为**提示**，不阻断加载与导出。
  *
- * 两族混在同一个编号空间里，靠前缀区分：
- * - `KP-*`：**包级**，`skin/00-package.md` §六 总表，读 manifest 与包内条目即可判；
- * - `KA-*`：**分节**，`skin/07-audio.md` §五，各节文档自己编号（`audio` 先来，其余节随后）。
+ * 各族靠前缀区分、各归其文档：
+ * - `KP-*`：**包级**，`skin/00-package.md` §六；
+ * - `KB-*`：**画布背景**，`skin/05-canvas.md` §五；
+ * - `KR-*`：**角色与立绘**，`skin/02-role.md` §八；
+ * - `KS-*`：**道路**，`skin/01-road.md` §八；
+ * - `KW-*`：**容器与控件**，`skin/03-window.md` §六；
+ * - `KM-*`：**标记与骰子**，`skin/04-misc.md` §八；
+ * - `KIB-*`：**道具与建筑**，`skin/06-item-building.md` §四；
+ * - `KPG-*`：**欢迎页与首页**，`skin/08-pages.md` §四；
+ * - `KA-*`：**音频**，`skin/07-audio.md` §五。
  *
- * 分节项只收**不需要解码素材**的那几条，故 V1 起就能生效；需要解码或需要时长的项
- * （如 `KA-5` 的曲目时长）在 §五 已注明「V1.1 起检查」。
- * `KA-1`（音频路径在包内不存在）**不单列**——它与 `KP-2` 判的是同一件事、报的是同一处，
- * 单列只会让同一条缺失在清单里出现两遍（见 `skin/07-audio.md` §五 注）。
+ * **只登记「现在真会产生」的编号**，与 `KA-1` 的先例一致：
+ * - **与 `KP-2` 判同一件事、不单列**：`KB-2` / `KS-2` / `KW-5` / `KIB-4`（路径缺失）与 `KA-1`——
+ *   单列只会让同一条缺失在清单里出现两遍；
+ * - **需解码像素、当前不做**：`KR-4`（贴满四边）、`KR-8`（无透明通道）、`KM-2`（引导线拼接）、
+ *   `KIB-3`（尺寸不为 `cellSize` 整倍数）、`KIB-7` 的「整图全透明」一支、`KB-4` / `KB-5`
+ *   （需地图格数，而 `GameMap` 不存网格尺寸）；
+ * - **需元素最小渲染尺寸 / 内容族分类，规范未定**：`KW-2` / `KW-3`（`03-window.md` §三 / §二）；
+ * - **已作废 / 已满足**：`KW-6`（D3 四态接入后不再产生）、`KM-4`（`slotColor()` 已循环取色，
+ *   `04-misc.md` §十）、`KIB-8`（「写了 `fill` 未写 `stroke`」属正常用法，不提示）。
  */
 export const SKIN_ISSUE_CODES = [
+  // 包级（`00-package.md` §六）
   'KP-1',
   'KP-2',
   'KP-3',
@@ -493,6 +506,51 @@ export const SKIN_ISSUE_CODES = [
   'KP-8',
   'KP-9',
   'KP-10',
+  // 画布背景（`05-canvas.md` §五）
+  'KB-1',
+  'KB-3',
+  'KB-6',
+  'KB-7',
+  'KB-8',
+  'KB-9',
+  // 角色与立绘（`02-role.md` §八）
+  'KR-1',
+  'KR-2',
+  'KR-3',
+  'KR-5',
+  'KR-6',
+  'KR-7',
+  'KR-9',
+  'KR-10',
+  'KR-11',
+  // 道路（`01-road.md` §八）
+  'KS-1',
+  'KS-3',
+  'KS-4',
+  'KS-5',
+  'KS-6',
+  'KS-7',
+  // 容器与控件（`03-window.md` §六）
+  'KW-1',
+  'KW-4',
+  'KW-7',
+  // 标记与骰子（`04-misc.md` §八）
+  'KM-1',
+  'KM-3',
+  // 道具与建筑（`06-item-building.md` §四）
+  'KIB-1',
+  'KIB-2',
+  'KIB-5',
+  'KIB-6',
+  'KIB-7',
+  // 欢迎页与首页（`08-pages.md` §四）
+  'KPG-1',
+  'KPG-2',
+  'KPG-3',
+  'KPG-4',
+  'KPG-5',
+  'KPG-6',
+  // 音频（`07-audio.md` §五）
   'KA-2',
   'KA-3',
   'KA-4',
@@ -500,7 +558,7 @@ export const SKIN_ISSUE_CODES = [
 
 export type SkinIssueCode = (typeof SKIN_ISSUE_CODES)[number]
 
-/** 标题与 §六 总表逐条对应（明细进 `detail`） */
+/** 标题与各节校验表逐条对应（明细进 `detail`） */
 export const SKIN_ISSUE_TITLES: Record<SkinIssueCode, string> = {
   'KP-1': '缺少可解析的 manifest.json',
   'KP-2': '素材路径在包内不存在',
@@ -512,6 +570,43 @@ export const SKIN_ISSUE_TITLES: Record<SkinIssueCode, string> = {
   'KP-8': 'extends 路径不存在或形成环',
   'KP-9': 'theme 含未知 token 或布局 token',
   'KP-10': '含已废除的 resource 键',
+  'KB-1': '背景层缺 cellSize（该项不绘制）',
+  'KB-3': 'startX / startY 落在图片之外',
+  'KB-6': '某张地图没有任何可用背景',
+  'KB-7': 'background 层数多于地图数',
+  'KB-8': '被采用的背景层没有写 color',
+  'KB-9': '相邻两层的对齐基准不一致',
+  'KR-1': '棋子形象素材非正方形',
+  'KR-2': '形象键不在本局启用组件内',
+  'KR-3': '形象分组写成数组',
+  'KR-5': '立绘非竖构图（宽 ≥ 高）',
+  'KR-6': '立绘键不在本局启用组件内',
+  'KR-7': '立绘写成数组',
+  'KR-9': '受击图与主图宽高比不一致',
+  'KR-10': 'NPC 立绘与主人公立绘是同一张图',
+  'KR-11': 'NPC 形象键与任何 name 都不重名',
+  'KS-1': '道路 tiles 键与槽位名不一致',
+  'KS-3': '两条道路样式在规则 ①② 上同分',
+  'KS-4': '道路素材非正方形',
+  'KS-5': '以 .9.png 命名但未提供 slice',
+  'KS-6': '道路素材尺寸与 cellSize 不成整倍数',
+  'KS-7': 'road 节里出现颜色类字段',
+  'KW-1': '随视口族素材无 slice',
+  'KW-4': '固定族素材非正方形',
+  'KW-7': '按钮四态素材尺寸不一致',
+  'KM-1': 'node.building 未提供九宫格切片',
+  'KM-3': '骰面少于 6 张且未声明复用方式',
+  'KIB-1': '键不在本局启用的组件 id 内',
+  'KIB-2': 'img 以 .9.png 命名但未提供 slice',
+  'KIB-5': '用了显示名而不是 id 作键',
+  'KIB-6': 'item / background 含越界字段',
+  'KIB-7': '衬底不可见（fill 与 stroke 都透明）',
+  'KPG-1': 'bg.fit 取值非法',
+  'KPG-2': 'card 给了 img 但未给 slice',
+  'KPG-3': 'title.img 与标题区比例不符',
+  'KPG-4': 'dice.img 给了图但未给骰面',
+  'KPG-5': 'startup / lobby 出现越界字段',
+  'KPG-6': '出现旧键 pages',
   'KA-2': 'sfx 的事件键不在清单内',
   'KA-3': '音频 volume 超出 0–1',
   'KA-4': '单个音频文件体积过大',

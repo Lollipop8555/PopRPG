@@ -133,6 +133,13 @@
 
 ## 进度同步
 
+**2026-10-10 · V2.2 音频播放落地（`audio` 由「只解析不发声」推进为「真发声」）**
+- **范围**：`audio` 的**播放**半边落地——运行期播放器（`AudioContext`）＋ BGM 三场景切换（`home` / `map` / `battle`，各 600ms 淡出淡入）＋ **8 个 SFX 触发点**接线 ＋ 音量／静音偏好（`localStorage`，键 `poprpg_audio`）。`audio` 的 SFX 事件键为 **8 个**（`SFX_EVENTS`），此前文本中的「9 个」为笔误，已更正。
+- **落点**：[`../src/io/audio-runtime.ts`](../src/io/audio-runtime.ts) 运行期（依赖注入 `createContext` / `decode` / `setTimer`，便于 jsdom 注入假上下文）、[`../src/store/audio.ts`](../src/store/audio.ts) 偏好与接口、[`../src/audio/driver.ts`](../src/audio/driver.ts) 场景驱动（首次手势解锁 / 换肤重载 / 释放）、[`../src/audio/hooks.ts`](../src/audio/hooks.ts) 8 个触发点；设置 UI 落在 [`../src/play/GameScreen.tsx`](../src/play/GameScreen.tsx)。
+- **诚实边界**：`KA-5`（`loop: false` 且 < 3s）与 `bgm.<场景>.fade` 覆盖**未接**（时长写死 600ms）。
+- **验证**：`npx tsc --noEmit` 无错；`npx vitest run` **73 个文件 / 884 项**全绿。
+- **设计侧同步**：[`design/skin/07-audio.md`](design/skin/07-audio.md) 状态行 / §一 / §四 / §五 / §六 版本措辞改写并新增 **§8.2 播放落点**，本文件（逐节索引）`S-25` / `Q20` / `Q26` 与模块表同步；任务侧 [`../TASK.md`](../TASK.md) 与 [`../task/04-skin.md`](../task/04-skin.md) 同步。
+
 **2026-10-09 · V2.4 NPC 槽位 SlotN（裁决 62–66，设计侧，未开工）**
 - **`npcs` 升级为槽位数组**（裁决 62）：元素一律是槽位对象 `{ ids, dialog?, at? }` —— `ids` ＝ 该槽候选（**1 位固定 / 多位掷 `talk.dice` 等权抽一位 / 空 ＝ 该槽留空**）、`dialog` ＝ `{ mod? }`（写死**该槽**方案）、`at` ＝ 落点格。**槽位按声明顺序**编号 `slot0` / `slot1`…，**槽位数 ≤ `w × h`**；**旧包 `npcs: [a, b]`（裸字符串）导入即升级为 `[ { ids: [a, b] } ]`** —— 整个数组升为**一个槽位**、语义不变（与旧 `dialog: Mod1` → `{ mod: Mod1 }` 同一套**读时兼容、写时新形态**）。**节点级 `dialog` 退役**。
 - **槽位坐标与不重叠**（裁决 63）：`at: [dx, dy]` 是**建筑自身格坐标系**（左上 `(0,0)`），缺省按声明顺序取**先 y 后 x 字典序**第 N 格；**同实例两槽 `at` 不得相同**（`K40`）、越界出 `K39`。**NPC 不走动**；**玩家与 NPC 可以重叠**（踩到它那一格就是找它说话）。

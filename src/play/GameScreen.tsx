@@ -26,6 +26,8 @@ import TalkDialog from './TalkDialog'
 import HeroNotice from './HeroNotice'
 import Overlay from '../ui/Overlay'
 import { useSkinStore } from '../store/skin'
+import { useAudioStore } from '../store/audio'
+import { useBattleSfx, useCoinSfx, useDiceSfx, useErrorSfx, useModalSfx, useNoticeSfx } from '../audio/hooks'
 import { useSurfaceStyle } from '../ui/useSurfaceStyle'
 import { useButtonStyle } from '../ui/useButtonStyle'
 import { portraitOf, roleSprite } from '../engine/skin'
@@ -87,6 +89,15 @@ export default function GameScreen({ session }: { session: Session }) {
   const { player } = session
   // 受击这一拍（§4.4）：底栏立绘与地图棋子看的是同一个锚点（主角 hp）
   const hudHit = useHitPulse(player.resources.hp)
+  // 音频（`skin/07-audio.md` §三）：氛围与音效钩子；偏好走本机存储（用户配置，优先于皮肤默认音量）
+  const audioEnabled = useAudioStore((s) => !s.muted)
+  const audioMaster = useAudioStore((s) => s.master)
+  useBattleSfx(session)
+  useDiceSfx(!!pending, session.rolls.length)
+  useNoticeSfx(session)
+  useCoinSfx(session)
+  useErrorSfx(session)
+  useModalSfx(drawer !== null || menuOpen)
   const env = currentNodeInfo(session)
   const gate = env.gate
 
@@ -289,6 +300,28 @@ export default function GameScreen({ session }: { session: Session }) {
               >
                 定位线 {guides ? '开' : '关'}
               </button>
+              {/* 音量（`skin/07-audio.md` §四）：总音量与静音是**用户配置**，覆盖皮肤默认音量 */}
+              <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+                <button
+                  className="btn"
+                  style={plainBtn}
+                  title={audioEnabled ? '静音' : '取消静音'}
+                  onClick={() => useAudioStore.getState().setMuted(audioEnabled)}
+                >
+                  {audioEnabled ? '🔊 音效' : '🔇 静音'}
+                </button>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={audioMaster}
+                  disabled={!audioEnabled}
+                  aria-label="总音量"
+                  onChange={(e) => useAudioStore.getState().setMaster(Number(e.target.value))}
+                  style={{ flex: 1, minWidth: 90 }}
+                />
+              </div>
               <button className="btn" style={plainBtn} onClick={() => play.quit()}>
                 退出
               </button>
