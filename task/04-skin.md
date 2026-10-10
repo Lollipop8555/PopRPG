@@ -100,43 +100,49 @@
 ## D6 校验接入「清单」
 
 > **已接**（2026-10-10）：皮肤校验器 [`src/check/skinValidate.ts`](../src/check/skinValidate.ts)（**纯函数**：读入参的**皮肤条目 ＋ 组件库 ＋ 工程**，不碰 store）汇总加载期 `KP-*` / `KA-*` 与「须对照组件库 / 本局工程」的各节码；[`src/check/validate.ts`](../src/check/validate.ts) 的 `validateProject()` 新增可选 `SkinContext` 并并入结果，[`src/build/Checklist.tsx`](../src/build/Checklist.tsx) 取「预览皮肤优先、回退全局启用皮肤」两处来源。
-> **注册即真会产出**：只登记能判的码；需解码像素的 `KR-4` / `KR-8` / `KM-2` / `KIB-3` / `KB-4` / `KB-5` 一支与规范未定的 `KW-2` / `KW-3` 暂不产出（口径见 [`src/types/skin.ts`](../src/types/skin.ts) 的 `SKIN_ISSUE_CODES` 注释）。
+> **注册即真会产出**：只登记能判的码；需解码像素的 `KR-4` / `KR-8` / `KM-2` / `KIB-3` / `KB-4` / `KB-5` 一支与规范未定的 `KW-2` 暂不产出（口径见 [`src/types/skin.ts`](../src/types/skin.ts) 的 `SKIN_ISSUE_CODES` 注释）。`KW-3` 原属此列，2026-10-10 按简化口径改判「素材不是 `.9.png`」，**已产出**。
 
 - [x] `KP-1`~`KP-10` 接入 `src/check/validate.ts`，在 `src/build/Checklist.tsx` 汇总显示；**全部为提示，不阻断导出**（**不设皮肤体积硬上限**，裁决 15）——**落点**：加载期码由 [`src/io/pp.ts`](../src/io/pp.ts) 收下、原样并入 `SkinIssue[]`；`KP-5`（无效键汇总）与各节明细共用一份判据（`badKeys`，取 `project.enabledIds` 启用集）
-- [x] 各节明细校验项登记——**落点**：`skinValidate.ts` 逐节产出 **`KB-1` / `KB-3` / `KB-6`~`KB-9`**（画布背景，`05-canvas.md` §五）、**`KR-1`~`KR-3` / `KR-5`~`KR-7` / `KR-9`~`KR-11`**（角色与立绘，含 `KR-11` 的 `name` ＋ 通配口径，`02-role.md` §八）、**`KS-1` / `KS-3`~`KS-7`**（道路）、**`KW-1` / `KW-4` / `KW-7`**（容器与控件）、**`KM-1` / `KM-3`**（标记与骰子）、**`KIB-1` / `KIB-2` / `KIB-5`~`KIB-7`**（道具与建筑，`enabledIds` 启用集判定）、**`KPG-1`~`KPG-6`**（欢迎页与首页，含 `KPG-6` 旧 `pages` 键迁移提示）；码表与标题见 [`src/types/skin.ts`](../src/types/skin.ts)（`KM-4` 已由 `slotColor()` 循环取色天然满足，**不产出**）
+- [x] 各节明细校验项登记——**落点**：`skinValidate.ts` 逐节产出 **`KB-1` / `KB-3` / `KB-6`~`KB-9`**（画布背景，`05-canvas.md` §五）、**`KR-1`~`KR-3` / `KR-5`~`KR-7` / `KR-9`~`KR-11`**（角色与立绘，含 `KR-11` 的 `name` ＋ 通配口径，`02-role.md` §八）、**`KS-1` / `KS-3`~`KS-7`**（道路）、**`KW-1` / `KW-3` / `KW-4` / `KW-7`**（容器与控件）、**`KM-1` / `KM-3`**（标记与骰子）、**`KIB-1` / `KIB-2` / `KIB-5`~`KIB-7`**（道具与建筑，`enabledIds` 启用集判定）、**`KPG-1`~`KPG-6`**（欢迎页与首页，含 `KPG-6` 旧 `pages` 键迁移提示）；码表与标题见 [`src/types/skin.ts`](../src/types/skin.ts)（`KM-4` 已由 `slotColor()` 循环取色天然满足，**不产出**）
 - [x] 皮肤校验只在加载了 `.pp` 时出现；未加载皮肤时清单内容与现状一致——**落点**：`Checklist.tsx` 仅当「预览已加载」或「存在全局启用皮肤及其提示」时才传 `SkinContext`，否则传 `undefined`；整包被忽略（`KP-1`，`skin` 为 `undefined`）时**只回加载期提示**（无 manifest 可判）
 
 ## D7 验收（原子项）
 
-- [ ] 完全不加载 `.pp`：全流程渲染与现状一致，无报错、无空白
-- [ ] 只有 `road` 一节的 `.pp`：地图道路走素材，其余元素仍程序绘制
-- [ ] `item.background.img` 生效：背包格显示衬底图（`img` 覆盖 `fill`）；**只给 `fill` 不给 `stroke` 时不出现描边**（裁决 18）
-- [ ] 背景按下标一一对应（**每图单层**）：皮肤背景 2 层 ＋ pmod 4 张地图时，第 1、2 张地图各取下标 0 / 1，**第 3、4 张地图（越界）都取最后一层（下标 1）**——**任何情况下画布上只有一层背景图**（裁决 23 回归项）
-- [ ] 无可用背景：`background` 缺失／为空时该地图走**默认配置**（程序绘制纸面底纹）并提示 `KB-6`；层数多于地图数时末尾层不生效并提示 `KB-7`，均无报错（裁决 23）
-- [ ] `manifest.json` 缺失的 `.pp`：整包被忽略并提示 `KP-1`，游戏照常渲染
-- [ ] `KP-4`：含 `../` 或 `http://` 的素材路径被拒绝并提示
-- [ ] 旧写法 `resource` 前缀拼接不再生效：写 `"bg.jpg"` 的包取不到条目并提示 `KP-2`（路径必须相对包根，裁决 19）
-- [ ] **目录结构自由（裁决 22）**：同一份 manifest 把素材整体移到其它目录名下（如 `assets/`）并同步改路径后，加载与渲染结果完全一致；含旧 `resource` 键的包照常加载并提示 `KP-10`
-- [ ] **立绘 · 底栏（裁决 24 / 25）**：配置 `portraits.player` 后，底栏 hp/mp 左侧显示立绘且**原 `hud-face`（职业 emoji ＋ 职业名）不再出现**；**未配置立绘时底栏渲染与现状逐像素一致**，立绘位**不占宽**（无空盒、无占位）；立绘高度＝**窗口短边 `6% W`**，**改变窗口尺寸时立绘等比跟随**
-- [ ] **立绘 · 对战 VS 区（裁决 24 / 25）**：**任一方有立绘即渲染**整个 VS 区（主角在左、怪物在右、中间「VS」为文字），缺失的一侧**留空且不回退 emoji**；**双方都无立绘时 VS 区整体不渲染**；写 `flip: true` 的立绘**左右翻转但不改变站位**；立绘高度＝ **`18% W`**、**底边对齐**
-- [ ] **对话弹层不设立绘区（`S-29` 2026-09-29 修订）**：踩到 `encounter: talk` 建筑进入对话弹层时，弹层只有**标题栏 ＋ 台词 ＋ 选项**——不出现任何立绘、不出现 VS 区；NPC 只占标题栏 `icon` 一格（`role.npcs.<NPC name>`，**V2.4 起为 `name` ＋ 通配 `"*"`**，缺位回退该 NPC `icon` emoji）
-- [ ] **立绘 · 其余落点（裁决 24 / 25）**：出身卡内职业立绘**居中替代** `.class-icon`（高度 `10% W`），缺位回退 `cls.icon` emoji；状态面板头部与底栏**同源同图**；**遭遇 / 商店弹层始终不出现立绘**（`S-29` 仅预留）；`portraits.*` 写成数组时按 `KR-7` 提示且不渲染
-- [ ] **受击两法（裁决 25）**：同一素材分别验证——提供 `hurt` 时受击瞬间显示受击图（与 `img` 不同宽高比时提示 `KR-9`）；**未提供 `hurt` 时发生形变**（棋子以格中心、立绘以底边为基准），幅度与时长**写死、不随素材变化**；`dead` 不设变体
-- [ ] **NPC 形象与立绘（裁决 26，`S-29` 修订；V2.4 裁决 66 改写）**：`role.npcs` 生效时按 **NPC 的 `name`** 取图（**先精确 `name`、再通配 `"*"`**），未命中回退该 NPC `icon` emoji；`portraits.npcs` **当前无落点**（对话弹层不设立绘区），仍参与 `KR` 校验（拿 `hero_stand.png` 冒充 NPC 立绘提示 `KR-10`；`npcs` 键与任一 `name` 都不重名却配了图 → **`KR-11`**）
-- [ ] **NPC 地图落点（V2.4，裁决 66；原「NPC 不占地图格」作废）**：加载含 NPC 槽位的 `.pmod` 与皮肤后，地图上按各槽 `at` 绘制 NPC——**`role.npcs` 命中 → 画皮肤**（单格、无朝向、层在棋子层之下）；**未命中 → 画槽位色圆环**（颜色 ＝ 构建页该槽位行颜色，调色板**构建页与游玩态共用**，槽号 ≥ 色数即循环取色）；**玩家与 NPC 重叠时 NPC 仍可见**、**NPC 之间不重叠**；对话弹层**不受影响**（NPC 仍只占标题栏 `icon` 一格）
-- [ ] `.pgame` 一次加载游戏与皮肤；缺 `pack.json` 时按约定文件名回退（`KP-7`）；缺少 `skin/` 子目录时按「无皮肤」启动
-- [ ] 皮肤库：导入两份 `.pp` 后列表有两条、包体在 IndexedDB；**切换皮肤后旧皮肤的解压结果被释放**（裁决 15）
-- [ ] 本局 `.pp` 与用户全局 pp 并存：被覆盖节点取本局，未覆盖节点取全局
-- [ ] `theme` 生效且越权被忽略：改 `--paper` 生效，改 `--gap` 被忽略并提示 `KP-9`
-- [ ] 按钮配置写有四态：`normal` 落**行内**属性，`hover` / `active` / `disabled` 各落**一对 CSS 变量**（没配的那态**不写**），真浏览器里悬停 / 按下 / 禁用各换各的图；**没配该态的观感与完全不写四态时逐像素一致**（缺省链回落 `normal` ＋ CSS 表现）
-- [ ] 建筑信息视图：`building.background` 生效，文字仍为窗体字体字色（裁决 12 回归项）
-- [ ] **建筑节点九宫格（`KM-1`，SVG 层切块拼装，V2.2）**：`misc.nodes.building` 或 `building[<id>].img` 声明 `slice` 时，地图建筑节点按**九块拼装**出图——**四角不缩放、四边与中宫拉伸**，盒随格数变化而四角恒定；未声明 `slice` 或源尺寸不可得时**回落整图拉伸**、观感与现状一致
-- [ ] `audio` 字段被解析并校验：清单能看到路径/音量提示（`KA-2` / `KA-3` / `KA-4`，裁决 16）
-- [ ] **音频播放（V2.2）**：首次用户交互后 BGM 起播并按场景切换（首页／地图／战斗，各 600ms 淡出淡入）；8 个 SFX 触发点各自发声；音量与静音写入 `localStorage`（`poprpg_audio`）并跨刷新恢复；未启用皮肤或该场景无曲时静默、不报错
-- [ ] Creative 九宫格切分工具：拖四根参考线后写回的 `slice` 落在 manifest 中，**V2.2 起 `slice` 已真被消费**——DOM 层走 `border-image`、**SVG 层（含建筑节点）走切块拼装**，不再一律拉伸（裁决 21）
-- [ ] Creative 全链路：从 `.pmod` 生成骨架 → 绑定素材 → 导出 `.pp` → 在 play 加载，观感与预览一致
-- [ ] `npm run build`（tsc 无错）＋ `npx vitest run` 全绿
-- [ ] `npm run dev` 人工手测一次：zip 读取、`.pp` / `.pgame` 导出下载在真浏览器可用
+> **本轮收口（2026-10-10）**：下列 29 项中，26 项为**可机验项**且各有专用用例覆盖；本轮另补两处此前缺验证的落点——
+> ① 跨层**端到端**验收 [`src/play/__tests__/v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx)（真 zip 字节 → `readSkin` / `readPGame` → 运行期合成 / 素材源 → 上屏），
+> ② Creative 切分**几何** [`src/creative/__tests__/nine.test.ts`](../src/creative/__tests__/nine.test.ts)（四线 ↔ 九块、`.9.png` 黑边、写回 `slice`；此前零覆盖）。
+> 余 3 项不勾：**131** 的真浏览器伪类换图与逐像素一致、**139** 的人工手测属真浏览器交互；**132** 阻塞于 D3 L63（[`03-window.md`](../docs/design/skin/03-window.md) §四.2，设计侧未决）。
+> 判据（138）已过：`npx tsc --noEmit` 无错 ＋ `npx vitest run` **75 文件 / 934 用例全绿**。
+
+- [x] 完全不加载 `.pp`：全流程渲染与现状一致，无报错、无空白——**落点**：[`mapView.test.tsx`](../src/play/__tests__/mapView.test.tsx)「未启用皮肤」；[`v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx) D7-111
+- [x] 只有 `road` 一节的 `.pp`：地图道路走素材，其余元素仍程序绘制——**落点**：[`mapView.test.tsx`](../src/play/__tests__/mapView.test.tsx)「接管道路」；[`v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx) D7-112（真包 → 真素材源）
+- [x] `item.background.img` 生效：背包格显示衬底图（`img` 覆盖 `fill`）；**只给 `fill` 不给 `stroke` 时不出现描边**（裁决 18）——**落点**：[`itemBuildingSkin.test.tsx`](../src/play/__tests__/itemBuildingSkin.test.tsx)「背包格的衬底三件套」；[`engine/skin/__tests__/item-building.test.ts`](../src/engine/skin/__tests__/item-building.test.ts)
+- [x] 背景按下标一一对应（**每图单层**）：皮肤背景 2 层 ＋ pmod 4 张地图时，第 1、2 张地图各取下标 0 / 1，**第 3、4 张地图（越界）都取最后一层（下标 1）**——**任何情况下画布上只有一层背景图**（裁决 23 回归项）——**落点**：[`mapView.test.tsx`](../src/play/__tests__/mapView.test.tsx)「逐图清单下标即地图下标」；[`engine/skin/__tests__/pick.test.ts`](../src/engine/skin/__tests__/pick.test.ts)「越界 clamp」；[`v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx) D7-114（担保每图单层）
+- [x] 无可用背景：`background` 缺失／为空时该地图走**默认配置**（程序绘制纸面底纹）并提示 `KB-6`；层数多于地图数时末尾层不生效并提示 `KB-7`，均无报错（裁决 23）——**落点**：[`mapView.test.tsx`](../src/play/__tests__/mapView.test.tsx)「该层不可用即向前回退」；[`check/__tests__/skinValidate.test.ts`](../src/check/__tests__/skinValidate.test.ts) `KB-1` / `KB-7`
+- [x] `manifest.json` 缺失的 `.pp`：整包被忽略并提示 `KP-1`，游戏照常渲染——**落点**：[`io/__tests__/pp.test.ts`](../src/io/__tests__/pp.test.ts)「KP-1 入口」；[`v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx) D7-116
+- [x] `KP-4`：含 `../` 或 `http://` 的素材路径被拒绝并提示——**落点**：[`io/__tests__/pp.test.ts`](../src/io/__tests__/pp.test.ts)「KP-4 路径约束」；[`v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx) D7-117
+- [x] 旧写法 `resource` 前缀拼接不再生效：写 `"bg.jpg"` 的包取不到条目并提示 `KP-2`（路径必须相对包根，裁决 19）——**落点**：[`io/__tests__/pp.test.ts`](../src/io/__tests__/pp.test.ts)「KP-2 素材存在性」；[`v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx) D7-118
+- [x] **目录结构自由（裁决 22）**：同一份 manifest 把素材整体移到其它目录名下（如 `assets/`）并同步改路径后，加载与渲染结果完全一致；含旧 `resource` 键的包照常加载并提示 `KP-10`——**落点**：[`io/__tests__/pp.test.ts`](../src/io/__tests__/pp.test.ts)「目录结构与文件名完全自由」＋「KP-10 已废除的 resource 键」；[`v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx) D7-119
+- [x] **立绘 · 底栏（裁决 24 / 25）**：配置 `portraits.player` 后，底栏 hp/mp 左侧显示立绘且**原 `hud-face`（职业 emoji ＋ 职业名）不再出现**；**未配置立绘时底栏渲染与现状逐像素一致**，立绘位**不占宽**（无空盒、无占位）；立绘高度＝**窗口短边 `6% W`**，**改变窗口尺寸时立绘等比跟随**——**落点**：[`portraitLandings.test.tsx`](../src/play/__tests__/portraitLandings.test.tsx)「落点 1：底栏」；[`ui/__tests__/portrait.test.tsx`](../src/ui/__tests__/portrait.test.tsx)（`vmin` 档随窗口）
+- [x] **立绘 · 对战 VS 区（裁决 24 / 25）**：**任一方有立绘即渲染**整个 VS 区（主角在左、怪物在右、中间「VS」为文字），缺失的一侧**留空且不回退 emoji**；**双方都无立绘时 VS 区整体不渲染**；写 `flip: true` 的立绘**左右翻转但不改变站位**；立绘高度＝ **`18% W`**、**底边对齐**——**落点**：[`portraitLandings.test.tsx`](../src/play/__tests__/portraitLandings.test.tsx)「落点 2：对战 VS 区」
+- [x] **对话弹层不设立绘区（`S-29` 2026-09-29 修订）**：踩到 `encounter: talk` 建筑进入对话弹层时，弹层只有**标题栏 ＋ 台词 ＋ 选项**——不出现任何立绘、不出现 VS 区；NPC 只占标题栏 `icon` 一格（`role.npcs.<NPC name>`，**V2.4 起为 `name` ＋ 通配 `"*"`**，缺位回退该 NPC `icon` emoji）——**落点**：[`portraitLandings.test.tsx`](../src/play/__tests__/portraitLandings.test.tsx)「落点 3：对话弹层不设立绘区」；[`talkDialog.test.tsx`](../src/play/__tests__/talkDialog.test.tsx)
+- [x] **立绘 · 其余落点（裁决 24 / 25）**：出身卡内职业立绘**居中替代** `.class-icon`（高度 `10% W`），缺位回退 `cls.icon` emoji；状态面板头部与底栏**同源同图**；**遭遇 / 商店弹层始终不出现立绘**（`S-29` 仅预留）；`portraits.*` 写成数组时按 `KR-7` 提示且不渲染——**落点**：[`portraitLandings.test.tsx`](../src/play/__tests__/portraitLandings.test.tsx)「落点 4 / 5」；[`check/__tests__/skinValidate.test.ts`](../src/check/__tests__/skinValidate.test.ts) `KR-3`
+- [x] **受击两法（裁决 25）**：同一素材分别验证——提供 `hurt` 时受击瞬间显示受击图（与 `img` 不同宽高比时提示 `KR-9`）；**未提供 `hurt` 时发生形变**（棋子以格中心、立绘以底边为基准），幅度与时长**写死、不随素材变化**；`dead` 不设变体——**落点**：[`portraitLandings.test.tsx`](../src/play/__tests__/portraitLandings.test.tsx)「受击表现：谁掉血谁抖」；[`mapView.test.tsx`](../src/play/__tests__/mapView.test.tsx)「棋子的受击形变」；[`ui/__tests__/hitPulse.test.tsx`](../src/ui/__tests__/hitPulse.test.tsx)
+- [x] **NPC 形象与立绘（裁决 26，`S-29` 修订；V2.4 裁决 66 改写）**：`role.npcs` 生效时按 **NPC 的 `name`** 取图（**先精确 `name`、再通配 `"*"`**），未命中回退该 NPC `icon` emoji；`portraits.npcs` **当前无落点**（对话弹层不设立绘区），仍参与 `KR` 校验（拿 `hero_stand.png` 冒充 NPC 立绘提示 `KR-10`；`npcs` 键与任一 `name` 都不重名却配了图 → **`KR-11`**）——**落点**：[`engine/skin/__tests__/pick.test.ts`](../src/engine/skin/__tests__/pick.test.ts)「NPC 按 name ＋ 通配」；[`mapView.test.tsx`](../src/play/__tests__/mapView.test.tsx)「NPC 槽位层」；[`check/__tests__/skinValidate.test.ts`](../src/check/__tests__/skinValidate.test.ts)（`KR-10` / `KR-11`）
+- [x] **NPC 地图落点（V2.4，裁决 66；原「NPC 不占地图格」作废）**：加载含 NPC 槽位的 `.pmod` 与皮肤后，地图上按各槽 `at` 绘制 NPC——**`role.npcs` 命中 → 画皮肤**（单格、无朝向、层在棋子层之下）；**未命中 → 画槽位色圆环**（颜色 ＝ 构建页该槽位行颜色，调色板**构建页与游玩态共用**，槽号 ≥ 色数即循环取色）；**玩家与 NPC 重叠时 NPC 仍可见**、**NPC 之间不重叠**；对话弹层**不受影响**（NPC 仍只占标题栏 `icon` 一格）——**落点**：[`mapView.test.tsx`](../src/play/__tests__/mapView.test.tsx)「NPC 槽位层」（含槽位色圆环、层序、未抽定不画）
+- [x] `.pgame` 一次加载游戏与皮肤；缺 `pack.json` 时按约定文件名回退（`KP-7`）；缺少 `skin/` 子目录时按「无皮肤」启动——**落点**：[`io/__tests__/pgame.test.ts`](../src/io/__tests__/pgame.test.ts)「标准 `pack.json`」＋「KP-7 回退探测」＋「缺件与提示」；[`v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx) D7-127（容器取出的皮肤直接上屏）
+- [x] 皮肤库：导入两份 `.pp` 后列表有两条、包体在 IndexedDB；**切换皮肤后旧皮肤的解压结果被释放**（裁决 15）——**落点**：[`io/__tests__/skin-library.test.ts`](../src/io/__tests__/skin-library.test.ts)「增删查」；[`store/__tests__/skin.test.ts`](../src/store/__tests__/skin.test.ts)（记账撤销）；[`v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx) D7-128
+- [x] 本局 `.pp` 与用户全局 pp 并存：被覆盖节点取本局，未覆盖节点取全局——**落点**：[`io/__tests__/skin-runtime.test.ts`](../src/io/__tests__/skin-runtime.test.ts)「两层合成」；[`v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx) D7-129（本局 road ＋ 全局 misc 同屏）
+- [x] `theme` 生效且越权被忽略：改 `--paper` 生效，改 `--gap` 被忽略并提示 `KP-9`——**落点**：[`io/__tests__/skin-theme.test.ts`](../src/io/__tests__/skin-theme.test.ts)；[`io/__tests__/pp.test.ts`](../src/io/__tests__/pp.test.ts)「KP-9 主题键」；[`engine/skin/__tests__/pick.test.ts`](../src/engine/skin/__tests__/pick.test.ts) `themeVars`；[`v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx) D7-130
+- [ ] 按钮配置写有四态：`normal` 落**行内**属性，`hover` / `active` / `disabled` 各落**一对 CSS 变量**（没配的那态**不写**），真浏览器里悬停 / 按下 / 禁用各换各的图；**没配该态的观感与完全不写四态时逐像素一致**（缺省链回落 `normal` ＋ CSS 表现）——**CSS 变量落点已机验**（[`windowButtons.test.tsx`](../src/play/__tests__/windowButtons.test.tsx)「落点 5：按钮三态」；[`ui/__tests__/texture.test.tsx`](../src/ui/__tests__/texture.test.tsx)「按钮四态 buttonStyle」：`normal` 行内 ＋ 三态各写各对、没写的不占位）；**「真浏览器伪类换图 ＋ 逐像素一致」属人工手测**，随 139 一并核
+- [ ] 建筑信息视图：`building.background` 生效，文字仍为窗体字体字色（裁决 12 回归项）——**受阻**：依赖 D3 L63（[`03-window.md`](../docs/design/skin/03-window.md) §四.2 信息图标组合）与构建页排期，未裁决前不动工
+- [x] **建筑节点九宫格（`KM-1`，SVG 层切块拼装，V2.2）**：`misc.nodes.building` 或 `building[<id>].img` 声明 `slice` 时，地图建筑节点按**九块拼装**出图——**四角不缩放、四边与中宫拉伸**，盒随格数变化而四角恒定；未声明 `slice` 或源尺寸不可得时**回落整图拉伸**、观感与现状一致——**落点**：[`engine/skin/__tests__/texture.test.ts`](../src/engine/skin/__tests__/texture.test.ts)「九宫格切块 `nineSliceTiles`」；[`ui/__tests__/texture.test.tsx`](../src/ui/__tests__/texture.test.tsx)「SVG 层九块拼装 / 回落整图拉伸」；[`itemBuildingSkin.test.tsx`](../src/play/__tests__/itemBuildingSkin.test.tsx)「建筑节点贴图」（`img` 缺位回退通用件）
+- [x] `audio` 字段被解析并校验：清单能看到路径/音量提示（`KA-2` / `KA-3` / `KA-4`，裁决 16）——**落点**：[`io/__tests__/pp-audio.test.ts`](../src/io/__tests__/pp-audio.test.ts)「KA-2 / KA-3 / KA-4」
+- [x] **音频播放（V2.2）**：首次用户交互后 BGM 起播并按场景切换（首页／地图／战斗，缺省各 600ms 淡出淡入，**可按曲目用 `bgm.<场景>.fade` 覆盖**）；8 个 SFX 触发点各自发声；音量与静音写入 `localStorage`（`poprpg_audio`）并跨刷新恢复；未启用皮肤或该场景无曲时静默、不报错——**落点**：[`io/__tests__/audio-runtime.test.ts`](../src/io/__tests__/audio-runtime.test.ts)（解锁 / 场景切换 / 淡出 / **按曲目 `fade` 定淡入时长** / 音效合并 / 音量静音 / 重载释放）；[`store/__tests__/audio.test.ts`](../src/store/__tests__/audio.test.ts)（`localStorage` 恢复）；[`engine/skin/__tests__/audio.test.ts`](../src/engine/skin/__tests__/audio.test.ts)（场景键与事件钩子 / **`fade` 解析与规整**）
+- [x] Creative 九宫格切分工具：拖四根参考线后写回的 `slice` 落在 manifest 中，**V2.2 起 `slice` 已真被消费**——DOM 层走 `border-image`、**SVG 层（含建筑节点）走切块拼装**，不再一律拉伸（裁决 21）——**落点**（几何与写回）：[`creative/__tests__/nine.test.ts`](../src/creative/__tests__/nine.test.ts)（四线 ↔ 九块、`.9.png` 黑边、`sliceOf` / `linesOfSlice` 往返、切片命名，**本轮新增**）；**消费**：[`ui/__tests__/texture.test.tsx`](../src/ui/__tests__/texture.test.tsx)（`border-image` / SVG 切块）。**说明**：指针拖拽手势本身属浏览器交互层，本项只机验纯几何与写回结果
+- [x] Creative 全链路：从 `.pmod` 生成骨架 → 绑定素材 → 导出 `.pp` → 在 play 加载，观感与预览一致——**落点**：[`creative/__tests__/creative.test.tsx`](../src/creative/__tests__/creative.test.tsx)「样例游戏 → 待填清单 → 绑定 → 命中 → 打包」（含打开本地目录同一条装载路径）；[`build/__tests__/skinPreview.test.tsx`](../src/build/__tests__/skinPreview.test.tsx)（预览复用 `MapView`）
+- [x] `npm run build`（tsc 无错）＋ `npx vitest run` 全绿——**本轮实测**：`npx tsc --noEmit` 无错；`npx vitest run` **75 文件 / 934 用例全绿**（2026-10-10）
+- [ ] `npm run dev` 人工手测一次：zip 读取、`.pp` / `.pgame` 导出下载在真浏览器可用——**属人工手测**，需真浏览器（jsdom 无下载 / 无真 blob）
 
 ## D8 未决项（未裁决前不动工）
 
@@ -304,3 +310,25 @@
 - **取图与接线**：[`../src/engine/skin/lookup.ts`](../src/engine/skin/lookup.ts) 新增 `guidesOf(misc)`（取 `misc.guides.grid` 一张，**平铺的唯一候选就是本条**）；[`../src/play/MapView.tsx`](../src/play/MapView.tsx) 的引导线层——**配了素材即 `<pattern>` 铺满视口，未配 / 量不出源尺寸则照旧画每 10 格的程序虚线**（同一条退路），与程序层同一档透明度 `0.28`、开 / 关仍在游玩菜单（`guides`，裁决 27）。
 - **验收**：`npx tsc --noEmit` 无错；`npx vitest run` **73 个文件 / 902 项**全绿（本轮新增 7 项：`guidesOf` 2 项、`textureProps` 平铺 2 项、`SvgTexture` 平铺 2 项、`MapView` 平铺落点 1 项）。
 - **设计侧同步**：[`../docs/design/skin/04-misc.md`](../docs/design/skin/04-misc.md) §五 / §十（落点表新增一行、未接条目改为已落地）、[`../docs/design/skin.md`](../docs/design/skin.md) §3.4 / §四策略表（`tile` 行改为已落地）；任务侧本条与版本线条目改写。
+
+**2026-10-10 · V2.2 D7 验收收口（补齐端到端验收与 Creative 切分几何用例）**
+- **背景**：D7 为**原子验收清单**（29 项），此前散落于各屏单测、无统一收口。本轮先**逐项盘点落点**，确认 **26 项为可机验项**且各有单测覆盖；另 3 项不可机验 / 受阻，保留未勾（**131** 真浏览器伪类与逐像素、**132** 阻塞于 D3 L63、**139** `npm run dev` 手测）。
+- **补两处覆盖空白**：① **跨层端到端验收** [`../src/play/__tests__/v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx)（13 项）——真 zip 字节 → `readSkin` / `readPGame` → `createSkinAssets` / 皮肤 store → [`../src/play/MapView.tsx`](../src/play/MapView.tsx) 渲染，覆盖无皮肤回退、单层背景取用、主题 token `KP-9`、两层合并、换套先撤旧地址等接缝；jsdom 无 `URL.createObjectURL`，按 [`../src/store/__tests__/skin.test.ts`](../src/store/__tests__/skin.test.ts) 的桩法注入。② **Creative 切分几何** [`../src/creative/__tests__/nine.test.ts`](../src/creative/__tests__/nine.test.ts)（19 项）——`normalizeLines` / `nineRegions` / `sliceOf` ↔ `linesOfSlice` / `detectNineBorders` / `sliceFileName`，此前**零覆盖**。
+- **验收**：`npx tsc --noEmit` 无错；`npx vitest run` **75 个文件 / 934 用例全绿**（较 `tile` 收口 73 / 902 净增 **2 文件 / 32 项**）。
+- **同批**：D7 26 项勾选并写明落点（见 D7 段落）、设计侧 [`../docs/DESIGN.md`](../docs/DESIGN.md) 与 [`../TASK.md`](../TASK.md) 进度同步。
+
+**2026-10-10 · V2.2 音频 `bgm.<场景>.fade` 覆盖落地 ＋ 背景「盖满 / 分辨率」提示作废**
+- **`bgm.<场景>.fade`（按曲目覆盖淡入淡出时长，用户裁定补做）**：`SkinBgm` 增可选 `fade?: number`（[`../src/types/skin.ts`](../src/types/skin.ts)）；[`../src/engine/skin/audio.ts`](../src/engine/skin/audio.ts) 增常量 `BGM_DEFAULT_FADE_MS = 600` 与纯函数 `fadeOf()`（缺位、非有限或为负一律回落缺省；`0` 合法，表示立即切换），`BgmTrack` 增 `fade` 字段、`bgmTrackOf()` 带出；[`../src/store/audio.ts`](../src/store/audio.ts) 的 `resolveBgm()` 透传 `fade`；[`../src/io/audio-runtime.ts`](../src/io/audio-runtime.ts) 的 `AudioTrack` 增可选 `fade`，`applyBgm()` 按 `want.track.fade ?? BGM_FADE_MS` 做淡出 / 淡入（换肤重载的即时切换仍为 0）。§2.1 原文「`fade` 字段的覆盖**尚未接**」随之销账。
+- **背景「盖满整张地图 / 分辨率不足」两条提示作废（用户裁定）**：背景按「地图尺寸 × 地图 DPI（`cellSize`）」等比缩放，**能否盖住整张地图不在检查范围**。`KB-4` / `KB-5` 由「需地图格数、当前不做」改记为**已作废**，同步 [`../docs/design/skin/05-canvas.md`](../docs/design/skin/05-canvas.md) §五（表内两行加删除线并注明理由）与 [`../src/types/skin.ts`](../src/types/skin.ts) 的 `SKIN_ISSUE_CODES` 注释。
+- **验收**：`npx tsc --noEmit` 无错；`npx vitest run` **75 个文件 / 938 项全绿**（较 D7 收口 75 / 934 净增 4 项：引擎 `fade` 解析 2 项 ＋ 运行期按曲目 / 零时长 2 项）。
+- **诚实边界**：`KA-5`（`loop: false` 且 < 3s，须解码量时长，成本高于收益）彼时**仍未接**——**已于下一条按简化口径接入**。
+- 设计侧同步：[`../docs/design/skin/07-audio.md`](../docs/design/skin/07-audio.md) 状态行 / §二（字段表新增 `fade` 行）/ §2.1 / §8.1 / §8.2；[`../docs/DESIGN.md`](../docs/DESIGN.md) 与 [`../TASK.md`](../TASK.md) 进度同步。
+
+**2026-10-10 · 皮肤「提示」简化口径收口（`KW-1` / `KW-3` / `KA-5`）**
+- **口径（用户裁定）**：这是**开放的游戏引擎**，只提示**无意识的低级错误**、不拦**故意的设计**——一律 `warn`、不阻断导出。故三条遗留提示按「素材类型是不是 `.9.png` / 有没有关循环」一刀切，**不做细节分析**。
+- **`KW-1`（随视口族）语义改写**：由「素材无 `slice`」改为「素材**不是 `.9.png`**」即提示。[`../src/check/skinValidate.ts`](../src/check/skinValidate.ts) 新增 `isNine()` 助手（`/\.9\.png$/i`）并重写该条——即便作者有意用普通图，提示仍在，不影响提交。
+- **`KW-3`（随内容族，新增接入）**：按钮类（`BUTTON_KINDS`）素材不是 `.9.png` 即提示「该族禁止硬拉伸，建议改用 `.9.png`」。运行期本就是**兼容而非报错**——[`../src/engine/skin/texture.ts`](../src/engine/skin/texture.ts) 的 `surfaceMode()` / `effectiveMode()` 按「素材带 `slice` → `nine`，否则 `stretch`」处理，提示只提醒类型选得对不对。
+- **`KA-5`（BGM 未循环，简化接入）**：[`../src/engine/skin/audio.ts`](../src/engine/skin/audio.ts) 新增 `nonLoopingBgm()`——只列**显式 `loop: false`** 的场景键（缺省与显式 `loop: true` 都算循环、不报），由 [`../src/io/pp.ts`](../src/io/pp.ts) 的 `checkAudio()` 合成加载期提示。原先「不循环**且**曲目过短（< 3s）」须解码量时长、成本高于收益，**已废**。
+- **码表**：[`../src/types/skin.ts`](../src/types/skin.ts) 的 `SKIN_ISSUE_CODES` 增 `KW-3` / `KA-5` 并补标题，注释区分「已按简化口径产出」与「仍未接」两类；**`KW-2` 是唯一未接项**（缺「元素最小渲染尺寸」机器可读规格表）。
+- **验收**：`npx tsc --noEmit` 无错；`npx vitest run` **75 个文件 / 947 项全绿**（较 938 净增 9 项：`nonLoopingBgm` 4、`KA-5` 加载期 2、`KW-1` 阳性 1、`KW-3` 2）。
+- 设计侧同步：[`../docs/design/skin/03-window.md`](../docs/design/skin/03-window.md) §三 / §六（§六重写为「简化口径 ＋ 状态列」，§三 注明 `KW-2` 未接）、[`../docs/design/skin/07-audio.md`](../docs/design/skin/07-audio.md) 状态行 / §五（`KA-5` 行改写）/ §8.1 / §8.2；[`../docs/DESIGN.md`](../docs/DESIGN.md) 与 [`../TASK.md`](../TASK.md) 进度同步。

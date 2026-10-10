@@ -133,6 +133,27 @@
 
 ## 进度同步
 
+**2026-10-10 · 皮肤「提示」简化口径收口（`KW-1` / `KW-3` / `KA-5` 按用户裁定落地）**
+- **口径（用户裁定）**：这是**开放的游戏引擎**，只提示**无意识的低级错误**、不拦**故意的设计**——一律 `warn`、不阻断导出。故三条遗留提示按「素材类型是不是 `.9.png` / 有没有关循环」一刀切，**不做细节分析**。
+- **`KW-1`（随视口族）**：由「素材无 `slice`」改为「素材**不是 `.9.png`**」即提示（即便有意为之，提示仍在，不影响提交）。[`../src/check/skinValidate.ts`](../src/check/skinValidate.ts) 新增 `isNine()` 助手并重写该条。
+- **`KW-3`（随内容族，新增接入）**：按钮类素材不是 `.9.png` 即提示「该族禁止硬拉伸，建议改用 `.9.png`」。运行期本就是**兼容而非报错**（非 `.9` 整图拉伸、`.9` 走九宫格，`surfaceMode()`），提示只提醒类型选得对不对。
+- **`KA-5`（BGM 未循环，简化接入）**：[`../src/engine/skin/audio.ts`](../src/engine/skin/audio.ts) 新增 `nonLoopingBgm()`——只列**显式 `loop: false`** 的场景（缺省与 `loop: true` 不报），由 [`../src/io/pp.ts`](../src/io/pp.ts) 的 `checkAudio()` 合成加载期提示。原先「不循环**且**时长 < 3s」须解码量时长、成本高于收益，**已废**。
+- **码表**：[`../src/types/skin.ts`](../src/types/skin.ts) 的 `SKIN_ISSUE_CODES` 增 `KW-3` / `KA-5`，标题与注释同步；`KW-2` 因缺「元素最小渲染尺寸」规格表**仍未接**（唯一未接项）。
+- **验证**：`npx tsc --noEmit` 无错；`npx vitest run` **75 个文件 / 947 项全绿**（较 938 净增 9 项：`nonLoopingBgm` 4 ＋ `KA-5` 加载期 2 ＋ `KW-1` 阳性 1 ＋ `KW-3` 2）。
+- **文档同步**：[`design/skin/03-window.md`](design/skin/03-window.md) §三 / §六（新增简化口径说明与状态列）、[`design/skin/07-audio.md`](design/skin/07-audio.md) 状态行 / §五 / §8.1 / §8.2、[`../task/04-skin.md`](../task/04-skin.md) 与 [`../TASK.md`](../TASK.md) 进度同步。
+
+**2026-10-10 · V2.2 音频 `bgm.<场景>.fade` 覆盖落地 ＋ 背景「盖满 / 分辨率」提示作废**
+- **`bgm.<场景>.fade`（按曲目覆盖淡入淡出时长）**：[`../src/types/skin.ts`](../src/types/skin.ts) 的 `SkinBgm` 增可选 `fade?: number`；[`../src/engine/skin/audio.ts`](../src/engine/skin/audio.ts) 增 `BGM_DEFAULT_FADE_MS = 600` ＋ 纯函数 `fadeOf()`（缺位 / 非有限 / 为负一律回落缺省，`0` 表示立即切换），`BgmTrack` 增 `fade`；经 [`../src/store/audio.ts`](../src/store/audio.ts) 的 `resolveBgm()` 透传，运行期 [`../src/io/audio-runtime.ts`](../src/io/audio-runtime.ts) 的 `applyBgm()` 按 `AudioTrack.fade ?? BGM_FADE_MS` 淡出 / 淡入。`07-audio.md` §2.1「`fade` 覆盖尚未接」销账。
+- **背景提示作废**：`KB-4`（覆盖不到整张地图）/ `KB-5`（分辨率低于「地图格数 × `cellSize`」）改记为**已作废**——背景按「地图尺寸 × 地图 DPI（`cellSize`）」等比缩放，能否盖满整张地图不作检查（用户裁定）。同步 [`design/skin/05-canvas.md`](design/skin/05-canvas.md) §五 与 [`../src/types/skin.ts`](../src/types/skin.ts) 的 `SKIN_ISSUE_CODES` 注释。
+- **验证**：`npx tsc --noEmit` 无错；`npx vitest run` **75 个文件 / 938 项全绿**（较 D7 收口 75 / 934 净增 4 项）。
+- **任务侧同步**：[`design/skin/07-audio.md`](design/skin/07-audio.md) 状态行 / §二 / §2.1 / §8.1 / §8.2、[`design/skin/05-canvas.md`](design/skin/05-canvas.md) §五、[`../task/04-skin.md`](../task/04-skin.md) D7 音频项与「进度同步」、[`../TASK.md`](../TASK.md)。`KA-5` 仍未接（其余不变）。
+
+**2026-10-10 · V2.2 D7 验收收口（补齐端到端验收与 Creative 切分几何用例）**
+- **背景**：`04-skin.md` 的 D7 为**原子验收清单**（29 项），此前散落于各屏单测、无统一收口。本轮逐项盘点落点，确认 **26 项可机验**且各有单测覆盖；另 3 项保留未勾（真浏览器伪类与逐像素 / 阻塞于 [`design/skin/03-window.md`](design/skin/03-window.md) §四.2 / `npm run dev` 手测）。
+- **补两处覆盖空白**：① 跨层端到端验收 [`../src/play/__tests__/v22-acceptance.test.tsx`](../src/play/__tests__/v22-acceptance.test.tsx)（13 项）——真 zip 字节 → `readSkin` / `readPGame` → 素材源 / 皮肤 store → `MapView` 渲染；② Creative 切分几何 [`../src/creative/__tests__/nine.test.ts`](../src/creative/__tests__/nine.test.ts)（19 项）——四线 ↔ 九块、黑边识别、写回 `slice`，此前**零覆盖**。
+- **验证**：`npx tsc --noEmit` 无错；`npx vitest run` **75 个文件 / 934 用例全绿**。
+- **任务侧同步**：[`../task/04-skin.md`](../task/04-skin.md) D7 勾选与「进度同步」、[`../TASK.md`](../TASK.md) 版本表与「进度同步」。设计文档正文（skin 各分节）无口径变化。
+
 **2026-10-10 · V2.2 音频播放落地（`audio` 由「只解析不发声」推进为「真发声」）**
 - **范围**：`audio` 的**播放**半边落地——运行期播放器（`AudioContext`）＋ BGM 三场景切换（`home` / `map` / `battle`，各 600ms 淡出淡入）＋ **8 个 SFX 触发点**接线 ＋ 音量／静音偏好（`localStorage`，键 `poprpg_audio`）。`audio` 的 SFX 事件键为 **8 个**（`SFX_EVENTS`），此前文本中的「9 个」为笔误，已更正。
 - **落点**：[`../src/io/audio-runtime.ts`](../src/io/audio-runtime.ts) 运行期（依赖注入 `createContext` / `decode` / `setTimer`，便于 jsdom 注入假上下文）、[`../src/store/audio.ts`](../src/store/audio.ts) 偏好与接口、[`../src/audio/driver.ts`](../src/audio/driver.ts) 场景驱动（首次手势解锁 / 换肤重载 / 释放）、[`../src/audio/hooks.ts`](../src/audio/hooks.ts) 8 个触发点；设置 UI 落在 [`../src/play/GameScreen.tsx`](../src/play/GameScreen.tsx)。

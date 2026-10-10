@@ -24,7 +24,7 @@ import {
 } from './skin-paths'
 import { hasEntry, jsonEntry, type ZipEntries, unzipEntries } from './zip'
 import { themeVars } from '../engine/skin/theme'
-import { AUDIO_MAX_BYTES, outOfRangeVolumes, unknownSfxEvents } from '../engine/skin/audio'
+import { AUDIO_MAX_BYTES, nonLoopingBgm, outOfRangeVolumes, unknownSfxEvents } from '../engine/skin/audio'
 
 /** 入口描述文件（必须在包根） */
 export const SKIN_MANIFEST_ENTRY = 'manifest.json'
@@ -196,11 +196,12 @@ function checkManifest(entries: ZipEntries, manifest: SkinManifest, issues: Skin
 }
 
 /**
- * `KA-2` / `KA-3` / `KA-4`：音频这块**不播放也判得出来**的几条（`skin/07-audio.md` §五）。
+ * `KA-2` / `KA-3` / `KA-4` / `KA-5`：音频这块**不播放也判得出来**的几条（`skin/07-audio.md` §五）。
  *
  * 判据本身在 `engine/skin/audio.ts`（纯函数），这里只负责「读包内条目长度」与「拼成提示」。
  * `KA-1`（音频路径在包内不存在）不在这里——`KP-2` 上面的通用收集已经覆盖音频扩展名，
- * 单列只会同一条缺失报两遍；`KA-5`（曲目时长）要解码，**仍未接**（V2.2 播放已落地，本项除外）。
+ * 单列只会同一条缺失报两遍；`KA-5` 只提示「BGM 显式 `loop: false`（不循环）」、**不看时长**
+ * （原设想的「不循环且曲目过短」须解码量时长，成本高于收益）。
  */
 function checkAudio(
   entries: ZipEntries,
@@ -218,6 +219,11 @@ function checkAudio(
   const volumes = outOfRangeVolumes(audio)
   if (volumes.length > 0) {
     issues.push(issue('KA-3', `音量超出 0–1，已截断到边界：${volumes.join('、')}`))
+  }
+
+  const nonLooping = nonLoopingBgm(audio)
+  if (nonLooping.length > 0) {
+    issues.push(issue('KA-5', `BGM 显式关闭了循环（loop: false），曲目播完即停：${nonLooping.join('、')}`))
   }
 
   // 体积只能从包内条目读，故不走 audio.ts（那里不碰 zip）；同一个文件被多处引用只报一次

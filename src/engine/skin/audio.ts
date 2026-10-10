@@ -4,12 +4,13 @@
  * V1 只做两件事——
  * 1. **解析**：把 manifest 的 `audio` 收成明确的一档取值（场景键 → 曲目、事件键 → 音源），
  *    把「字符串写法」「对象写法」「缺省值」「越界音量」这些分支一次算清，播放侧不再自己判形状；
- * 2. **校验**：算出 §五 里**不需要解码素材**的那几条（`KA-2` 事件键越界、`KA-3` 音量越界），
- *    连同包级检查一起变成加载期提示（`SkinIssue`）。
+ * 2. **校验**：算出 §五 里**不需要解码素材**的那几条（`KA-2` 事件键越界、`KA-3` 音量越界、
+ *    `KA-5` BGM 显式关闭循环），连同包级检查一起变成加载期提示（`SkinIssue`）。
  *
  * 不在这里的：`KA-1`（路径不存在）由包级 `KP-2` 判、`KA-4`（文件体积）在 `io/pp.ts` 里判
  * （要读包内条目长度）；**播放**（`AudioContext`、音量偏好）已随 **V2.2** 落地（见
- * `docs/design/skin/07-audio.md` §8.2），`loop` 时长检查 `KA-5` **仍未接**。
+ * `docs/design/skin/07-audio.md` §8.2）。`KA-5` **不看时长**（原先设想「不循环且曲目过短」
+ * 须解码量时长，成本高于收益），只提示「这首不会循环」。
  *
  * 与各节一致的规矩：**场景 / 事件之间不互相借用**——配了 `battle` 不会让 `map` 有曲子。
  */
@@ -29,6 +30,8 @@ import {
 export const BGM_DEFAULT_VOLUME = 0.5
 /** BGM 缺省是否循环（§二） */
 export const BGM_DEFAULT_LOOP = true
+/** 换场景缺省淡入 / 淡出时长（毫秒，§2.1） */
+export const BGM_DEFAULT_FADE_MS = 600
 /** 音效缺省音量（§二） */
 export const SFX_DEFAULT_VOLUME = 0.8
 
@@ -40,6 +43,17 @@ export interface BgmTrack {
   file: SkinPath
   loop: boolean
   volume: number
+  /** 换场景淡入 / 淡出时长（毫秒，已规整；见 `fadeOf()`） */
+  fade: number
+}
+
+/**
+ * 淡入淡出时长规整（§2.1）：缺位、非有限或为负一律回落 `BGM_DEFAULT_FADE_MS`；
+ * `0` 合法（表示立即切换、不做淡入淡出）。
+ */
+export function fadeOf(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return BGM_DEFAULT_FADE_MS
+  return value
 }
 
 /** 一条解析好的音效 */
@@ -71,7 +85,7 @@ export function sfxOf(
   return audio?.sfx?.[event]
 }
 
-/** 某个场景的完整取值：路径 ＋ `loop`（缺省 `true`）＋ `volume`（缺省 `0.5`、越界截断） */
+/** 某个场景的完整取值：路径 ＋ `loop`（缺省 `true`）＋ `volume`（缺省 `0.5`、越界截断）＋ `fade`（缺省 `600`） */
 export function bgmTrackOf(audio: SkinAudio | undefined, scene: BgmScene): BgmTrack | undefined {
   const bgm = bgmOf(audio, scene)
   if (bgm === undefined) return undefined
@@ -79,6 +93,7 @@ export function bgmTrackOf(audio: SkinAudio | undefined, scene: BgmScene): BgmTr
     file: bgm.file,
     loop: bgm.loop ?? BGM_DEFAULT_LOOP,
     volume: clampVolume(bgm.volume, BGM_DEFAULT_VOLUME),
+    fade: fadeOf(bgm.fade),
   }
 }
 
@@ -118,4 +133,14 @@ export function outOfRangeVolumes(audio: SkinAudio | undefined): string[] {
     if (sfx !== undefined && typeof sfx === 'object' && bad(sfx.volume)) out.push(`audio.sfx.${event}.volume`)
   }
   return out
+}
+
+/**
+ * `KA-5`：声明了 BGM 但**显式写了 `loop: false`** 的场景，列出场景键。
+ *
+ * **不看时长**（早期设想是「不循环且曲目过短」，须解码量时长、成本高于收益）：开放式引擎只提示
+ * 「这首不会循环」，是否故意如此由作者决定，一律**只提示、不阻断**。
+ */
+export function nonLoopingBgm(audio: SkinAudio | undefined): BgmScene[] {
+  return BGM_SCENES.filter((scene) => audio?.bgm?.[scene]?.loop === false)
 }

@@ -9,8 +9,8 @@
  * - **纯函数**：只读入参（皮肤条目 ＋ 组件库 ＋ 工程），不碰 store、不写文件。
  * - **只提示不阻断**（裁决 15）：全部产出 `severity: 'warn'`，不设体积硬上限。
  * - **注册即真会产出**：只有能判的码才产出，与 `SKIN_ISSUE_CODES` 的登记口径一致；
- *   需解码像素的 `KR-4` / `KR-8` / `KM-2` / `KIB-3` / `KB-4` / `KB-5` 一支，
- *   与规范未定的 `KW-2` / `KW-3` 暂不产出（详见 `types/skin.ts` 的 `SKIN_ISSUE_CODES` 注释）。
+ *   需解码像素的 `KR-4` / `KR-8` / `KM-2` / `KIB-3` 一支，与规范未定的 `KW-2`
+ *   暂不产出（`KB-4` / `KB-5` 已作废，见 `types/skin.ts` 的 `SKIN_ISSUE_CODES` 注释）。
  *
  * 「本局」一律取 `project.enabledIds`（启用范围）：未启用的组件既不渲染、也不该被皮肤选中，
  * 故 `KIB-1` / `KR-2` / `KR-6` 用的是**启用集**而非「库里存在」。
@@ -86,6 +86,11 @@ function portraitRef(p: unknown, where: string): Ref | undefined {
 /** 两个尺寸是否同一宽高比（容差 1%） */
 function sameAspect(a: ImageSize, b: ImageSize): boolean {
   return Math.abs(a.width / a.height - b.width / b.height) < 0.01
+}
+
+/** 是否 `.9.png`（可缩放素材走九宫格；非 .9 一律整图拉伸） */
+function isNine(path: string): boolean {
+  return /\.9\.png$/i.test(path)
 }
 
 /* ------------------------------------------------------------------ */
@@ -366,10 +371,22 @@ export function skinValidate(library: Library, project: Project, context: SkinCo
 
   const win = manifest.window
 
-  // KW-1：随视口族（三个容器）无 slice
+  // KW-1：随视口族（三个容器）素材不是 .9.png（可缩放素材不用九宫格，圆角 / 边框可能变形）
   for (const kind of ['dialog', 'drawer', 'popover'] as const) {
     for (const ref of textureRef(win?.surfaces?.[kind], `window.surfaces.${kind}`)) {
-      if (!ref.slice) add('KW-1', `${ref.where} 是随视口族素材但没有 slice，V1 会整体拉伸变形`)
+      if (!isNine(ref.path)) add('KW-1', `${ref.where} 不是 .9.png，未按九宫格伸缩，圆角 / 边框可能变形（不影响导出）`)
+    }
+  }
+
+  // KW-3：随内容族（按钮）素材不是 .9.png（该类禁止硬拉伸，建议改用 .9.png）
+  for (const kind of BUTTON_KINDS) {
+    const states = buttonStatesOf(win, kind)
+    if (!states) continue
+    const risky = Object.entries(states).flatMap(([stateName, texture]) =>
+      textureRef(texture as SkinTexture, `window.buttons.${kind}.${stateName}`).filter((ref) => !isNine(ref.path)),
+    )
+    if (risky.length > 0) {
+      add('KW-3', `${risky.map((r) => r.where).join('、')} 不是 .9.png，随内容族禁止硬拉伸，建议改用 .9.png（不影响导出）`)
     }
   }
 

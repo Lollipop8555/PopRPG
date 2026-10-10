@@ -34,7 +34,7 @@
 | **V1** | Phase 0 基座 / Phase A BUILD / Phase B PLAY | **已冻结口径**：七大类 · 13 项配置 · `encounter` 五选一 | **已完成**（A 首轮 ＋ B 全部 58 项勾选；全量 197 项单测绿） |
 | **V2.0** | **新增 NPC 与对话**（第 8 类组件 ＋ **进入建筑后的 NPC 触发节点**） | **追加设定 / 结构改造**（不属于 V1 的阶段性设计） | **已完成**（编辑器侧 E0–E3 ＋ 运行时 E4 ＋ 19 项原子验收；E5 皮肤落点并入 **V2.1**） |
 | **V2.1** | **SKIN 基础**：三件套容器 / 贴图渲染器 / 逐屏素材接入 | 叠加层 | **进行中**（D0 类型与取图纯函数 / D1 容器与加载 / D2 贴图渲染器 已落地；**D3 逐屏素材接入进行中**——运行期通道 ＋ `road` ＋ 画布 `background` ＋ `role` 一条（棋子形象 / 立绘四落点 / 受击表现）＋ `window` 容器衬底（对话框 / 抽屉 / 气泡）＋ `misc` 地图标记与骰子 ＋ `item` / `building`（道具格子与图标 ＋ 建筑地图节点 / 名称字体字色）＋ `startup` / `lobby`（欢迎页封面三件 ＋ 首页背景与出身卡）＋ `window` 按钮 `normal` 态 ＋ `misc` 图标按名替换 ＋ `window` 固定族格子 ＋ **`window` 条 / 提示条 / 分隔线 ＋ 九宫格（DOM 层，提前落地）** 已收口；**仅余 `window` §四.2 信息图标组合（阻塞于设计侧 `03-window.md` §四.2 与构建页排期）**） |
-| **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 皮肤校验 / 音频播放 | 叠加层 | **进行中**（**九宫格切片消费已提前到 V2.1**；**D4 Creative 已接线可用**、**D5 build 加载 `.pp` 预览已接**、**D6 皮肤校验接入「清单」已接**——`KP-*` / `KB-*` / `KR-*`（含 `KR-11`）/ `KS-*` / `KW-*` / `KM-*` / `KIB-*` / `KPG-*` 共 38 码产出并汇总显示，`npx tsc --noEmit` 无错 ＋ `npx vitest run` 69 文件 / 843 项全绿；**余 `audio` 播放（3 BGM ＋ 9 SFX）与 `tile` 平铺待裁决**） |
+| **V2.2** | **SKIN 进阶 ＋ 音频**：Creative 模式 / 皮肤校验 / 音频播放 | 叠加层 | **进行中**（**九宫格切片消费已提前到 V2.1**；**D4 Creative 已接线可用**、**D5 build 加载 `.pp` 预览已接**、**D6 皮肤校验接入「清单」已接**——`KP-*` / `KB-*` / `KR-*`（含 `KR-11`）/ `KS-*` / `KW-*` / `KM-*` / `KIB-*` / `KPG-*` 共 38 码产出并汇总显示；**音频播放 / SVG 层九宫格 / `tile` 平铺均已落地**（`audio` 3 BGM ＋ 8 SFX 触发点、`node.building` 九宫格切块、引导线平铺），**D7 原子验收 26/29 可机验项已收口**，`npx tsc --noEmit` 无错 ＋ `npx vitest run` **75 文件 / 934 项**全绿；余 `KA-5` 时长检查与 `fade` 覆盖未接、D7 三项不可机验） |
 | **V2.3** | **全局状态池**（全局唯一键值表 ＋ 主角六维属性并入 ＋ **引擎变量扩充：步数 / 位置 / 道具件数** ＋ **判定两类：回合判定 ＋ 触发判定** ＋ **判定模板（命名条件 `conds`）** ＋ **键对键比较（`ref`）** ＋ 对话 if-else 与门锁的读写接入 ＋ **对话记账退役、改由池标记 ＋ `if` / 模板表达（含「一次性对话」预设）** ＋ **抽定与对话执行记录键族 `engine-roll.*`（抽定按槽位、值 ＝ npc `id`；执行记录按"人 ＋ 方案"、值 ＝ `true`；引擎写、作者只读，裁决 61）** ＋ 定义面板） | **追加设定 / 结构改造**（与 V2.0 同档；**本引擎无存量用户，直接重写数据结构**） | **已完成**（设计已定稿于 [`docs/design/state-pool.md`](docs/design/state-pool.md) / 裁决 31–61，**`SP-2`–`SP-10` 已全清**；**S0–S8 全量落地**——S3 旧存储退役 ＋ 力值读写点迁移（方案 B，池为唯一账本）、S4 运行时、S5 面板、S6 判定、S7 接入与校验、S8 端到端验收 **107–115 逐项勾选**。`npx tsc --noEmit` 无错；`npx vitest run` **66 文件 / 793 用例全绿**；`npm run build` 通过（1789 模块）。**唯一未落项**：裁决 61 键族的**多槽 / `at` 触发**变体（裁决 62–64）归 **V2.4**，本档只落**单槽 `slot0`**。进度见「进度同步」2026-10-09；**档位定稿**：记为 **V2.3**，紧随 V2.0、排在 V2.1 收尾与 V2.2 之前，裁决 50） |
 | **V2.4** | **NPC 槽位 SlotN**（`npcs` 升级为**槽位数组** `{ ids, dialog?, at? }`，每槽**独立配置 ＋ 各自随机命中**、**槽位数 ≤ `w × h`**、**同实例两槽不重叠** ＋ **触发语义拆两条**：踏入建筑**一次性抽定全部槽** ＋ 跑 `encounter` / **踩到槽位格**触发该槽 NPC 对话 ＋ 实例页**槽位列表 ＋ 画布槽位标记可拖动 ＋ 按槽号配色** ＋ 皮肤 `role.npcs` 改**按 `name` 命中 ＋ 通配 `"*"`**、**无皮肤画槽位色圆环**、**新增地图落点**） | **追加设定 / 结构改造**（与 V2.0 / V2.3 同档；**本引擎无存量用户，直接重写 `npcs` 数据结构**） | **已完成**（设计定稿于 [`docs/design/07-decisions.md`](docs/design/07-decisions.md) **§8.6 裁决 62–66**；**E0 / E3 / E4 / E5 / E6 全部落地**——类型与 `.pmod` 槽位数组读写（旧包升级 / 节点级 `dialog` 退役）、校验 `K38`–`K40`、运行时两触发 ＋ 按槽记账、实例页槽位列表 ＋ 画布槽位标记可拖动、皮肤侧 `role.npcs` 按 `name` ＋ 通配 ＋ 地图槽位落点圆环兜底；`npx tsc --noEmit` 无错 ＋ `npx vitest run` **66 个文件 / 806 项**全绿；`task/05-npc.md` 验收 20–23 已勾选。**唯一遗留**：`KR-11` 皮肤校验随 V2.2 的 D6「校验接入清单」一并做） |
 
@@ -144,6 +144,27 @@ Phase C  收尾      ：手绘视觉打磨 / GitHub Pages 部署（贯穿各阶�
 ---
 
 ## 进度同步
+
+**2026-10-10 · 皮肤「提示」简化口径收口（`KW-1` / `KW-3` / `KA-5`）**
+- **范围**：按用户裁定把三条遗留提示按**最简口径**落地——开放式引擎只提示无意识错误、不拦故意设计，一律 `warn` 不阻断。
+- **落点**：[`src/check/skinValidate.ts`](src/check/skinValidate.ts)（`isNine()` 助手 ＋ `KW-1` 改为「非 `.9.png`」＋ 新增 `KW-3`）、[`src/engine/skin/audio.ts`](src/engine/skin/audio.ts)（`nonLoopingBgm()`）、[`src/io/pp.ts`](src/io/pp.ts)（`checkAudio()` 合成 `KA-5`）、[`src/types/skin.ts`](src/types/skin.ts)（`SKIN_ISSUE_CODES` 增 `KW-3` / `KA-5`）。
+- **口径**：`KW-1` / `KW-3` 一律以「素材是不是 `.9.png`」为界（非 `.9` 即提示）；`KA-5` 只看是否**显式 `loop: false`**、**不看时长**。`KW-2` 因缺「元素最小渲染尺寸」规格表**仍未接**。
+- **验证**：`npx tsc --noEmit` 无错；`npx vitest run` **75 个文件 / 947 项全绿**（较 938 净增 9 项）。
+- **文档同步**：[`docs/design/skin/03-window.md`](docs/design/skin/03-window.md) §三 / §六、[`docs/design/skin/07-audio.md`](docs/design/skin/07-audio.md) 状态行 / §五 / §8.1 / §8.2、[`task/04-skin.md`](task/04-skin.md) 与 [`docs/DESIGN.md`](docs/DESIGN.md) 进度同步。
+
+**2026-10-10 · V2.2 音频 `bgm.<场景>.fade` 覆盖落地 ＋ 背景「盖满 / 分辨率」提示作废**
+- **范围**：① 补落 `audio` 的 `bgm.<场景>.fade`——按曲目覆盖换场景淡入淡出时长（缺省仍 `BGM_FADE_MS = 600`，`0` 表示立即切换）；② 按用户裁定作废背景的「盖满整张地图」(`KB-4`) 与「分辨率不足」(`KB-5`) 两条提示。
+- **落点**：[`src/types/skin.ts`](src/types/skin.ts)（`SkinBgm.fade?`）、[`src/engine/skin/audio.ts`](src/engine/skin/audio.ts)（`BGM_DEFAULT_FADE_MS` / `fadeOf()` / `BgmTrack.fade` / `bgmTrackOf()`）、[`src/store/audio.ts`](src/store/audio.ts)（`resolveBgm()` 透传）、[`src/io/audio-runtime.ts`](src/io/audio-runtime.ts)（`AudioTrack.fade` ＋ `applyBgm()` 按 `fade ?? BGM_FADE_MS`）。
+- **作废口径**：背景按「地图尺寸 × 地图 DPI（`cellSize`）」等比缩放，**能否盖住整张地图不在检查范围**——[`docs/design/skin/05-canvas.md`](docs/design/skin/05-canvas.md) §五 两行加删除线并注明，[`src/types/skin.ts`](src/types/skin.ts) 的 `SKIN_ISSUE_CODES` 注释把 `KB-4` / `KB-5` 由「需地图格数」移入「已作废」。
+- **验证**：`npx tsc --noEmit` 无错；`npx vitest run` **75 个文件 / 938 项全绿**（较 D7 收口净增 4 项）。
+- **诚实边界**：`KA-5`（`loop: false` 且 < 3s，须解码量时长）**仍未接**，保持登记。
+- **文档同步**：[`docs/design/skin/07-audio.md`](docs/design/skin/07-audio.md) 状态行 / §二 / §2.1 / §8.1 / §8.2、[`docs/design/skin/05-canvas.md`](docs/design/skin/05-canvas.md) §五、[`task/04-skin.md`](task/04-skin.md) D7 与「进度同步」、[`docs/DESIGN.md`](docs/DESIGN.md) 进度同步。
+
+**2026-10-10 · V2.2 D7 验收收口（补齐端到端验收与 Creative 切分几何用例）**
+- **范围**：`task/04-skin.md` D7 的**原子验收清单**（29 项）逐项盘点落点——**26 项可机验**且各有单测覆盖，已勾选并写明落点；另 3 项保留未勾（真浏览器伪类与逐像素 / 阻塞于 `03-window.md` §四.2 / `npm run dev` 手测）。
+- **补两处覆盖空白**：[`src/play/__tests__/v22-acceptance.test.tsx`](src/play/__tests__/v22-acceptance.test.tsx)（13 项，真 zip 字节 → `readSkin` / `readPGame` → 素材源 / 皮肤 store → `MapView` 渲染的跨层端到端验收）与 [`src/creative/__tests__/nine.test.ts`](src/creative/__tests__/nine.test.ts)（19 项，Creative 切分几何，此前零覆盖）。
+- **验证**：`npx tsc --noEmit` 无错；`npx vitest run` **75 个文件 / 934 用例全绿**。
+- **同步**：[`task/04-skin.md`](task/04-skin.md) D7 与「进度同步」、[`docs/DESIGN.md`](docs/DESIGN.md) 进度同步。
 
 **2026-10-10 · V2.2 音频播放落地（`audio` 由「只解析不发声」推进为「真发声」）**
 - **范围**：按 V2.2 清单首行落地 `audio` 的**播放**半边——**运行期播放器**（`AudioContext`）＋ **BGM 三场景切换**（`home` / `map` / `battle`，各 600ms 淡出淡入）＋ **8 个 SFX 触发点**接线 ＋ **音量／静音偏好**（`localStorage`）＋ **可注入假 `AudioContext` 的单测**。`audio` 的 SFX 事件键为 **8 个**（`SFX_EVENTS`），本档原写「9 个」已更正。

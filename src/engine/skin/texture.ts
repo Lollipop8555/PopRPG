@@ -131,7 +131,7 @@ export type EffectiveMode = 'stretch' | 'nine' | 'tile'
  * 生效的填充方式（§四）：**策略由调用方给、切片由素材给**，两者齐备才成立。
  *
  * - `nine` 要**同时**拿到策略与 `slice`——没给切片参数就无从切起，与「字符串写法」一样回落 `stretch`
- *   （`03-window.md` §六 `KW-1`：随视口族素材无 `slice` 时 V1 会整体拉伸，正是这条回落）；
+ *   （`03-window.md` §六 `KW-1`：随视口族素材非 `.9.png` 时按整图拉伸，`KW-1` 会点名提示，正是这条回落）；
  * - `tile` 不需要切片，独立成立；
  * - 渲染侧只调这一处，各层各自把结果翻译成自己的写法（DOM 用 `border-image`、SVG 内切块拼装）。
  */
@@ -144,9 +144,9 @@ export function effectiveMode(mode?: TextureMode, slice?: SkinSlice): EffectiveM
 /**
  * 衬底 / 格子这类**背景铺法**的默认策略：**素材带了 `slice` 就按九宫格**。
  *
- * 依据 `03-window.md` §二：随视口族、随内容族、单向族**都要求九宫格**（硬拉伸会被 `KW-3` 点名），
- * 固定族则尺寸写死、整图拉伸即可。两族的区别不在「要不要九宫格」，而在**素材有没有交切片**——
- * 交了就切，没交就整图拉伸。故这一处不需要调用方多传参数：调用方接口保持 `(ref, assets, fit)`。
+ * 依据 `03-window.md` §二：随视口族、随内容族、单向族**都要求九宫格**（非 `.9.png` 会被 `KW-3`
+ * 点名提示），固定族则尺寸写死、整图拉伸即可。两族的区别不在「要不要九宫格」，而在**素材有没有
+ * 交切片**——交了就切，没交就整图拉伸。故这一处不需要调用方多传参数：调用方接口保持 `(ref, assets, fit)`。
  */
 export function surfaceMode(ref: TextureRef | undefined): EffectiveMode {
   if (ref?.slice === undefined) return 'stretch'

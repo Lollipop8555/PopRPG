@@ -4,7 +4,7 @@
  * V2.2 起 `audio` 不再只是「解析与校验」——这里是播放侧内核，负责：
  * 1. **惰性建上下文**：纯静态环境禁止无手势播放，`unlock()` 在**首次用户交互后**才建 `AudioContext`
  *    并 `resume`（§四「不自动播放」）；未解锁前一切播放请求只记成「想要什么」，解锁即接上。
- * 2. **BGM 场景切换**：同一场景重复进入**不重启**曲目；换场景**淡出旧曲 → 淡入新曲**（各 `BGM_FADE_MS`）。
+ * 2. **BGM 场景切换**：同一场景重复进入**不重启**曲目；换场景**淡出旧曲 → 淡入新曲**（时长取该曲 `fade`，缺省 `BGM_FADE_MS`）。
  * 3. **音效**：一次性播放，播完自动断连；**同一帧内多次相同事件合并为一次**（防叠音）。
  * 4. **音量与静音**：总音量走一个 `master` 节点；每条的默认音量（皮肤给的）走各自的 `GainNode`，
  *    于是改总音量不影响各条比例。
@@ -17,7 +17,7 @@
 import type { BgmScene } from '../types'
 import { mimeOf } from './skin-assets'
 
-/** BGM 换场景时的淡入 / 淡出时长（§2.1 默认 600ms） */
+/** BGM 换场景时的**缺省**淡入 / 淡出时长（§2.1 默认 600ms；皮肤可按曲目覆盖，见 `AudioTrack.fade`） */
 export const BGM_FADE_MS = 600
 
 /**
@@ -29,6 +29,8 @@ export interface AudioTrack {
   volume: number
   /** 仅 BGM 有意义；缺省按循环处理 */
   loop?: boolean
+  /** 仅 BGM 有意义：换场景时该曲的淡入 / 淡出时长（毫秒），缺省 `BGM_FADE_MS`；`0` 表示立即切换 */
+  fade?: number
   bytes?: Uint8Array
 }
 
@@ -179,10 +181,11 @@ export function createAudioRuntime(deps: AudioRuntimeDeps = {}): AudioRuntime {
       }
       return
     }
+    const fade = want.track.fade ?? BGM_FADE_MS
     const buffer = await decodeOf(want.track)
     if (myToken !== token || !ctx || !master) return
     if (!buffer) return
-    if (current) fadeOutCurrent(BGM_FADE_MS)
+    if (current) fadeOutCurrent(fade)
     const gain = ctx.createGain()
     gain.gain.value = 0
     gain.connect(master)
@@ -194,7 +197,7 @@ export function createAudioRuntime(deps: AudioRuntimeDeps = {}): AudioRuntime {
     try {
       const now = ctx.currentTime
       gain.gain.setValueAtTime(0, now)
-      gain.gain.linearRampToValueAtTime(want.track.volume, now + BGM_FADE_MS / 1000)
+      gain.gain.linearRampToValueAtTime(want.track.volume, now + fade / 1000)
     } catch {
       gain.gain.value = want.track.volume
     }

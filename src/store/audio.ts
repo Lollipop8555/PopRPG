@@ -30,7 +30,13 @@ function resolveBgm(scene: BgmScene): AudioTrack | undefined {
   if (!skin) return undefined
   const track = bgmTrackOf(skin.manifest.audio, scene)
   if (!track) return undefined
-  return { file: track.file, volume: track.volume, loop: track.loop, bytes: skinBytesOf(skin, track.file) }
+  return {
+    file: track.file,
+    volume: track.volume,
+    loop: track.loop,
+    fade: track.fade,
+    bytes: skinBytesOf(skin, track.file),
+  }
 }
 
 /** 从当前生效皮肤解析一条音效；未启用皮肤或缺该事件即 `undefined`（无操作） */

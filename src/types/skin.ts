@@ -303,6 +303,11 @@ export interface SkinBgm {
   loop?: boolean
   /** 该曲默认音量 0–1，缺省 `0.5`（可被用户偏好覆盖） */
   volume?: number
+  /**
+   * 换场景时该曲的淡入 / 淡出时长（毫秒），缺省 `600`（`skin/07-audio.md` §2.1）。
+   * 仅作皮肤侧建议值；非有限或为负时回落缺省，不阻断。
+   */
+  fade?: number
 }
 
 export interface SkinSfxObject {
@@ -488,11 +493,13 @@ export const PGAME_DEFAULT_SKIN_DIR = 'skin/'
  * - **与 `KP-2` 判同一件事、不单列**：`KB-2` / `KS-2` / `KW-5` / `KIB-4`（路径缺失）与 `KA-1`——
  *   单列只会让同一条缺失在清单里出现两遍；
  * - **需解码像素、当前不做**：`KR-4`（贴满四边）、`KR-8`（无透明通道）、`KM-2`（引导线拼接）、
- *   `KIB-3`（尺寸不为 `cellSize` 整倍数）、`KIB-7` 的「整图全透明」一支、`KB-4` / `KB-5`
- *   （需地图格数，而 `GameMap` 不存网格尺寸）；
- * - **需元素最小渲染尺寸 / 内容族分类，规范未定**：`KW-2` / `KW-3`（`03-window.md` §三 / §二）；
+ *   `KIB-3`（尺寸不为 `cellSize` 整倍数）、`KIB-7` 的「整图全透明」一支；
+ * - **需元素最小渲染尺寸，规范未定**：`KW-2`（`03-window.md` §三，判「任一边切片之和 ≥ 最小渲染尺寸」）；
+ * - **已按简化口径产出**：`KW-3`（随内容族素材不是 `.9.png`，提示类型风险）、`KA-5`（BGM 显式
+ *   `loop: false`，提示不会循环；**不看时长**）——开放式引擎只提示无意识错误，不拦故意配置；
  * - **已作废 / 已满足**：`KW-6`（D3 四态接入后不再产生）、`KM-4`（`slotColor()` 已循环取色，
- *   `04-misc.md` §十）、`KIB-8`（「写了 `fill` 未写 `stroke`」属正常用法，不提示）。
+ *   `04-misc.md` §十）、`KIB-8`（「写了 `fill` 未写 `stroke`」属正常用法，不提示）、
+ *   `KB-4` / `KB-5`（背景按「地图尺寸 × 地图 DPI」等比缩放，能否盖满整张地图不作检查）。
  */
 export const SKIN_ISSUE_CODES = [
   // 包级（`00-package.md` §六）
@@ -532,6 +539,7 @@ export const SKIN_ISSUE_CODES = [
   'KS-7',
   // 容器与控件（`03-window.md` §六）
   'KW-1',
+  'KW-3',
   'KW-4',
   'KW-7',
   // 标记与骰子（`04-misc.md` §八）
@@ -554,6 +562,7 @@ export const SKIN_ISSUE_CODES = [
   'KA-2',
   'KA-3',
   'KA-4',
+  'KA-5',
 ] as const
 
 export type SkinIssueCode = (typeof SKIN_ISSUE_CODES)[number]
@@ -591,7 +600,8 @@ export const SKIN_ISSUE_TITLES: Record<SkinIssueCode, string> = {
   'KS-5': '以 .9.png 命名但未提供 slice',
   'KS-6': '道路素材尺寸与 cellSize 不成整倍数',
   'KS-7': 'road 节里出现颜色类字段',
-  'KW-1': '随视口族素材无 slice',
+  'KW-1': '随视口族素材不是 .9.png',
+  'KW-3': '随内容族素材不是 .9.png',
   'KW-4': '固定族素材非正方形',
   'KW-7': '按钮四态素材尺寸不一致',
   'KM-1': 'node.building 未提供九宫格切片',
@@ -610,6 +620,7 @@ export const SKIN_ISSUE_TITLES: Record<SkinIssueCode, string> = {
   'KA-2': 'sfx 的事件键不在清单内',
   'KA-3': '音频 volume 超出 0–1',
   'KA-4': '单个音频文件体积过大',
+  'KA-5': 'BGM 显式关闭了循环',
 }
 
 /**
