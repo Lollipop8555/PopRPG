@@ -152,3 +152,101 @@ export function surfaceMode(ref: TextureRef | undefined): EffectiveMode {
   if (ref?.slice === undefined) return 'stretch'
   return effectiveMode('nine', ref.slice)
 }
+
+/** 源图的内在像素尺寸（九宫格切块要按**图片像素**量四边，`io/image-size.ts` 供数） */
+export interface TextureSource {
+  width: number
+  height: number
+}
+
+/**
+ * **九宫格的一块**：源区（`s*`，图片像素）→ 落区（`d*`，所在层单位）。
+ *
+ * 四角**原样**（源区多大、落区就多大）、四边**单向拉伸**、中心**双向拉伸**，
+ * 与 DOM 层的 CSS `border-image` 逐块对应（§3.3「两侧实现可以不同，调用方接口必须相同」）。
+ */
+export interface NineTile {
+  /** 源区左上角 Ｘ（图片像素） */
+  sx: number
+  /** 源区左上角 Ｙ（图片像素） */
+  sy: number
+  /** 源区宽（图片像素） */
+  sw: number
+  /** 源区高（图片像素） */
+  sh: number
+  /** 落区左上角 Ｘ（所在层单位） */
+  dx: number
+  /** 落区左上角 Ｙ（所在层单位） */
+  dy: number
+  /** 落区宽（所在层单位） */
+  dw: number
+  /** 落区高（所在层单位） */
+  dh: number
+}
+
+/**
+ * **一轴的三段**：`[起始, 中段, 末尾]`，三段之和恒为 `total`。
+ *
+ * 两角之和没超轴长时**中段吃余量**（角原样）；超了就**按比例收角、中段归零**——
+ * 盒比四角还小时不至于把中段挤成负数（这正是 SVG 内切块拼装**必须**的夹取，
+ * 与 CSS `border-image` 在盒过小时的表现一致）。
+ */
+function thirds(lead: number, trail: number, total: number): [number, number, number] {
+  const a = Math.max(0, lead)
+  const b = Math.max(0, trail)
+  if (a + b <= total) return [a, total - a - b, b]
+  const scale = total / (a + b)
+  return [a * scale, 0, b * scale]
+}
+
+/**
+ * **九宫格切块**（`skin.md` §3.3、`03-window.md` §二）：切片 ＋ 源图尺寸 ＋ 目标盒 → 九块。
+ *
+ * 十块中的四角落到**切片给定的像素尺寸**（与 DOM 层 `border-image-width` 取切片像素同一口径），
+ * 四边与中心吃余量。返回 `undefined` 的情形有两种，都让渲染侧回落整图拉伸：
+ * 盒尺寸是 `auto`（量不出盒，画布背景那类）、源图尺寸未知（`sizeOf()` 取不到，格式不支持）。
+ *
+ * 顺序为**行优先**：左上、上、右上、左、中、右、左下、下、右下——三行各三块。
+ */
+export function nineSliceTiles(
+  box: TextureBox,
+  slice: SkinSlice,
+  source: TextureSource,
+): NineTile[] | undefined {
+  if (typeof box.w !== 'number' || typeof box.h !== 'number') return undefined
+  if (source.width < 1 || source.height < 1) return undefined
+
+  const [top, right, bottom, left] = slice.map((side) => Math.max(0, side))
+
+  // 源轴：按图片像素切；落轴：四角取同一批像素值（层单位 1:1 对应图片像素），中段吃盒余量
+  const [swTop, swMid, swBottom] = thirds(top, bottom, source.height)
+  const [swLeft, swMidX, swRight] = thirds(left, right, source.width)
+  const [dhTop, dhMid, dhBottom] = thirds(top, bottom, box.h)
+  const [dwLeft, dwMidX, dwRight] = thirds(left, right, box.w)
+
+  const sx = [0, swLeft, swLeft + swMidX]
+  const sw = [swLeft, swMidX, swRight]
+  const sy = [0, swTop, swTop + swMid]
+  const sh = [swTop, swMid, swBottom]
+  const dx = [box.x, box.x + dwLeft, box.x + dwLeft + dwMidX]
+  const dw = [dwLeft, dwMidX, dwRight]
+  const dy = [box.y, box.y + dhTop, box.y + dhTop + dhMid]
+  const dh = [dhTop, dhMid, dhBottom]
+
+  const tiles: NineTile[] = []
+  for (let row = 0; row < 3; row += 1) {
+    for (let col = 0; col < 3; col += 1) {
+      tiles.push({
+        sx: sx[col],
+        sy: sy[row],
+        sw: sw[col],
+        sh: sh[row],
+        dx: dx[col],
+        dy: dy[row],
+        dw: dw[col],
+        dh: dh[row],
+      })
+    }
+  }
+  return tiles
+}

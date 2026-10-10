@@ -8,6 +8,7 @@
  */
 
 import type { SkinPath } from '../types'
+import { imageSize, type ImageSize } from './image-size'
 import { skinBytesOf, type LoadedSkin } from './pp'
 
 /** 素材源：皮肤包 + 已建好的地址 */
@@ -16,6 +17,17 @@ export interface SkinAssets {
   urlOf(path: SkinPath): string | undefined
   /** 包内是否有这条素材（不看是否已建地址） */
   has(path: SkinPath): boolean
+  /**
+   * 该路径图片的**内在像素尺寸**；条目缺失或格式不识别时返回 `undefined`。
+   *
+   * 供 **SVG 层九宫格切块**量四边用（`skin/04-misc.md` §二 `node.building` 必须九宫格）：
+   * CSS `border-image` 自己知道原图多大，而 SVG 内切块拼装要显式给出源区像素。
+   * 只读条目字节，与 `urlOf` 无关（**不建地址**），惰性且按路径缓存。
+   *
+   * **可选**：这是只服务 SVG 九宫格一项的补充能力，不属于核心契约（地址 / 存在性 / 封面 / 释放），
+   * 缺省即该源不支持量尺寸，取图侧据此回落整图拉伸（`textureProps()` 已作可选调用）。
+   */
+  sizeOf?(path: SkinPath): ImageSize | undefined
   /** 封面图地址（皮肤库里列表用），取不到返回 `undefined` */
   previewUrl(): string | undefined
   /** 撤销本源建过的全部地址；可重复调用，撤后仍可继续 `urlOf`（按需重建） */
@@ -87,6 +99,8 @@ export function createSkinAssets(skin: LoadedSkin | undefined, options: SkinAsse
 
   /** 已建地址（含建失败的 `undefined`，避免对同一条重复尝试） */
   const urls = new Map<SkinPath, string | undefined>()
+  /** 已量尺寸（含量不出的 `undefined`，避免对同一条重复解析字节） */
+  const sizes = new Map<SkinPath, ImageSize | undefined>()
   let preview: string | undefined
   let previewTried = false
 
@@ -101,8 +115,18 @@ export function createSkinAssets(skin: LoadedSkin | undefined, options: SkinAsse
     return url
   }
 
+  const sizeOf = (path: SkinPath): ImageSize | undefined => {
+    const key = normalize(path)
+    if (sizes.has(key)) return sizes.get(key)
+    const bytes = skin ? skinBytesOf(skin, key) : undefined
+    const size = bytes === undefined ? undefined : imageSize(bytes, key)
+    sizes.set(key, size)
+    return size
+  }
+
   return {
     urlOf,
+    sizeOf,
     has: (path) => skin !== undefined && skinBytesOf(skin, normalize(path)) !== undefined,
     previewUrl: () => {
       if (!previewTried && skin?.preview) {
@@ -114,6 +138,7 @@ export function createSkinAssets(skin: LoadedSkin | undefined, options: SkinAsse
     release: () => {
       for (const url of urls.values()) if (url !== undefined) revokeUrl(url)
       urls.clear()
+      sizes.clear()
       if (preview !== undefined) revokeUrl(preview)
       preview = undefined
       previewTried = false

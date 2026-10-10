@@ -102,7 +102,7 @@
 
 > **本批落「地图标记 ＋ 骰子」两组**：起点 / 终点 / 脚印三键与骰子本体 / 骰面已接入 `misc`。
 > **图标随后一批接入**（D3 第十屏）：`misc.icons.<图标名>` 已落到九个 lucide 图标上，见「取图与落图」末条与「落点」表末条。
-> **引导线尚未接入**，`node.building` 与骰子动画态按原因后置，见文末「未接部分」。
+> **引导线尚未接入**；`node.building` 的九宫格已随 **V2.2**（2026-10-10）落地，见「取图与落图」末条与「落点」表；骰子动画态按原因后置，见文末「未接部分」。
 
 ### 取图与落图
 
@@ -115,6 +115,7 @@
 - **接线**：[`src/ui/useDieSkin.ts`](../../../src/ui/useDieSkin.ts) 的 `useDieBodyStyle()` / `useDieFace(pips)`；标记三键在 `MapView` 里就地接线（与 `road` / `background` 同一处读 `store/skin`，不另设 hook）。三条链都遵循同一条底线：**未启用皮肤 / 未配该键 / 包里缺图 → `undefined`**，于是标记交回 `<MapMarker>` / `<Footprint>`，骰面交回程序点阵或数字文本（§二、§三 的「兜底」列即此）。
 - **不套手绘滤镜**（§六）：贴图是位图，`SvgTexture` 不给画笔加滤镜；程序图形与 lucide 照旧套。
 - **图标**走**行内层**（`InlineTexture`）：与「内容 emoji」同一档——不套手绘滤镜、不加衬底（§四）。素材按 lucide 那档的 `size` 占 `size × size` 的盒、`object-fit: contain` 等比内缩，**换与不换都不动布局**（`GameIcon` 的 `size` 同时喂给 lucide 与素材）。接线 [`src/ui/useIconSkin.ts`](../../../src/ui/useIconSkin.ts) 的 `useIconTexture(name)`（`iconOf()` → `textureRef()` → `textureProps()`，与其余各链同一条底线）。
+- **多格建筑 `node.building`**（§二）走 **SVG 层 ＋ 九宫格**（`textureProps` ＋ `SvgTexture`）：素材带 `slice` 即生效，SVG 侧**切块拼装**成九块（四角原样、四边单向拉伸、中心双向拉伸，与 DOM 层 `border-image` 同义，见 [`03-window.md`](03-window.md) §八「SVG 层九宫格」）。盒＝建筑格的 `w × h`（[`MapView.tsx`](../../../src/play/MapView.tsx) 的 `nodeImg`，内缩 3px），缺图 / 无 `slice` → **程序圆角矩形**（§二 兜底列）。
 
 ### 落点
 
@@ -124,6 +125,7 @@
 | 道路脚印 | `mark.footprint` | 同上 | **只在 `road` 素材缺失时**顶替程序脚印（[`01-road.md`](01-road.md) §一）；该格有道路图就轮不到它 |
 | 骰子本体 | `die.body` | [`DiceHud.tsx`](../../../src/play/DiceHud.tsx)（46）、[`BattleDialog.tsx`](../../../src/play/BattleDialog.tsx)（38 掷骰中 / 30 定格）、[`TalkDialog.tsx`](../../../src/play/TalkDialog.tsx)（34）、[`DiceLog.tsx`](../../../src/play/DiceLog.tsx)（34 流水） | 五处 `.die` 盒共用一张；`🎲` 兜底时**也铺**（本体属于那个空骰盒，不属于某一次点数） |
 | 骰面 | `die.face.d1`–`d6` / `numeric` | [`DiceLog.tsx`](../../../src/play/DiceLog.tsx) 的 `DieFace` | 四个调用处（HUD / 对话 / 对战 / 流水）共用同一份骰面逻辑，换面只此一处 |
+| 多格建筑 | `node.building` | [`MapView.tsx`](../../../src/play/MapView.tsx)（`NodeShape`） | 游玩态地图；**随格数 `w × h` 九宫格**（`slice` 即 SVG 切块拼装）；缺图回退程序圆角矩形 |
 | lucide 图标 | `misc.icons.<图标名>` | 入口 [`GameIcon.tsx`](../../../src/ui/GameIcon.tsx)；调用 [`LoadScreen.tsx`](../../../src/play/LoadScreen.tsx)（`Sword` 22 / `Hammer` 16 / `FileDown` 14、13 / `FileUp` 14 / `LibraryBig` 13）、[`GameScreen.tsx`](../../../src/play/GameScreen.tsx)（`Menu` 18 / `Flag` 16）、[`DiceHud.tsx`](../../../src/play/DiceHud.tsx)（`StepForward` 13）、[`DiceLog.tsx`](../../../src/play/DiceLog.tsx) / [`BagPanel.tsx`](../../../src/play/BagPanel.tsx) / [`EquipPanel.tsx`](../../../src/play/EquipPanel.tsx) / [`StatusPanel.tsx`](../../../src/play/StatusPanel.tsx)（`X` 14） | 键即 **lucide 图标名**（清单 `ICON_NAMES` 九个，[`lookup.ts`](../../../src/engine/skin/lookup.ts)）；缺图 / 缺位一律回退 lucide 原件 |
 
 - **`mark.end` 与 `mark.footprint` 的「不共用」是刻意的**：脚印只在道路缺图的格子上出现，与终点标记无缘，故两者绝不会在同一格上争位。
@@ -132,7 +134,7 @@
 ### 未接部分
 
 - **内容 emoji 与兜底字形**（§四）：这两样**不是「未接」**——内容 emoji（职业 / 道具 / 怪物 / 技能）走 `role` / `item` 各节替换，兜底字形（`🙂` / `✦` / `❔` / `🎲` / `🔒`）按 §四 **永远不可覆盖**，与 `misc.icons` 无关。lucide 图标本批**已接**，见上表末条。
-- **`node.building`**（§二）：**随格数拉伸**，必须九宫格（`KM-1`），V1 的 `drawTexture` 还没有 `slice` → 留到 **V1.1**（与容器衬底的九宫格同一批）。
+- ~~**`node.building`**（§二）~~：**已于 2026-10-10 · V2.2 落地**——SVG 层切块拼装九宫格（[`texture.ts`](../../../src/engine/skin/texture.ts) 的 `nineSliceTiles()` ＋ [`Texture.tsx`](../../../src/ui/Texture.tsx) 的 `nineSvg()`），素材带 `slice` 即生效，缺图 / 缺 `slice` 回退程序圆角矩形。至此 §二 的地图标记族**全部接完**。
 - **NPC 槽位标记 `node.npcSlot`**（**V2.4**，裁决 66）：游玩态在建筑格上绘制 —— `role.npcs` 命中画皮肤、否则画**槽号色圆环**；**调色板是构建页与游玩态共用的一份**（[`../04-editor.md`](../04-editor.md) §5.6），保证"编辑页看到的颜色 ＝ 游玩态的颜色"。绘制层在棋子层之下（[`02-role.md`](02-role.md) §十一）。
 - **引导线**（§五）：属**平铺**（`tile` 策略），V1 没有该策略 → 留到 **V2.2**。**当前的每 10 格定位线是程序绘制的虚线**，已在游玩菜单里给出开 / 关（裁决 27）。
 - **骰子动画态 `die.rolling`**（§三）：**待确认 2 未裁决**，暂时沿用 `🎲` 兜底。

@@ -200,7 +200,7 @@ function checkManifest(entries: ZipEntries, manifest: SkinManifest, issues: Skin
  *
  * 判据本身在 `engine/skin/audio.ts`（纯函数），这里只负责「读包内条目长度」与「拼成提示」。
  * `KA-1`（音频路径在包内不存在）不在这里——`KP-2` 上面的通用收集已经覆盖音频扩展名，
- * 单列只会同一条缺失报两遍；`KA-5`（曲目时长）要解码，留给 V1.1。
+ * 单列只会同一条缺失报两遍；`KA-5`（曲目时长）要解码，**仍未接**（V2.2 播放已落地，本项除外）。
  */
 function checkAudio(
   entries: ZipEntries,

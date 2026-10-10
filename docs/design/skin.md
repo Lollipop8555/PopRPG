@@ -18,7 +18,7 @@
 | [`skin/04-misc.md`](skin/04-misc.md) | 标记与骰子 `misc` | 起点终点标记 / 建筑节点 / 骰子与骰面 / 图标兜底 / 引导线 | 已补（推算，待校正） |
 | [`skin/07-audio.md`](skin/07-audio.md) | 音频 `audio` | BGM / 音效 / 事件钩子 / 播放约束 | 新增（字段**定稿为预留**；V1 **解析与校验**，**播放**已落 **V2.2**——裁决 16） |
 | [`skin/08-pages.md`](skin/08-pages.md) | 欢迎页与游戏首页 `startup` / `lobby` | 封面背景（封面图归皮肤）/ 标题图形 / 主视觉 / 出身卡片 | 新增（裁决 5 / 20）；**已实现**（两屏全落，2026-09-30） |
-| [`skin/09-creative.md`](skin/09-creative.md) | Creative 模式 | 新建 / 编辑 / 导出 `.pp`，**九宫格 / `.9.png` 切片设置面板**，命中检查与预览 | 新增（裁决 9 / 10 / 21 / 28）；**未实现**——第三个顶层模式尚未落地（`src/app/router.ts` 目前只有 play / build） |
+| [`skin/09-creative.md`](skin/09-creative.md) | Creative 模式 | 新建 / 编辑 / 导出 `.pp`，**九宫格 / `.9.png` 切片设置面板**，命中检查与预览 | 新增（裁决 9 / 10 / 21 / 28）；**已实现**（第三个顶层模式已接入 `#/creative`，2026-09-30；路由现为 `play` / `build` / `creative` / `guide` 四支） |
 
 > **编号是文件创建顺序，不是阅读顺序**：建议按上表自上而下阅读（包 → 画布 → 元素族 → 音频 → 页 → 编辑器）。
 
@@ -108,7 +108,7 @@
 
 **九宫格由素材自己声明**：配了 `slice` 就走九宫格、没配即整图拉伸（§五「调用方接口不变」）——故**同一个键可以今天拉伸、明天九宫格**，老素材不用改。规范仍要求：**没配 `slice` 的素材必须在纯拉伸下不难看**。
 
-**落地范围（2026-09-30，D3 第十三屏）**：**DOM 层**（面板 / 弹窗 / 按钮 / 格子 / 条 / 提示条 / 分隔线）走 CSS `border-image`，`slice` 末带 `fill`、不写 `borderWidth`——即「容器与控件」这一族**全部生效**；**SVG 层**（道路 / 地图 / 画布 / 棋子）仍按 `preserveAspectRatio` 出图，要走九宫格得另起切块拼装，**尚未落地**。
+**落地范围（2026-09-30，D3 第十三屏）**：**DOM 层**（面板 / 弹窗 / 按钮 / 格子 / 条 / 提示条 / 分隔线）走 CSS `border-image`，`slice` 末带 `fill`、不写 `borderWidth`——即「容器与控件」这一族**全部生效**；**SVG 层**（地图 / 画布 / 棋子）于 **2026-10-10 · V2.2** 补上**切块拼装**九宫格（首个落点＝多格建筑 `node.building`，[`skin/04-misc.md`](skin/04-misc.md) §二／§十），未带切片的 SVG 素材仍按 `preserveAspectRatio` 出图。
 
 **切片设置面板（裁决 21 / 28）**：Creative 模式的素材属性栏里有一条「九宫格」栏，**对任何已绑定、且需要拉伸的素材都可用**（不限 `.9.png` 命名，裁决 28）——导入整图、拖四根参考线（与四个数值框**双向联动**）、读 `.9.png` 黑边作初值（**只读不写**）、实时预览拉伸、一键写回 `slice`（含 `fill`），并可另存九张切片；产出供九宫格策略消费（[`skin/09-creative.md`](skin/09-creative.md) §2.3）。**注**：Creative 模式本身**尚未实现**（`src/app/router.ts` 目前只有 play / build）。
 
@@ -134,10 +134,10 @@ drawTexture(target, src, box, opts)
 | 版本 | 策略 | 实现 |
 |------|------|------|
 | V1 | `stretch` | `<image preserveAspectRatio="none">` 直接拉伸；DOM 层 `<img>` 走 `background-size: 100% 100%` |
-| **已落地（DOM 层）** | `nine` | CSS `border-image`（`Slice` 语序即 `[上, 右, 下, 左]`、末带 `fill`、**不写 `borderWidth`**）；素材带 `slice` 才成立 |
+| **已落地（DOM ＋ SVG）** | `nine` | DOM 层 CSS `border-image`（`Slice` 语序即 `[上, 右, 下, 左]`、末带 `fill`、**不写 `borderWidth`**）；SVG 层切块拼装（`nineSliceTiles()` ＋ `SvgTexture`）。素材带 `slice` 才成立 |
 | 待接线 | `tile` | 参数位与判定已就绪（`effectiveMode` 认得，平铺独立成立不需切片）；**唯一候选是坐标参照线（定位线）**，随引导线素材一起接（V2.2）。**分隔线已裁决不走 `tile`**（裁决 29，见 §3.4） |
 
-- **SVG 内无原生 `border-image`**，九宫格必须在 SVG 内切块拼装；DOM 层（面板 / 弹窗）可直接用 CSS `border-image` 实现同一策略。**两侧实现可以不同，调用方接口必须相同。**（本批只落 DOM 层，SVG 层尚为 `stretch`。）
+- **SVG 内无原生 `border-image`**，九宫格必须在 SVG 内切块拼装；DOM 层（面板 / 弹窗）可直接用 CSS `border-image` 实现同一策略。**两侧实现可以不同，调用方接口必须相同。**（两层**均已落地**：DOM 层见 D3 第十三屏，SVG 层见 **V2.2**——切块要源图像素尺寸，经 `SkinAssets.sizeOf()` 取，量不出即回落 `stretch`。）
 - 适用范围：道路 / 建筑素材、面板与弹窗底图、按钮底图、色块——**凡是需要拉伸的一律走此接口**。
 
 **实现落点（React，2026-09-30）**：`target` 参数在本工程里体现为**选用哪个渲染器**，而不是运行期分支。
@@ -148,7 +148,7 @@ drawTexture(target, src, box, opts)
   `rotate` / `flip` 由落位结果给出（都绕盒心），**业务代码不参与变换计算**，素材节点也不带手绘滤镜、不吃点击（`S-6`）。
 - 几何与取图归纯函数 `src/engine/skin/texture.ts`（三写法归一 / 绕心旋转镜像 / `mode` 回落）；
   素材地址归 `src/io/skin-assets.ts`（按需建、`release()` 一次撤，裁决 15）。
-- `effectiveMode(mode?, slice?)` 把关「策略与素材是否齐备」：**`nine` 要策略 ＋ 切片同时成立**（只写 `mode: 'nine'` 而没给 `slice` 回落 `stretch`，不画半张九宫格），`tile` 独立成立。`surfaceMode(ref)`（素材带 `slice` → `nine`，否则 `stretch`）＋ `Texture.tsx` 的 `nineStyle()` 出 `border-image`——**DOM 层已在 D3 第十三屏落地**（容器 / 按钮 / 格子 / 条 / 提示条 / 分隔线六处一次升级，调用方一行不动）；`tile` 待接线（唯一候选＝定位线，V2.2）。
+- `effectiveMode(mode?, slice?)` 把关「策略与素材是否齐备」：**`nine` 要策略 ＋ 切片同时成立**（只写 `mode: 'nine'` 而没给 `slice` 回落 `stretch`，不画半张九宫格），`tile` 独立成立。`surfaceMode(ref)`（素材带 `slice` → `nine`，否则 `stretch`）＋ `Texture.tsx` 的 `nineStyle()` 出 `border-image`——**DOM 层已在 D3 第十三屏落地**（容器 / 按钮 / 格子 / 条 / 提示条 / 分隔线六处一次升级，调用方一行不动）；**SVG 层于 V2.2 落地**（`nineSliceTiles()` ＋ `SvgTexture` 切块拼装，首个落点＝`node.building`，同批补 `SkinAssets.sizeOf()` 供源图像素尺寸）；`tile` 待接线（唯一候选＝定位线，V2.2）。
 
 ## 五、素材字段的三种写法
 
@@ -177,10 +177,10 @@ drawTexture(target, src, box, opts)
 
 | 编号 | 取舍 | 后果 | 登记位置 |
 |------|------|------|----------|
-| S-1 | 素材**不写 `slice`** 即按普通拉伸处理（**DOM 层九宫格已落地**，写 `slice` 即生效；SVG 层仍为拉伸） | 只交图不交切片的素材观感偏软；想生效必须显式给 `slice` | §3.3 |
+| S-1 | 素材**不写 `slice`** 即按普通拉伸处理（**DOM 层九宫格已落地**，写 `slice` 即生效；**SVG 层九宫格（切块拼装）亦已落地**，2026-10-10 · V2.2） | 只交图不交切片的素材观感偏软；想生效必须显式给 `slice` | §3.3 |
 | S-2 | 镜像不默认启用 | 左右朝向的素材需按需全画，图量略增 | §3.2 |
 | S-3 | 道路格角位只认**夹角角块**（两侧的边都有路），不细分外侧角 | 外侧角有路而侧边无路时，接缝处出现视觉断开 | [`skin/01-road.md`](skin/01-road.md) §五 |
-| S-4 | 容器素材只提供底纹，边框仍由 CSS 绘制 | 素材配色须与 CSS 边框一致，否则 V1.1 换图时需同步调整 | [`skin/03-window.md`](skin/03-window.md) §五 |
+| S-4 | 容器素材只提供底纹，边框仍由 CSS 绘制 | 素材配色须与 CSS 边框一致，否则换图（V2.2 起）时需同步调整 | [`skin/03-window.md`](skin/03-window.md) §五 |
 | S-5 | 骰面点阵显式启用镜像与旋转 | 与 §3.2「镜像不默认启用」不一致，属登记在案的例外 | [`skin/04-misc.md`](skin/04-misc.md) §三 |
 | S-6 | 位图素材不套手绘滤镜 | 素材与程序绘制图形的手绘感需要美术在出图时自行保证 | [`skin/04-misc.md`](skin/04-misc.md) §六 |
 | S-7 | 背景为单张整图，不分块、不多分辨率 | 大地图的背景体积与内存随面积增长，需美术出大图 | [`skin/05-canvas.md`](skin/05-canvas.md) §六 |
@@ -241,7 +241,7 @@ drawTexture(target, src, box, opts)
 | Q22 | 商品 | **已裁决（18）**：描边**是独立设置项**——不给 `stroke` 即**不渲染描边**（既不跟随 `fill`，也不保留组件色），无第四态 |
 | Q23 | 包 | **已裁决（19 / 22）**：用户全局 pp **只在运行时解压一份到内存**（同 Q17）；`.pgame` 布局＝`pack.json` ＋ `game.pmod` ＋ `skin/`；`.pp` **强制项只有** `manifest.json` ＋ 可选 `preview.png`（裁决 22：目录名与层级自由，`resource/` 仅为推荐约定），**路径一律相对包根且以描述文件为准**，`resource` 键**废除**（`KP-10`） |
 | Q24 | 页 | **已裁决（20）**：首页封面图**归皮肤侧**（`startup.bg` / `lobby.bg`，即原 `pages.home.bg`），`.pmod` **不设**封面字段 |
-| Q25 | Creative | **已裁决（21）**：Creative **提供九宫格切分工具**（V1 渲染仍按拉伸，产出供 V1.1 消费）；**字体不做子集化**（原样打包） |
+| Q25 | Creative | **已裁决（21）**：Creative **提供九宫格切分工具**（产出供运行期消费；`nine` 的 DOM 层已落 V2.1、**SVG 层切块拼装已落 V2.2**，见 §3.3）；**字体不做子集化**（原样打包） |
 | Q26 | 音频 | BGM 是否需要**按地图**而不仅是按场景——播放已随 **V2.2** 落地，本项**仍未裁决**（[`skin/00-package.md`](skin/00-package.md) §七） |
 | Q27 | 商品 / 窗体 | **已裁决（12）**：信息视图图标＝衬底（`background` 在下）＋ `icon`（居中在上），名称与说明文字走**窗体自身**字体字色；`building.font` / `fontColor` **不作用于此处**，两节不存在交叉配置 |
 | Q28 | 包 | 是否允许**跨包 `extends`**（按皮肤名继承本地已安装的另一套皮肤）；当前只允许**包内继承** |

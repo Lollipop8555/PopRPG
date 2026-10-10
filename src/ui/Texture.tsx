@@ -20,14 +20,17 @@ import { BUTTON_STATES } from '../engine/skin/lookup'
 import type { SkinFit, SkinSlice, SkinTexture } from '../types'
 import {
   effectiveMode,
+  nineSliceTiles,
   placeTexture,
   surfaceMode,
   textureRef,
+  type NineTile,
   type TextureBox,
   type TextureMode,
   type TexturePlacement,
   type TextureRef,
   type TextureSize,
+  type TextureSource,
 } from '../engine/skin/texture'
 import type { SkinAssets } from '../io/skin-assets'
 
@@ -42,8 +45,12 @@ export const CSS_SIZED_BOX: TextureBox = { x: 0, y: 0, w: 1, h: 1 }
 export interface TextureProps extends TexturePlacement {
   /** 已建好的可用地址（`textureProps()` 从素材源取好） */
   src: string
-  /** 填充方式；V1 只认 `stretch` */
+  /** 生效的填充方式（`textureProps()` 已按「策略 ＋ 切片」判定，见 `effectiveMode()`） */
   mode?: TextureMode
+  /** 九宫格切片；`mode === 'nine'` 时由 `SvgTexture` 切块拼装用 */
+  slice?: SkinSlice
+  /** 源图内在像素尺寸；`mode === 'nine'` 时切块拼装用（DOM 层 `border-image` 不需要） */
+  source?: TextureSource
   /** 0–1，缺省 1 */
   opacity?: number
   /** 额外类名（两层都透传） */
@@ -70,7 +77,18 @@ export function textureProps(
   const src = assets.urlOf(ref.src)
   if (src === undefined) return undefined
 
-  return { ...placement, src, ...extra }
+  // 铺法在这里定死：调用方给了就照给（如画布背景的 `stretch`），没给按背景铺法默认——
+  // **素材带了 `slice` 即九宫格**（`surfaceMode()`，承 `node.building` `KM-1` 的「必须九宫格」）。
+  const mode = extra.mode ?? surfaceMode(ref)
+
+  // 九宫格只在**SVG 层**再补两块料：切片与源图像素尺寸（DOM 层走 `border-image`，不吃这两个字段）。
+  // 量不出源图尺寸（素材源不支持量尺寸 / 格式不识别 / 条目缺失）就不带 `slice`，`SvgTexture` 回落整图拉伸。
+  if (effectiveMode(mode, ref.slice) === 'nine' && ref.slice !== undefined) {
+    const source = assets.sizeOf?.(ref.src)
+    if (source !== undefined) return { ...placement, src, ...extra, mode, slice: ref.slice, source }
+  }
+
+  return { ...placement, src, ...extra, mode }
 }
 
 /**
@@ -285,9 +303,69 @@ function svgTransform({ x, y, w, h, rotate, flip }: TexturePlacement): string | 
   return `translate(${cx} ${cy}) ${ops.join(' ')} translate(${-cx} ${-cy})`
 }
 
-/** SVG 层：画在既有 `<svg>` 里（地图 / 画布 / 棋子） */
-export function SvgTexture({ src, x, y, w, h, rotate, flip, mode, opacity, className, alt }: TextureProps) {
+/** 九宫格的四角下标（行优先序：左上 / 右上 / 左下 / 右下）——四角原样，无拉伸可言 */
+const NINE_CORNERS = new Set([0, 2, 6, 8])
+
+/**
+ * **九宫格切块拼装**（`skin.md` §3.3）：把九块各用一个嵌套 `<svg>` 框出源区、拉伸落进目标区。
+ *
+ * 每块都是「源区 `viewBox` ＋ `preserveAspectRatio="none"`」——坐标单位即图片像素，
+ * 因而四边能**单向拉伸**、中心能**双向拉伸**，与 DOM 层 `border-image` 的 `stretch` 同义。
+ * 源图大于块区时由嵌套 `<svg>` 自带的裁剪吃掉溢出，不必额外写 `clipPath`。
+ *
+ * 位图不套手绘滤镜、不吃点击（S-6），故整组只带 `pointerEvents: none`。
+ */
+function nineSvg(
+  src: string,
+  tiles: NineTile[],
+  source: TextureSource,
+  transform: string | undefined,
+  opacity: number | undefined,
+  className: string | undefined,
+  alt: string | undefined,
+): JSX.Element {
+  return (
+    <g
+      transform={transform}
+      opacity={opacity}
+      className={className}
+      style={{ pointerEvents: 'none' }}
+      aria-hidden={alt ? undefined : true}
+      aria-label={alt}
+    >
+      {tiles.map((tile, index) => (
+        <svg
+          key={index}
+          x={num(tile.dx)}
+          y={num(tile.dy)}
+          width={num(tile.dw)}
+          height={num(tile.dh)}
+          viewBox={`${num(tile.sx)} ${num(tile.sy)} ${num(tile.sw)} ${num(tile.sh)}`}
+          // 四角 sw===dw 且 sh===dh，取不取 `none` 都一样；四边 / 中心必须 `none` 才拉得开
+          preserveAspectRatio={NINE_CORNERS.has(index) ? 'xMidYMid meet' : 'none'}
+        >
+          <image href={src} x={0} y={0} width={source.width} height={source.height} preserveAspectRatio="none" />
+        </svg>
+      ))}
+    </g>
+  )
+}
+
+/**
+ * SVG 层：画在既有 `<svg>` 里（地图 / 画布 / 棋子）。
+ *
+ * **九宫格**（`mode === 'nine'` 且切片与源图尺寸齐备）走**切块拼装**——CSS `border-image`
+ * 在 SVG 里没有对应写法，故手动切九块（见 `nineSvg()`）；量不出源图尺寸或盒是 `auto` 时回落整图拉伸。
+ */
+export function SvgTexture({ src, x, y, w, h, rotate, flip, mode, slice, source, opacity, className, alt }: TextureProps) {
   const placement: TexturePlacement = { x, y, w, h, rotate: rotate ?? 0, flip: flip === true }
+  const transform = svgTransform(placement)
+
+  if (mode === 'nine' && slice !== undefined && source !== undefined) {
+    const tiles = nineSliceTiles({ x, y, w, h }, slice, source)
+    return tiles === undefined ? null : nineSvg(src, tiles, source, transform, opacity, className, alt)
+  }
+
   return (
     <image
       href={src}
@@ -296,8 +374,8 @@ export function SvgTexture({ src, x, y, w, h, rotate, flip, mode, opacity, class
       // `auto` 不写尺寸属性：SVG2 按素材原始像素出图（画布背景的唯一写法，`05-canvas.md` §三）
       width={isAuto(w) ? undefined : w}
       height={isAuto(h) ? undefined : h}
-      preserveAspectRatio={effectiveMode(mode) === 'stretch' ? 'none' : 'xMidYMid meet'}
-      transform={svgTransform(placement)}
+      preserveAspectRatio={effectiveMode(mode, slice) === 'stretch' ? 'none' : 'xMidYMid meet'}
+      transform={transform}
       opacity={opacity}
       className={className}
       style={{ pointerEvents: 'none' }}

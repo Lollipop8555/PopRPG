@@ -114,7 +114,7 @@
 - **取值（纯函数）** [`../../../src/engine/skin/audio.ts`](../../../src/engine/skin/audio.ts)：`bgmOf()` / `sfxOf()` 给原值，`bgmTrackOf()` / `sfxTrackOf()` 把「字符串写法 / 对象写法 / 缺省 / 越界」一次算清，收成 `BgmTrack` / `SfxTrack`（`{ file, loop?, volume }`）；`clampVolume()` 把越界音量夹回 0–1（不静音、不换算）；缺省常量 `BGM_DEFAULT_VOLUME = 0.5` / `BGM_DEFAULT_LOOP = true` / `SFX_DEFAULT_VOLUME = 0.8`。场景 / 事件**各查自己的键、不跨键借用**（配了 `battle` 不会让 `map` 有曲）。
 - **校验（纯函数）** 同上：`unknownSfxEvents()` 列出 §三 清单外的 `sfx` 事件键（`KA-2`，忽略这些键）；`outOfRangeVolumes()` 列出 `volume` 越界项的出处（`KA-3`，形如 `audio.bgm.map.volume` / `audio.sfx.hit.volume`）。
 - **校验（读条目）** [`../../../src/io/pp.ts`](../../../src/io/pp.ts) 的 `checkAudio()`：`KA-4`（单文件体积）要读包内条目长度，故落在 IO 层；**路径先去重**，同一个文件被多处引用只报一次；阈值 `AUDIO_MAX_BYTES = 2 MB`。
-- **提示码** `SkinIssueCode` 新增 `KA-2` / `KA-3` / `KA-4`，与包级 `KP-*` 同一码空间；**没有 `KA-1`**（如上表，归 `KP-2`）；`KA-5` 待 V1.1。
+- **提示码** `SkinIssueCode` 新增 `KA-2` / `KA-3` / `KA-4`，与包级 `KP-*` 同一码空间；**没有 `KA-1`**（如上表，归 `KP-2`）；`KA-5` **仍未接**（见 §8.2「不做 / 未接」）。
 - **已知边界**：`outOfRangeVolumes()` 只遍历 §三 的已知事件键——写在**清单外**的键上带越界音量**不另判**（那个键整体已被 `KA-2` 忽略）。
 - **验收**：`npx tsc --noEmit` 无错；`npx vitest run` **51 个文件 / 592 项**全绿（新增 2 个用例文件 / 31 项：[`../../../src/engine/skin/__tests__/audio.test.ts`](../../../src/engine/skin/__tests__/audio.test.ts) 18 项纯函数、[`../../../src/io/__tests__/pp-audio.test.ts`](../../../src/io/__tests__/pp-audio.test.ts) 13 项加载期）。
 
